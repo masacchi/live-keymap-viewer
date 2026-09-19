@@ -1,0 +1,409 @@
+<title>Cornix LP JIS Keymap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --ground:#EEF0EE;
+  --surface:#FFFFFF;
+  --surface-2:#F6F7F5;
+  --ink:#1B2024;
+  --muted:#687076;
+  --faint:#A7ADB1;
+  --line:#C6CBCD;
+  --line-soft:#DDE1E1;
+  --sym-fill:#E7F1F2;
+  --sym-ink:#0B5E66;
+  --L0:#3B4247;
+  --L1:#B86E0A;
+  --L2:#0E7580;
+  --L3:#6547AE;
+  --L4:#B03D56;
+  --on-accent:#FFFFFF;
+  --flash:#F2C230;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --sans:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121518;
+    --surface:#1D2226;
+    --surface-2:#181C1F;
+    --ink:#E4E7E8;
+    --muted:#98A0A5;
+    --faint:#5D656A;
+    --line:#3A4247;
+    --line-soft:#2B3236;
+    --sym-fill:#15343A;
+    --sym-ink:#7FD3DB;
+    --L0:#B9C0C4;
+    --L1:#E6A13F;
+    --L2:#3DB5C1;
+    --L3:#A58BEB;
+    --L4:#EB7A92;
+    --on-accent:#101315;
+    --flash:#F2C230;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121518;
+  --surface:#1D2226;
+  --surface-2:#181C1F;
+  --ink:#E4E7E8;
+  --muted:#98A0A5;
+  --faint:#5D656A;
+  --line:#3A4247;
+  --line-soft:#2B3236;
+  --sym-fill:#15343A;
+  --sym-ink:#7FD3DB;
+  --L0:#B9C0C4;
+  --L1:#E6A13F;
+  --L2:#3DB5C1;
+  --L3:#A58BEB;
+  --L4:#EB7A92;
+  --on-accent:#101315;
+  --flash:#F2C230;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+header h1{font-size:26px;line-height:1.25;margin:0 0 6px;font-weight:700;letter-spacing:.01em;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:68ch}
+.mono{font-family:var(--mono)}
+h2{font-size:17px;margin:0;font-weight:700;text-wrap:balance}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+/* layer switch summary */
+.switches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.sw{background:var(--surface);border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;text-decoration:none;color:inherit}
+.sw:hover,.sw:focus-visible{border-color:var(--c)}
+.sw:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.sw .badge{grid-row:span 2;width:40px;height:40px;border-radius:8px;background:var(--c);color:var(--on-accent);display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:15px}
+.sw .name{font-weight:700}
+.sw .how{color:var(--muted);font-size:13px}
+.sw .how b{color:var(--ink);font-weight:500}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted)}
+.legend svg{vertical-align:middle;margin-right:6px}
+.legend span{display:inline-flex;align-items:center}
+
+/* layers */
+.layer{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.layer-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.layer-head .tag{font-family:var(--mono);font-weight:700;color:var(--c);font-size:15px}
+.layer-head .trig{color:var(--muted);font-size:13px}
+.layer-head .trig b{color:var(--c);font-weight:700}
+.board{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.board svg{display:block;width:100%;min-width:760px;height:auto}
+.layer-foot{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 18px}
+
+/* key styles */
+.k rect.cap{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.k.sym rect.cap{fill:var(--sym-fill)}
+.k.sym .main{fill:var(--sym-ink)}
+.k.trns rect.cap{fill:var(--surface-2);stroke:var(--line);stroke-dasharray:3 3}
+.k.trns .main,.k.trns .shift{fill:var(--faint)}
+.k.none rect.cap{fill:none;stroke:var(--line-soft);stroke-dasharray:2 4}
+.k.held rect.cap{fill:var(--c);stroke:var(--c)}
+.k.held .main,.k.held .sub{fill:var(--on-accent)}
+.k.lt rect.cap{stroke:var(--c);stroke-width:1.8}
+.k .main{fill:var(--ink);font-family:var(--mono);font-weight:700;text-anchor:middle;dominant-baseline:central}
+.k .main.jp{font-family:var(--sans)}
+.k .shift{fill:var(--muted);font-family:var(--mono);font-size:11px;font-weight:500}
+.k .sub{fill:var(--muted);font-family:var(--sans);font-size:9.5px;text-anchor:middle}
+.k .band{fill:var(--c)}
+.k .bandtxt{fill:var(--on-accent);font-family:var(--sans);font-size:9.5px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+.k.flash rect.cap{stroke:var(--flash);stroke-width:4}
+@media (prefers-reduced-motion:no-preference){
+  .k.flash rect.cap{animation:pulse .9s ease-in-out 3}
+  @keyframes pulse{50%{stroke-width:1.2}}
+}
+.enc circle{fill:var(--surface-2);stroke:var(--line);stroke-width:1.2}
+.enc text{fill:var(--muted);font-family:var(--sans);font-size:10.5px;text-anchor:middle;dominant-baseline:central}
+.enc .t{fill:var(--ink);font-weight:700;font-size:11px}
+.half-label{fill:var(--faint);font-family:var(--sans);font-size:11px;letter-spacing:.08em}
+
+/* lookup */
+.lookup{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.lookup p{margin:0;color:var(--muted);font-size:13px}
+.symgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:6px}
+.sym{display:grid;grid-template-columns:44px 1fr;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;border:1px solid transparent;background:var(--surface-2);cursor:pointer;text-align:left;color:inherit;font:inherit}
+.sym:hover{border-color:var(--line)}
+.sym:focus-visible{outline:2px solid var(--L2);outline-offset:1px}
+.sym .ch{font-family:var(--mono);font-weight:700;font-size:20px;text-align:center;color:var(--sym-ink);background:var(--sym-fill);border-radius:6px;line-height:36px}
+.route{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;line-height:1.3}
+.route .plus{color:var(--faint)}
+.chip{display:inline-block;padding:2px 6px;border-radius:5px;border:1px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.chip.hold{border-color:var(--c);color:var(--c);font-family:var(--sans);font-weight:700;font-size:11px}
+.chip.shift{font-family:var(--sans);font-size:11px}
+.alt{color:var(--muted);font-size:11px;margin-top:2px}
+.symcell{display:flex;flex-direction:column}
+
+.notes{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.notes b{color:var(--ink);font-weight:500}
+.notes code{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--line-soft);padding:0 4px;border-radius:4px;color:var(--ink)}
+@media (max-width:520px){header h1{font-size:22px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Cornix LP · Windows 日本語(JIS)キーボード設定で使用時</div>
+    <h1>Cornix LP キーマップ — 実際に入力される文字</h1>
+    <p>キーキャップの文字は、JIS配列のWindowsで<b>実際に入力される文字</b>です(Pipetteの表示はUS配列前提なので、記号がずれて見えます)。左上の小さい文字はShiftを押したときの文字、キー下部の色帯は長押しで入るレイヤーです。</p>
+  </header>
+
+  <nav class="switches" id="switches" aria-label="レイヤー切替"></nav>
+
+  <div class="legend" id="legend"></div>
+
+  <div id="layers"></div>
+
+  <section class="lookup" id="lookup">
+    <div>
+      <h2>記号の出し方</h2>
+      <p>クリックすると、そのキーの位置を図の中で光らせます。キー名はベースレイヤーでの位置(例:<span class="chip">S</span> = Sキーの位置)です。</p>
+    </div>
+    <div class="symgrid" id="symgrid"></div>
+  </section>
+
+  <section class="notes">
+    <h2 style="color:var(--ink)">補足</h2>
+    <div><b>長押し判定</b>:親指のSpace / BS / Del はLayer Tap(<code>LT</code>)。Permissive Hold有効時は、押している間に他のキーを押して離せばすぐレイヤーが有効になります。右下の <code>`</code> だけはTap Dance(200ms押し続けるとL4)。</div>
+    <div><b>¥ と \</b>:JISのWindowsでは、IMEオフ時に<code>¥</code>キーと<code>\</code>(ろ)キーはどちらも同じ文字(U+005C)を入力します。フォントによって¥にも\にも見えます。</div>
+    <div><b>エンコーダー</b>:全レイヤー共通で、左が音量(−/＋)、右がマウスホイール(↑/↓)。</div>
+    <div><b>未使用</b>:Layer 5〜9 は空です。</div>
+  </section>
+</div>
+
+<script>
+(function(){
+// ---------- keymap data (from Cornix_設定.vil) ----------
+const LAYOUT = [
+ [["KC_TAB","KC_Q","KC_W","KC_E","KC_R","KC_T","KC_NO"],["KC_LCTRL","KC_A","KC_S","KC_D","KC_F","KC_G","KC_NO"],["KC_LSHIFT","KC_Z","KC_X","KC_C","KC_V","KC_B","KC_MUTE"],["KC_LCTRL","KC_LGUI","KC_LALT","KC_LANG2","LT3(KC_DELETE)","LT1(KC_BSPACE)","KC_NO"],["KC_MINUS","KC_P","KC_O","KC_I","KC_U","KC_Y","KC_NO"],["KC_QUOTE","KC_SCOLON","KC_L","KC_K","KC_J","KC_H","KC_BTN3"],["KC_NONUS_HASH","KC_RBRACKET","KC_DOT","KC_COMMA","KC_M","KC_N","KC_NO"],["TD(3)","KC_RO","KC_SLASH","KC_LANG1","KC_ENTER","LT2(KC_SPACE)","KC_NO"]],
+ [["KC_ESCAPE","KC_1","KC_2","KC_3","KC_4","KC_5","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_MUTE"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","KC_0","KC_9","KC_8","KC_7","KC_6","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_BTN3"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"]],
+ [["KC_ESCAPE","LSFT(KC_1)","KC_LBRACKET","LSFT(KC_3)","LSFT(KC_4)","LSFT(KC_5)","KC_NO"],["KC_TRNS","KC_SLASH","KC_EQUAL","LSFT(KC_SCOLON)","KC_QUOTE","LSFT(KC_2)","KC_NO"],["KC_TRNS","KC_RO","KC_JYEN","KC_MINUS","KC_SCOLON","LSFT(KC_7)","KC_MUTE"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","LSFT(KC_9)","LSFT(KC_8)","LSFT(KC_QUOTE)","LSFT(KC_6)","KC_EQUAL","KC_NO"],["KC_TRNS","KC_TRNS","KC_RIGHT","KC_UP","KC_DOWN","KC_LEFT","KC_BTN3"],["KC_TRNS","KC_TRNS","KC_END","KC_PGUP","KC_PGDOWN","KC_HOME","KC_NO"],["LSFT(KC_EQUAL)","LSFT(KC_JYEN)","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"]],
+ [["KC_TRNS","KC_F1","KC_F2","KC_F3","KC_F4","KC_F5","KC_NO"],["KC_TRNS","KC_F11","KC_F12","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_MUTE"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_NO"],["KC_TRNS","KC_F10","KC_F9","KC_F8","KC_F7","KC_F6","KC_NO"],["KC_TRNS","KC_TRNS","KC_MS_R","KC_MS_U","KC_MS_D","KC_MS_L","KC_BTN3"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_BTN2","KC_BTN1","KC_NO"],["KC_TRNS","KC_TRNS","KC_TRNS","KC_TRNS","KC_ACL0","KC_ACL2","KC_NO"]],
+ [["USER06","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"],["USER00","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"],["USER01","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_MUTE"],["USER02","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"],["USER05","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"],["KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_BTN3"],["KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"],["KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO","KC_NO"]]
+];
+const TD = [
+  {tap:"KC_SPACE",hold:2},
+  {tap:"KC_BSPACE",hold:1},
+  {tap:"KC_DELETE",hold:3},
+  {tap:"LSFT(KC_LBRACKET)",hold:4}
+];
+const LAYERS = [
+  {n:0,name:"ベース",trigger:null},
+  {n:1,name:"数字",trigger:"左親指 BS",short:"BS長押し",td:1},
+  {n:2,name:"記号・カーソル",trigger:"右親指 Space",short:"Space長押し",td:0},
+  {n:3,name:"Fキー・マウス",trigger:"左親指 Del",short:"Del長押し",td:2},
+  {n:4,name:"Bluetooth",trigger:"右下端 `",short:"`長押し",td:3}
+];
+
+// ---------- JIS output mapping ----------
+const JIS = {
+  KC_1:["1","!"],KC_2:["2",'"'],KC_3:["3","#"],KC_4:["4","$"],KC_5:["5","%"],
+  KC_6:["6","&"],KC_7:["7","'"],KC_8:["8","("],KC_9:["9",")"],KC_0:["0",null],
+  KC_MINUS:["-","="],KC_EQUAL:["^","~"],KC_JYEN:["¥","|"],KC_LBRACKET:["@","`"],
+  KC_RBRACKET:["[","{"],KC_SCOLON:[";","+"],KC_QUOTE:[":","*"],KC_NONUS_HASH:["]","}"],
+  KC_COMMA:[",","<"],KC_DOT:[".",">"],KC_SLASH:["/","?"],KC_RO:["\\","_"]
+};
+const NAMED = {
+  KC_TAB:["Tab"],KC_ESCAPE:["Esc"],KC_ENTER:["Enter"],KC_SPACE:["Space"],KC_BSPACE:["BS"],KC_DELETE:["Del"],
+  KC_LCTRL:["Ctrl","","mod"],KC_LSHIFT:["Shift","","mod"],KC_LGUI:["Win","","mod"],KC_LALT:["Alt","","mod"],
+  KC_LANG1:["かな","IME オン"],KC_LANG2:["英数","IME オフ"],
+  KC_LEFT:["←"],KC_RIGHT:["→"],KC_UP:["↑"],KC_DOWN:["↓"],
+  KC_HOME:["Home"],KC_END:["End"],KC_PGUP:["PgUp"],KC_PGDOWN:["PgDn"],
+  KC_MS_L:["←","マウス移動"],KC_MS_R:["→","マウス移動"],KC_MS_U:["↑","マウス移動"],KC_MS_D:["↓","マウス移動"],
+  KC_BTN1:["左","クリック"],KC_BTN2:["右","クリック"],KC_BTN3:["中","クリック"],
+  KC_ACL0:["遅","マウス速度"],KC_ACL2:["速","マウス速度"],
+  KC_MUTE:["消音","ミュート"],
+  USER06:["USB/BT","出力切替"],USER00:["BT0","接続先"],USER01:["BT1","接続先"],USER02:["BT2","接続先"],USER05:["BT消去","ペア解除"]
+};
+function resolve(kc){
+  // returns {main, shift, sub, cat, sym}
+  let m;
+  if(kc==="KC_NO") return {cat:"none"};
+  if(kc==="KC_TRNS") return {cat:"trns"};
+  if((m=kc.match(/^LT(\d)\((KC_\w+)\)$/))){
+    const r=resolve(m[2]); r.hold=+m[1]; return r;
+  }
+  if((m=kc.match(/^TD\((\d)\)$/))){
+    const t=TD[+m[1]]; const r=resolve(t.tap); r.hold=t.hold; return r;
+  }
+  if((m=kc.match(/^LSFT\((KC_\w+)\)$/))){
+    const j=JIS[m[1]]; return {main:j[1],shift:null,cat:"sym",sym:true};
+  }
+  if((m=kc.match(/^KC_([A-Z])$/))) return {main:m[1],cat:"alpha"};
+  if((m=kc.match(/^KC_F(\d+)$/))) return {main:"F"+m[1],cat:"fn"};
+  if(JIS[kc]){
+    const j=JIS[kc]; const isNum=/^KC_\d$/.test(kc);
+    return {main:j[0],shift:j[1],cat:isNum?"num":"sym",sym:!isNum};
+  }
+  if(NAMED[kc]){const n=NAMED[kc]; return {main:n[0],sub:n[1]||"",cat:n[2]||"named"};}
+  return {main:kc.replace(/^KC_/,""),cat:"named"};
+}
+
+// ---------- physical geometry (u) ----------
+const U=64, KS=0.92;
+const OFF=[0.35,0.35,0.1,-0.15,0.1,0.35];
+const MIRROR=15.4;
+function leftPos(r,i){
+  if(r<=2 && i<=5) return {x:i,y:r+OFF[i],rot:0};
+  if(r===2 && i===6) return {x:6.1,y:1.85,rot:0};
+  if(r===3 && i<=2) return {x:i,y:3+OFF[i],rot:0};
+  if(r===3 && i===3) return {x:3.5,y:3.45,rot:0};
+  if(r===3 && i===4) return {x:4.6,y:3.55,rot:9};
+  if(r===3 && i===5) return {x:5.66,y:3.86,rot:20};
+  return null;
+}
+const KEYS=[];
+for(let r=0;r<8;r++){for(let i=0;i<7;i++){
+  const right=r>=4; const lr=right?r-4:r;
+  if(right && lr===1 && i===6){ // right inner key (Mouse3)
+    const p=leftPos(2,6); KEYS.push({r,i,x:MIRROR-p.x-KS,y:p.y-0.1,rot:0}); continue;
+  }
+  if(right && lr===2 && i===6) continue;
+  const p=leftPos(lr,i); if(!p) continue;
+  KEYS.push({r,i,x:right?MIRROR-p.x-KS:p.x,y:p.y,rot:right?-p.rot:p.rot});
+}}
+const posName={};
+KEYS.forEach(k=>{const b=resolve(LAYOUT[0][k.r][k.i]); posName[k.r+"-"+k.i]=b.main;});
+
+// ---------- render ----------
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const a in attrs)e.setAttribute(a,attrs[a]);if(parent)parent.appendChild(e);return e;}
+function mainSize(s){const n=[...s].length; if(/[ぁ-んァ-ン一-龥]/.test(s)) return n<=2?15:12; return n===1?22:n<=3?16:n<=4?14:12;}
+const heldKC = {1:"LT1(KC_BSPACE)",2:"LT2(KC_SPACE)",3:"LT3(KC_DELETE)",4:"TD(3)"};
+
+function drawLayer(L){
+  const pad=0.3, W=(MIRROR+pad*2)*U, H=(5.0+pad)*U;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":`Layer ${L.n} ${L.name}`});
+  const g=el("g",{transform:`translate(${pad*U},${(pad+0.2)*U})`},svg);
+  el("text",{x:0,y:-0.18*U,class:"half-label"},g).textContent="LEFT";
+  const rt=el("text",{x:(MIRROR-KS)*U+KS*U,y:-0.18*U,class:"half-label","text-anchor":"end"},g); rt.textContent="RIGHT";
+  KEYS.forEach(k=>{
+    const kc=LAYOUT[L.n][k.r][k.i];
+    let d=resolve(kc);
+    const isTrns=d.cat==="trns";
+    if(isTrns){d=Object.assign(resolve(LAYOUT[0][k.r][k.i]),{cat:"trns"});}
+    const w=KS*U, cx=k.x*U+w/2, cy=k.y*U+w/2;
+    const cls=["k",d.cat==="sym"&&!isTrns?"sym":"",isTrns?"trns":"",d.cat==="none"?"none":""];
+    const gk=el("g",{class:cls.join(" "),id:`k-${L.n}-${k.r}-${k.i}`,transform:`rotate(${k.rot} ${cx} ${cy})`},g);
+    const isHeld = L.n>0 && kc.startsWith("TD(")===false && false;
+    // held trigger for this layer: TD(n) at base position
+    const baseKc=LAYOUT[0][k.r][k.i];
+    const heldHere = L.n>0 && baseKc===heldKC[L.n];
+    if(d.hold!==undefined && !isTrns){gk.classList.add("lt");gk.style.setProperty("--c",`var(--L${d.hold})`);}
+    if(heldHere){gk.classList.add("held");gk.style.setProperty("--c",`var(--L${L.n})`);}
+    el("rect",{class:"cap",x:k.x*U,y:k.y*U,width:w,height:w,rx:8},gk);
+    if(heldHere){
+      const bd=resolve(baseKc);
+      el("text",{class:"main jp",x:cx,y:cy-7,"font-size":13},gk).textContent="押下中";
+      el("text",{class:"sub",x:cx,y:cy+13},gk).textContent=`${bd.main} 長押し`;
+      return;
+    }
+    if(d.cat==="none") return;
+    const hasBand = d.hold!==undefined && !isTrns;
+    const hasSub = !!d.sub;
+    let my = cy - (hasBand?7:0) - (hasSub?6:0);
+    const mt=el("text",{class:"main"+(/[ぁ-んァ-ン一-龥]/.test(d.main)?" jp":""),x:cx,y:my,"font-size":mainSize(d.main)},gk);
+    mt.textContent=d.main;
+    if(d.shift){el("text",{class:"shift",x:k.x*U+6,y:k.y*U+14},gk).textContent=d.shift;}
+    if(hasSub){el("text",{class:"sub",x:cx,y:my+18},gk).textContent=d.sub;}
+    if(hasBand){
+      const bh=16;
+      el("path",{class:"band",d:`M${k.x*U} ${k.y*U+w-bh} h${w} v${bh-8} a8 8 0 0 1 -8 8 h${-(w-16)} a8 8 0 0 1 -8 -8 z`},gk);
+      const lay=LAYERS[d.hold];
+      el("text",{class:"bandtxt",x:cx,y:k.y*U+w-bh/2},gk).textContent=`長押し→L${d.hold}`;
+    }
+  });
+  // encoders only on base
+  if(L.n===0){
+    const ey=4.55*U;
+    [["左ノブ","音量 − / ＋",2.2],["右ノブ","ホイール ↑ / ↓",MIRROR-2.2-KS]].forEach(([t,s,x])=>{
+      const ge=el("g",{class:"enc"},g);
+      el("circle",{cx:(x+KS/2)*U,cy:ey,r:0.28*U},ge);
+      el("text",{class:"t",x:(x+KS/2)*U+0.42*U,y:ey-7,"text-anchor":"start"},ge).textContent=t;
+      const st=el("text",{x:(x+KS/2)*U+0.42*U,y:ey+9,"text-anchor":"start"},ge);st.textContent=s;
+    });
+  }
+  return svg;
+}
+
+// summary
+const sw=document.getElementById("switches");
+LAYERS.slice(1).forEach(L=>{
+  const a=document.createElement("a");a.className="sw";a.href="#layer-"+L.n;a.style.setProperty("--c",`var(--L${L.n})`);
+  a.innerHTML=`<span class="badge">L${L.n}</span><span class="name">${L.name}</span><span class="how"><b>${L.trigger}</b> を長押し</span>`;
+  sw.appendChild(a);
+});
+
+// legend
+const lg=document.getElementById("legend");
+function legendItem(svgInner,label){const s=document.createElement("span");s.innerHTML=`<svg width="30" height="22" viewBox="0 0 30 22">${svgInner}</svg>${label}`;lg.appendChild(s);}
+legendItem(`<g class="k"><rect class="cap" x="1" y="1" width="28" height="20" rx="4"/><text class="shift" x="4" y="10" style="font-size:8px">+</text><text class="main" x="17" y="13" font-size="11">;</text></g>`,"左上 = Shift時の文字");
+legendItem(`<g class="k sym"><rect class="cap" x="1" y="1" width="28" height="20" rx="4"/><text class="main" x="15" y="11" font-size="12">@</text></g>`,"記号");
+legendItem(`<g class="k trns"><rect class="cap" x="1" y="1" width="28" height="20" rx="4"/><text class="main" x="15" y="11" font-size="11">A</text></g>`,"透過(下のレイヤーの入力がそのまま出る)");
+legendItem(`<g class="k none"><rect class="cap" x="1" y="1" width="28" height="20" rx="4"/></g>`,"無効");
+legendItem(`<g class="k held" style="--c:var(--L2)"><rect class="cap" x="1" y="1" width="28" height="20" rx="4"/></g>`,"そのレイヤー中に押さえているキー");
+
+// layers
+const host=document.getElementById("layers");host.style.display="flex";host.style.flexDirection="column";host.style.gap="16px";
+LAYERS.forEach(L=>{
+  const sec=document.createElement("section");sec.className="layer";sec.id="layer-"+L.n;sec.style.setProperty("--c",`var(--L${L.n})`);
+  sec.style.borderTop=`3px solid var(--L${L.n})`;
+  const head=document.createElement("div");head.className="layer-head";
+  head.innerHTML=`<span class="tag">L${L.n}</span><h2>${L.name}</h2><span class="trig">${L.trigger?`<b>${L.trigger}</b> を長押ししている間`:"通常時"}</span>`;
+  sec.appendChild(head);
+  const b=document.createElement("div");b.className="board";b.appendChild(drawLayer(L));sec.appendChild(b);
+  const foot={
+    0:"親指の Space / BS / Del と右下の ` は、タップで文字、長押しでレイヤー切替。",
+    1:"数字は上段に1〜0。Shiftを押すと JIS の記号(! \" # $ % & ' ( ))になります。",
+    2:"右上段はUS配列のShift+6〜0と同じ並び(^ & * ( ))。矢印はH=← J=↓ K=↑ L=→。右下の \\ の位置で |、` の位置で ~(US配列のShift記号と同じ)。",
+    3:"マウス:H/J/K/L位置で移動、N=左クリック、M=右クリック、右親指で移動速度を切替。",
+    4:"左端の列でBT接続先と出力(USB/BT)を切替、右上端でペアリング消去。"
+  }[L.n];
+  const f=document.createElement("div");f.className="layer-foot";f.textContent=foot;sec.appendChild(f);
+  host.appendChild(sec);
+});
+
+// ---------- symbol lookup ----------
+const SYMS=['!','"','#','$','%','&',"'",'(',')','*','+',',','-','.','/',':',';','<','=','>','?','@','[','\\',']','^','_','`','{','|','}','~','¥'];
+const routes={};SYMS.forEach(s=>routes[s]=[]);
+[0,1,2,3].forEach(ln=>{
+  KEYS.forEach(k=>{
+    const kc=LAYOUT[ln][k.r][k.i]; if(kc==="KC_TRNS"||kc==="KC_NO") return;
+    const d=resolve(kc);
+    const add=(ch,shift)=>{ if(ch && routes[ch]) routes[ch].push({ln,shift,key:k,cost:(ln>0?1:0)+(shift?1:0)+(d.hold!==undefined&&!shift?0.5:0)}); };
+    add(d.main,false); if(d.shift) add(d.shift,true);
+  });
+});
+function routeHTML(rt){
+  const parts=[];
+  if(rt.ln>0){const L=LAYERS[rt.ln];parts.push(`<span class="chip hold" style="--c:var(--L${rt.ln})">${L.short}</span>`);}
+  if(rt.shift) parts.push(`<span class="chip shift">Shift</span>`);
+  const nm=posName[rt.key.r+"-"+rt.key.i];
+  const baseKc=LAYOUT[0][rt.key.r][rt.key.i];
+  const label = (rt.ln===0 && /^(TD|LT)/.test(baseKc)) ? `${nm} タップ` : nm;
+  parts.push(`<span class="chip">${escapeHtml(label)}</span>`);
+  return parts.join('<span class="plus">+</span>');
+}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const grid=document.getElementById("symgrid");
+SYMS.forEach(s=>{
+  const rs=routes[s].sort((a,b)=>a.cost-b.cost);
+  const btn=document.createElement("button");btn.type="button";btn.className="sym";btn.id="sym-"+SYMS.indexOf(s);
+  if(!rs.length){btn.innerHTML=`<span class="ch">${escapeHtml(s)}</span><span class="symcell"><span class="alt">割り当てなし</span></span>`;grid.appendChild(btn);return;}
+  const alt=rs.slice(1,2).map(r=>`<div class="route" style="margin-top:3px">${routeHTML(r)}</div>`).join("");
+  btn.innerHTML=`<span class="ch">${escapeHtml(s)}</span><span class="symcell"><span class="route">${routeHTML(rs[0])}</span>${alt?`<span class="alt">または</span>${alt}`:""}</span>`;
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".k.flash").forEach(e=>e.classList.remove("flash"));
+    const r=rs[0]; const node=document.getElementById(`k-${r.ln}-${r.key.r}-${r.key.i}`);
+    document.getElementById("layer-"+r.ln).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+    if(node){node.classList.add("flash");setTimeout(()=>node.classList.remove("flash"),3200);}
+  });
+  grid.appendChild(btn);
+});
+})();
+</script>
