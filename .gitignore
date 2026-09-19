@@ -6,3 +6,6 @@ dist-electron/
 *.log
 .DS_Store
 *.zip
+
+# tsc --build の中間ファイル
+*.tsbuildinfo
