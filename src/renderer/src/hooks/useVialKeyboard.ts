@@ -69,6 +69,14 @@ const INITIAL: VialKeyboardState = {
   polling: false
 }
 
+/** 押下と表示レイヤーだけを見た指紋。これが同じなら画面は変わらない。 */
+function signatureOf(layers: LayerSnapshot): string {
+  const held: string[] = []
+  for (const [id, key] of layers.held) held.push(`${id}:${key.holdActive ? 1 : 0}`)
+  held.sort()
+  return `${layers.displayLayer}|${layers.activeLayers.join(',')}|${held.join(' ')}`
+}
+
 function describeError(error: unknown): string {
   if (error instanceof Error) return error.message
   return String(error)
@@ -83,6 +91,8 @@ export function useVialKeyboard() {
   const unlockTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   /** ポーリング中に前の応答を待たずに次を投げないようにする。 */
   const inFlight = useRef(false)
+  /** 前回描いた状態の指紋。変わらなければ再描画しない(20ms 間隔なので効く)。 */
+  const lastSignature = useRef('')
 
   const stopTimers = useCallback(() => {
     if (pollTimer.current !== null) clearInterval(pollTimer.current)
@@ -98,6 +108,7 @@ export function useVialKeyboard() {
     if (!transport || !engine) return
 
     stopTimers()
+    lastSignature.current = ''
     setState((prev) => ({ ...prev, status: 'ready', polling: true, unlock: null }))
 
     pollTimer.current = setInterval(() => {
@@ -106,6 +117,9 @@ export function useVialKeyboard() {
       void getMatrixState(transport, snapshot.rows, snapshot.cols)
         .then((matrix) => {
           const layers = engine.update(matrix, performance.now())
+          const signature = signatureOf(layers)
+          if (signature === lastSignature.current) return
+          lastSignature.current = signature
           setState((prev) => (prev.status === 'ready' ? { ...prev, layers } : prev))
         })
         .catch((error: unknown) => {

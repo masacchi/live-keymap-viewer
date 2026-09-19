@@ -74,10 +74,12 @@ function createWindow(nextMode: WindowMode, bounds: Bounds): BrowserWindow {
     return { action: 'deny' }
   })
 
+  // モード切替中に古いウィンドウから飛んでくるイベントで取り違えないよう、
+  // このウィンドウ自身のモードを閉じ込めておく
   const saveBounds = (): void => {
     if (win.isDestroyed() || win.isMinimized()) return
     const current = win.getBounds()
-    saveSettings(mode === 'overlay' ? { overlayBounds: current } : { normalBounds: current })
+    saveSettings(overlay ? { overlayBounds: current } : { normalBounds: current })
   }
   win.on('resized', saveBounds)
   win.on('moved', saveBounds)
