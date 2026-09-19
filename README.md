@@ -19,8 +19,34 @@ Vial キーボード(まずは Cornix LP)の **押しているキー** と **い
 npm install
 npm run dev      # 開発
 npm run build    # 型チェック + ビルド
+npm start        # ビルド済みのものを起動
 npm test         # 単体テスト (vitest)
 ```
+
+> **Linux / WSL で動かす場合**
+>
+> 画面のラベルは日本語を含む(かな / 英数 / 消音 / 長押し→L2 …)。
+> CJK を持つフォントが 1 つも入っていないと、そこが豆腐(□)になる。
+>
+> ```bash
+> sudo apt install -y fonts-noto-cjk
+> ```
+>
+> WSL なら、Windows 側のフォントを使うほうが早い(sudo も不要):
+>
+> ```bash
+> mkdir -p ~/.config/fontconfig
+> cat > ~/.config/fontconfig/fonts.conf <<'XML'
+> <?xml version="1.0"?>
+> <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+> <fontconfig><dir>/mnt/c/Windows/Fonts</dir></fontconfig>
+> XML
+> fc-cache -f
+> ```
+>
+> Electron 自体も Chromium のランタイムを要求する:
+> `sudo apt install -y libnss3 libnspr4 libasound2t64`。
+> 本来の対象である Windows では、どちらも既定で揃っている。
 
 実機が無くても、画面右上の **「モックで試す」** で動きを確かめられる。
 モックは `reference/Cornix_設定_LT.vil` のキーマップと、Cornix LP V1.12 のファームから

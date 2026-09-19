@@ -35,12 +35,28 @@ body,
   margin: 0;
 }
 
+/*
+ * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJK を持つフォントを
+ * 必ず 1 つは拾えるようにしておく。Windows は Yu Gothic UI / Meiryo、macOS は
+ * Hiragino、Linux は Noto CJK 系。どれも無いと豆腐(□)になる。
+ */
+:root {
+  --sans:
+    'IBM Plex Sans JP', 'Yu Gothic UI', 'Meiryo', 'Hiragino Sans', 'Noto Sans CJK JP',
+    'Noto Sans JP', 'Source Han Sans JP', 'IPAexGothic', 'VL PGothic', 'TakaoPGothic',
+    system-ui, sans-serif;
+}
+
 body {
   background: var(--ground);
   color: var(--ink);
-  font-family:
-    'IBM Plex Sans JP', 'Hiragino Sans', 'Yu Gothic UI', Meiryo, system-ui, sans-serif;
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* SVG の text は body から継承するが、明示しておく */
+svg text {
+  font-family: var(--sans);
 }
 
 /* オーバーレイでは背景を透かす。ウィンドウ自体も transparent で作られている。 */
