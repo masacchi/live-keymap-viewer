@@ -11,6 +11,7 @@ import {
   getViaProtocol,
   isMatrixTestSupported,
   loadKeyboard,
+  nextUnlockAction,
   reloadKeymap,
   unlockPoll,
   unlockStart
@@ -187,6 +188,29 @@ describe('アンロック', () => {
     const progress = await unlockPoll(transport)
     expect(progress.counter).toBe(50)
     expect(progress.unlocked).toBe(false)
+  })
+
+  it('開始していなければ、やり直すべきだと判断する', async () => {
+    const transport = await openMock(false)
+    // unlock_start を呼ばずにポーリングすると in_progress は落ちたまま
+    const progress = await unlockPoll(transport)
+    expect(progress).toMatchObject({ unlocked: false, inProgress: false })
+    expect(nextUnlockAction(progress)).toBe('restart')
+  })
+
+  it('進行中はただ待つ、アンロックできたら終わり', async () => {
+    const transport = await openMock(false)
+    await unlockStart(transport)
+    transport.press(0, 0)
+    transport.press(0, 1)
+
+    let progress = await unlockPoll(transport)
+    expect(nextUnlockAction(progress)).toBe('wait')
+
+    for (let i = 0; i < 60 && !progress.unlocked; i++) {
+      progress = await unlockPoll(transport)
+    }
+    expect(nextUnlockAction(progress)).toBe('done')
   })
 
   it('アンロック進行中は VIA コマンドが通らない', async () => {

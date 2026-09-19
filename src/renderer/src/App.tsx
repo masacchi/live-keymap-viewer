@@ -104,12 +104,8 @@ export default function App(): JSX.Element {
           </div>
         )}
 
-        {keyboard.unlock && (keyboard.status === 'locked' || keyboard.status === 'unlocking') && (
-          <UnlockPanel
-            unlock={keyboard.unlock}
-            unlocking={keyboard.status === 'unlocking'}
-            onStart={keyboard.beginUnlock}
-          />
+        {keyboard.unlock && keyboard.status === 'unlocking' && (
+          <UnlockPanel unlock={keyboard.unlock} />
         )}
 
         {ready ? (

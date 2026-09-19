@@ -311,6 +311,22 @@ export async function unlockPoll(transport: Transport): Promise<UnlockProgress> 
   return { unlocked: data[0] === 1, inProgress: data[1] === 1, counter: data[2] }
 }
 
+/** アンロックのポーリング結果を見て、次に何をすべきか。 */
+export type UnlockAction = 'done' | 'wait' | 'restart'
+
+/**
+ * `unlock_poll` の結果から次の動きを決める。
+ *
+ * `in_progress` が落ちているのに未アンロック、という状態が起き得る
+ * (`vial_lock` が呼ばれた、キーボードが挿し直された、など)。そのときは
+ * `unlock_start` からやり直す。放っておくと永遠に進まないので。
+ */
+export function nextUnlockAction(progress: UnlockProgress): UnlockAction {
+  if (progress.unlocked) return 'done'
+  if (!progress.inProgress) return 'restart'
+  return 'wait'
+}
+
 export async function lock(transport: Transport): Promise<void> {
   await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_LOCK], LONG)
 }

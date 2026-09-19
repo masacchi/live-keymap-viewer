@@ -17,6 +17,7 @@ import {
   getMatrixState,
   getUnlockStatus,
   loadKeyboard,
+  nextUnlockAction,
   reloadKeymap,
   unlockPoll,
   unlockStart
@@ -34,7 +35,6 @@ export type ConnectionStatus =
   | 'idle'
   | 'connecting'
   | 'loading'
-  | 'locked'
   | 'unlocking'
   | 'ready'
   | 'error'
@@ -147,6 +147,60 @@ export function useVialKeyboard() {
     }, MATRIX_POLL_MS)
   }, [stopTimers])
 
+  /**
+   * アンロック手順を進める。
+   *
+   * ボタンを置いて待つ意味がないので、ロックを見つけたら自動で始める。
+   * 押下を読むにはアンロックするしかなく、選択肢が 1 つしかないため。
+   * オーバーレイはクリックが透過するのでボタンはそもそも押せない、という事情もある。
+   *
+   * アンロック進行中は VIA コマンドが通らない(docs/PROTOCOL.md §2)ので、
+   * matrix のポーリングは止めておく。
+   */
+  const startUnlock = useCallback(
+    (snapshot: KeyboardSnapshot) => {
+      const transport = transportRef.current
+      if (!transport) return
+
+      stopTimers()
+      setState((prev) => ({ ...prev, status: 'unlocking', polling: false }))
+
+      const fail = (error: unknown): void => {
+        stopTimers()
+        setState((prev) => ({ ...prev, status: 'error', error: describeError(error) }))
+      }
+
+      void unlockStart(transport)
+        .then(() => {
+          unlockTimer.current = setInterval(() => {
+            void unlockPoll(transport)
+              .then((progress) => {
+                setState((prev) => ({
+                  ...prev,
+                  unlock: prev.unlock
+                    ? { ...prev.unlock, counter: progress.counter }
+                    : {
+                        keys: [],
+                        counter: progress.counter,
+                        max: VIAL_UNLOCK_COUNTER_MAX
+                      }
+                }))
+                const action = nextUnlockAction(progress)
+                if (action === 'done') {
+                  stopTimers()
+                  startPolling(snapshot)
+                } else if (action === 'restart') {
+                  void unlockStart(transport).catch(fail)
+                }
+              })
+              .catch(fail)
+          }, UNLOCK_POLL_MS)
+        })
+        .catch(fail)
+    },
+    [startPolling, stopTimers]
+  )
+
   /** 読み込みが終わったあと、ロック状態に応じて次の状態へ進む。 */
   const afterLoad = useCallback(
     async (snapshot: KeyboardSnapshot) => {
@@ -189,15 +243,19 @@ export function useVialKeyboard() {
       const status = await getUnlockStatus(transport)
       if (status.unlocked) {
         startPolling(snapshot)
-      } else {
-        setState((prev) => ({
-          ...prev,
-          status: 'locked',
-          unlock: { keys: status.keys, counter: VIAL_UNLOCK_COUNTER_MAX, max: VIAL_UNLOCK_COUNTER_MAX }
-        }))
+        return
       }
+      setState((prev) => ({
+        ...prev,
+        unlock: {
+          keys: status.keys,
+          counter: VIAL_UNLOCK_COUNTER_MAX,
+          max: VIAL_UNLOCK_COUNTER_MAX
+        }
+      }))
+      startUnlock(snapshot)
     },
-    [startPolling]
+    [startPolling, startUnlock]
   )
 
   const attach = useCallback(
@@ -293,42 +351,6 @@ export function useVialKeyboard() {
     }
   }, [startPolling, stopTimers])
 
-  /** アンロック手順を始める。進行中は VIA コマンドが通らないので matrix は止めておく。 */
-  const beginUnlock = useCallback(() => {
-    const transport = transportRef.current
-    const snapshot = state.snapshot
-    if (!transport || !snapshot) return
-
-    stopTimers()
-    setState((prev) => ({ ...prev, status: 'unlocking', polling: false }))
-
-    void unlockStart(transport).then(() => {
-      unlockTimer.current = setInterval(() => {
-        void unlockPoll(transport)
-          .then((progress) => {
-            setState((prev) => ({
-              ...prev,
-              unlock: prev.unlock
-                ? { ...prev.unlock, counter: progress.counter }
-                : { keys: [], counter: progress.counter, max: VIAL_UNLOCK_COUNTER_MAX }
-            }))
-            if (progress.unlocked) {
-              stopTimers()
-              startPolling(snapshot)
-            }
-          })
-          .catch((error: unknown) => {
-            stopTimers()
-            setState((prev) => ({
-              ...prev,
-              status: 'error',
-              error: describeError(error)
-            }))
-          })
-      }, UNLOCK_POLL_MS)
-    })
-  }, [startPolling, state.snapshot, stopTimers])
-
   /** 起動時、前に許可したデバイスがあれば自動で繋ぐ。 */
   useEffect(() => {
     let cancelled = false
@@ -356,5 +378,5 @@ export function useVialKeyboard() {
 
   useEffect(() => stopTimers, [stopTimers])
 
-  return { ...state, connect, connectMock, disconnect, beginUnlock, reload }
+  return { ...state, connect, connectMock, disconnect, reload }
 }

@@ -22,7 +22,6 @@ const STATUS_TEXT: Record<ConnectionStatus, string> = {
   idle: '未接続',
   connecting: '接続中…',
   loading: '設定を読み込み中…',
-  locked: 'ロック中',
   unlocking: 'アンロック中…',
   ready: '接続済み',
   error: 'エラー'
@@ -32,7 +31,6 @@ const STATUS_COLOR: Record<ConnectionStatus, string> = {
   idle: 'bg-neutral-500',
   connecting: 'bg-amber-400',
   loading: 'bg-amber-400',
-  locked: 'bg-rose-400',
   unlocking: 'bg-amber-400',
   ready: 'bg-emerald-400',
   error: 'bg-rose-500'
