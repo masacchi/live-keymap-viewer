@@ -52,6 +52,33 @@ npm test         # 単体テスト (vitest)
 モックは `reference/Cornix_設定_LT.vil` のキーマップと、Cornix LP V1.12 のファームから
 取り出した本物の定義 JSON(XZ 圧縮のまま)を返す。
 
+## Windows 用の exe を作る
+
+```bash
+npm run package:win           # x64
+npm run package:win -- arm64  # arm64
+```
+
+`dist/win32-x64/LiveKeymapViewer.exe` ができる。フォルダごと Windows 側にコピーして実行する:
+
+```bash
+cp -r dist/win32-x64 /mnt/c/Users/$USER/Desktop/LiveKeymapViewer
+```
+
+インストーラーは作らない(HANDOFF §2 で配布は後回しと決めた)。ポータブルな一式がそのまま動く。
+
+この方式にした理由は [scripts/package-win.mjs](scripts/package-win.mjs) の先頭にも書いてあるが、
+要点は **wine を使わずに済む**こと。electron-builder や @electron/packager は exe に
+アイコンとバージョン情報を書き込むため rcedit(Windows バイナリ)を呼ぶので、
+Linux からだと wine が要る。このアプリは
+
+- ネイティブモジュールを使っていない(HID は renderer の WebHID)
+- main / preload は `electron` と node 標準しか import していない
+- xz の WASM は renderer のバンドルに埋め込まれている
+
+ので、公式の win32 zip に `out/` を置いて `electron.exe` をリネームするだけで動く。
+アイコンや署名が要るようになったら、そのとき electron-builder を入れる。
+
 ## 使い方
 
 1. **接続** — 「キーボードに接続」で Vial の raw HID インターフェース
@@ -114,12 +141,24 @@ python3 scripts/gen-mock.py       # .vil + 定義 JSON → モックのデータ
 - 他キーボード向けの汎用化、インストーラーの配布
 - BT で matrix が取れなかった場合の、キー入力からの推測表示
 
+## WSL では実機に繋がらない
+
+WSL2 には USB ホストコントローラが無く、`/sys/bus/usb/devices/` は空、`/dev/hidraw*` も作られない。
+Chromium の WebHID は Linux では `/dev/hidraw*` を見るので、WSL 上で動かすと
+**デバイス選択に何も出ない**。アプリ側の問題ではない。
+
+実機で試すときは `npm run package:win` で作った exe を **Windows 側で実行する**こと。
+
+> `usbipd-win` を使えば WSL に USB デバイスを引き込めるが、その間そのキーボードは
+> **Windows からは使えなくなる**。「Windows で実際に何が入力されているか」を見るのが
+> このアプリの目的なので、その用途では意味がない。
+
 ## 接続の確認状況
 
 | 接続 | 状態 |
 |---|---|
-| USB | **未確認**(実機での確認が必要) |
-| Bluetooth | **未確認**(実機での確認が必要) |
+| USB | **未確認**(Windows 側の exe で要確認。WSL からは上記の理由で繋がらない) |
+| Bluetooth | **未確認**(Windows 側の exe で要確認) |
 
 > この実装は Linux (WSL2) 上で、モックデバイスに対してのみ検証してある。
 > プロトコルのバイト並びは vial-qmk / vial-gui の一次ソースと突き合わせ済み

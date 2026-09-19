@@ -11,12 +11,14 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "package:win": "npm run build && node scripts/package-win.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
+    "@electron/get": "^5.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.10.0",
     "@types/react": "^19.3.0",
