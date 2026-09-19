@@ -6,7 +6,16 @@
  * JIS / NAMED オブジェクト(HANDOFF §7)。
  */
 import type { Keycode } from './decode'
-import { MOD_ALT, MOD_CTRL, MOD_GUI, MOD_RIGHT, MOD_SHIFT, formatKeycode, hasShift } from './decode'
+import {
+  MOD_ALT,
+  MOD_CTRL,
+  MOD_GUI,
+  MOD_RIGHT,
+  MOD_SHIFT,
+  decodeKeycode,
+  formatKeycode,
+  hasShift
+} from './decode'
 
 export type LabelMode = 'jis' | 'us'
 
@@ -158,6 +167,8 @@ export const NAMED: Readonly<Record<string, Named>> = {
 export interface LabelContext {
   /** 定義 JSON の customKeycodes(USER00… の表示名)。 */
   customKeycodes?: ReadonlyArray<{ name?: string; title?: string; shortName?: string }>
+  /** Tap Dance の設定。TD(n) をタップ側の文字で出すのに使う。 */
+  tapDance?: ReadonlyArray<{ onTap: number; onHold: number }>
 }
 
 function printableTable(mode: LabelMode): Readonly<Record<string, Printable>> {
@@ -252,8 +263,12 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
     case 'oneShotMod':
       return { main: modsLabel(kc.mods), sub: 'ワンショット', category: 'mod' }
 
-    case 'tapDance':
+    case 'tapDance': {
+      // TD はタップ側の文字を出す。長押し側の表現は呼び出し元が担当する
+      const entry = ctx.tapDance?.[kc.index]
+      if (entry) return labelForKeycode(decodeKeycode(entry.onTap), mode, ctx)
       return { main: `TD${kc.index}`, category: 'layer' }
+    }
 
     case 'macro':
       return { main: `M${kc.index}`, category: 'named' }

@@ -1,0 +1,237 @@
+import { describe, expect, it } from 'vitest'
+import { MockTransport } from '@/hid/mockTransport'
+import {
+  ProtocolError,
+  countEncoders,
+  decodeMatrixState,
+  getKeymap,
+  getMatrixState,
+  getTapDance,
+  getUnlockStatus,
+  getViaProtocol,
+  isMatrixTestSupported,
+  loadKeyboard,
+  unlockPoll,
+  unlockStart
+} from '@/hid/vial'
+import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
+import {
+  MOCK_COLS,
+  MOCK_KEYMAP,
+  MOCK_LAYERS,
+  MOCK_ROWS,
+  MOCK_TAP_DANCE
+} from '@/mock/cornix.generated'
+import { RequestQueue } from '@/hid/transport'
+
+async function openMock(unlocked = true): Promise<MockTransport> {
+  const transport = new MockTransport({ unlocked })
+  await transport.open()
+  return transport
+}
+
+describe('プロトコルの読み出し', () => {
+  it('VIA / Vial のバージョンを読む', async () => {
+    const transport = await openMock()
+    expect(await getViaProtocol(transport)).toBe(9)
+  })
+
+  it('定義を XZ 展開して JSON にする', async () => {
+    const transport = await openMock()
+    const snapshot = await loadKeyboard(transport)
+    expect(snapshot.definition.matrix).toEqual({ rows: 8, cols: 7 })
+    expect(snapshot.definition.customKeycodes?.[0]?.name).toBe('BT0')
+    expect(snapshot.definition.layouts.keymap.length).toBeGreaterThan(0)
+  })
+
+  it('キーマップを big-endian u16 として読み、.vil の内容と一致する', async () => {
+    const transport = await openMock()
+    const keymap = await getKeymap(transport, MOCK_LAYERS, MOCK_ROWS, MOCK_COLS)
+    expect(keymap).toHaveLength(MOCK_LAYERS)
+    for (let layer = 0; layer < MOCK_LAYERS; layer++) {
+      for (let row = 0; row < MOCK_ROWS; row++) {
+        for (let col = 0; col < MOCK_COLS; col++) {
+          const expected =
+            MOCK_KEYMAP[layer * MOCK_ROWS * MOCK_COLS + row * MOCK_COLS + col]
+          expect(keymap[layer][row][col]).toBe(expected)
+        }
+      }
+    }
+  })
+
+  it('読んだキーマップが Vial の文字列表記に戻る', async () => {
+    const transport = await openMock()
+    const keymap = await getKeymap(transport, MOCK_LAYERS, MOCK_ROWS, MOCK_COLS)
+    expect(formatKeycode(decodeKeycode(keymap[0][7][5]))).toBe('LT2(KC_SPACE)')
+    expect(formatKeycode(decodeKeycode(keymap[0][3][5]))).toBe('LT1(KC_BSPACE)')
+    expect(formatKeycode(decodeKeycode(keymap[0][7][0]))).toBe('TD(3)')
+    expect(formatKeycode(decodeKeycode(keymap[4][1][0]))).toBe('USER00')
+  })
+
+  it('Tap Dance を u16 LE ×5 として読む', async () => {
+    const transport = await openMock()
+    const entry = await getTapDance(transport, 3)
+    expect(entry.onTap).toBe(MOCK_TAP_DANCE[3][0])
+    expect(formatKeycode(decodeKeycode(entry.onHold))).toBe('MO(4)')
+    expect(entry.tappingTerm).toBe(200)
+  })
+
+  it('エンコーダーの数を定義から数える', async () => {
+    const transport = await openMock()
+    const snapshot = await loadKeyboard(transport)
+    expect(countEncoders(snapshot.definition)).toBe(2)
+    expect(snapshot.encoders).toHaveLength(MOCK_LAYERS)
+    expect(formatKeycode(decodeKeycode(snapshot.encoders[0][0][0]))).toBe('KC_VOLD')
+  })
+
+  it('loadKeyboard が一通り揃えて返す', async () => {
+    const transport = await openMock()
+    const snapshot = await loadKeyboard(transport)
+    expect(snapshot).toMatchObject({
+      viaProtocol: 9,
+      vialProtocol: 6,
+      layers: 10,
+      rows: 8,
+      cols: 7,
+      matrixTestSupported: true
+    })
+    expect(snapshot.tapDance).toHaveLength(MOCK_TAP_DANCE.length)
+    expect(snapshot.uid).toBe('16882930253541522617')
+  })
+})
+
+describe('matrix state', () => {
+  it('行ごとに MSB バイトが先に来る並びをほどく', () => {
+    // 3 行 × 10 列。row_size = 2、col 8 は先頭バイトの bit0 に入る
+    const data = new Uint8Array(32)
+    data[2] = 0b0000_0001 // row0 の上位バイト → col 8
+    data[3] = 0b0000_0010 // row0 の下位バイト → col 1
+    data[4] = 0b0000_0000
+    data[5] = 0b1000_0000 // row1 → col 7
+    const matrix = decodeMatrixState(data, 3, 10)
+    expect(matrix[0][8]).toBe(true)
+    expect(matrix[0][1]).toBe(true)
+    expect(matrix[0][0]).toBe(false)
+    expect(matrix[1][7]).toBe(true)
+    expect(matrix[2].every((v) => !v)).toBe(true)
+  })
+
+  it('押したキーが matrix に出る', async () => {
+    const transport = await openMock()
+    transport.press(7, 5)
+    transport.press(0, 1)
+    const matrix = await getMatrixState(transport, MOCK_ROWS, MOCK_COLS)
+    expect(matrix[7][5]).toBe(true)
+    expect(matrix[0][1]).toBe(true)
+    expect(matrix[0][0]).toBe(false)
+
+    transport.release(0, 1)
+    const after = await getMatrixState(transport, MOCK_ROWS, MOCK_COLS)
+    expect(after[0][1]).toBe(false)
+    expect(after[7][5]).toBe(true)
+  })
+
+  it('ロック中は matrix が取れない', async () => {
+    const transport = await openMock(false)
+    transport.press(7, 5)
+    const matrix = await getMatrixState(transport, MOCK_ROWS, MOCK_COLS)
+    expect(matrix.flat().some((v) => v)).toBe(false)
+  })
+
+  it('Cornix のサイズなら matrix tester の条件を満たす', () => {
+    expect(isMatrixTestSupported(6, 8, 7)).toBe(true)
+    // vial protocol 2 以下は不可
+    expect(isMatrixTestSupported(2, 8, 7)).toBe(false)
+    // (cols/8 + 1) * rows が 28 を超えると不可
+    expect(isMatrixTestSupported(6, 20, 20)).toBe(false)
+  })
+})
+
+describe('アンロック', () => {
+  it('ロック中は押すべきキーを教える', async () => {
+    const transport = await openMock(false)
+    const status = await getUnlockStatus(transport)
+    expect(status.unlocked).toBe(false)
+    expect(status.keys).toEqual([
+      { row: 0, col: 0 },
+      { row: 0, col: 1 }
+    ])
+  })
+
+  it('unlock キーを押し続けるとカウンタが減ってアンロックされる', async () => {
+    const transport = await openMock(false)
+    await unlockStart(transport)
+    transport.press(0, 0)
+    transport.press(0, 1)
+
+    let progress = await unlockPoll(transport)
+    expect(progress.inProgress).toBe(true)
+    expect(progress.counter).toBeLessThan(50)
+
+    for (let i = 0; i < 60 && !progress.unlocked; i++) {
+      progress = await unlockPoll(transport)
+    }
+    expect(progress.unlocked).toBe(true)
+    expect(progress.inProgress).toBe(false)
+  })
+
+  it('途中で離すとカウンタが戻る', async () => {
+    const transport = await openMock(false)
+    await unlockStart(transport)
+    transport.press(0, 0)
+    transport.press(0, 1)
+    await unlockPoll(transport)
+    await unlockPoll(transport)
+    transport.release(0, 1)
+    const progress = await unlockPoll(transport)
+    expect(progress.counter).toBe(50)
+    expect(progress.unlocked).toBe(false)
+  })
+
+  it('アンロック進行中は VIA コマンドが通らない', async () => {
+    const transport = await openMock(false)
+    await unlockStart(transport)
+    // ファームは書き換えずに返すので、レイヤー数の位置にはリクエストのバイトが残る
+    const data = await transport.send(new Uint8Array([0x11]))
+    expect(data[1]).toBe(0)
+  })
+})
+
+describe('RequestQueue', () => {
+  it('リクエストを 1 本に直列化する', async () => {
+    const queue = new RequestQueue()
+    const order: string[] = []
+    const slow = queue.run(async () => {
+      await new Promise((r) => setTimeout(r, 20))
+      order.push('slow')
+    })
+    const fast = queue.run(async () => {
+      order.push('fast')
+    })
+    await Promise.all([slow, fast])
+    expect(order).toEqual(['slow', 'fast'])
+  })
+
+  it('途中の失敗でキューが止まらない', async () => {
+    const queue = new RequestQueue()
+    const failed = queue.run(async () => {
+      throw new Error('boom')
+    })
+    await expect(failed).rejects.toThrow('boom')
+    await expect(queue.run(async () => 'ok')).resolves.toBe('ok')
+  })
+})
+
+describe('対応バージョンの確認', () => {
+  it('v6 以外はエラーにする', async () => {
+    const transport = await openMock()
+    // Vial プロトコルの応答だけを 5 に差し替える
+    const original = transport.send.bind(transport)
+    transport.send = async (request, options) => {
+      const data = await original(request, options)
+      if (request[0] === 0xfe && request[1] === 0x00) data[0] = 5
+      return data
+    }
+    await expect(loadKeyboard(transport)).rejects.toBeInstanceOf(ProtocolError)
+  })
+})
