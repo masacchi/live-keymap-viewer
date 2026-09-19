@@ -71,5 +71,12 @@ await writeFile(
 
 await rename(join(OUT_DIR, 'electron.exe'), join(OUT_DIR, EXE_NAME))
 
-console.log(`\n完成: ${join(OUT_DIR, EXE_NAME)}`)
-console.log('フォルダごと Windows 側にコピーして実行する。')
+// exe 単体では動かない。icudtl.dat や resources/app が隣に無いと
+// 「Invalid file descriptor to ICU data received」で落ちる。
+console.log(`\n完成: ${OUT_DIR}`)
+console.log('')
+console.log('  ⚠ exe 単体では動かない。フォルダごとコピーすること。')
+console.log('')
+console.log(`    cp -r ${OUT_DIR.replace(ROOT + '/', '')} /mnt/c/Users/$USER/Desktop/LiveKeymapViewer`)
+console.log('')
+console.log(`  コピーしたフォルダの中の ${EXE_NAME} を実行する。`)

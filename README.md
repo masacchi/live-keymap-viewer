@@ -59,13 +59,22 @@ npm run package:win           # x64
 npm run package:win -- arm64  # arm64
 ```
 
-`dist/win32-x64/LiveKeymapViewer.exe` ができる。フォルダごと Windows 側にコピーして実行する:
+`dist/win32-x64/` ができる。**フォルダごと** Windows 側にコピーして、その中の
+`LiveKeymapViewer.exe` を実行する:
 
 ```bash
 cp -r dist/win32-x64 /mnt/c/Users/$USER/Desktop/LiveKeymapViewer
 ```
 
+> **exe 単体をコピーしても動かない。** Electron の exe は、同じフォルダにある
+> `icudtl.dat` / `resources.pak` / `*.dll` / `locales/` / `resources/app/` を読む。
+> exe だけを持っていくと、起動時に
+> `ERROR:base\i18n\icu_util.cc:237 Invalid file descriptor to ICU data received.`
+> で落ちる。これは Electron に限らず Chromium 系アプリ共通の構成。
+
 インストーラーは作らない(HANDOFF §2 で配布は後回しと決めた)。ポータブルな一式がそのまま動く。
+単一 exe にまとめたい場合は electron-builder の `portable` ターゲットがあるが、
+NSIS を使うので Linux からだと wine が要る。
 
 この方式にした理由は [scripts/package-win.mjs](scripts/package-win.mjs) の先頭にも書いてあるが、
 要点は **wine を使わずに済む**こと。electron-builder や @electron/packager は exe に
