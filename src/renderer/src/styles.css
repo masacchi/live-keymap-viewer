@@ -181,9 +181,17 @@ body.overlay .app-shell {
   dominant-baseline: middle;
 }
 
+/* ノブは図の上下どちらかに横一列でまとめる(KLE 上の座標では描かない) */
 .encoder {
   fill: none;
-  stroke: var(--line);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.encoder-label {
+  fill: var(--ink);
+  font-size: 13px;
+  text-anchor: start;
+  dominant-baseline: middle;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
+import { OverlayControls } from './components/OverlayControls'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
@@ -13,6 +14,7 @@ export default function App(): JSX.Element {
   const keyboard = useVialKeyboard()
   const [labelMode, setLabelMode] = useState<LabelMode>('jis')
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
+  const [overlayOpacity, setOverlayOpacity] = useState(0.82)
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
 
   // 設定を読み、オーバーレイなら body にクラスを付けて背景を透かす
@@ -20,6 +22,7 @@ export default function App(): JSX.Element {
     void window.api?.getSettings().then((settings) => {
       setLabelMode(settings.labelMode)
       setWindowMode(settings.mode)
+      setOverlayOpacity(settings.overlayOpacity)
     })
   }, [])
 
@@ -44,6 +47,11 @@ export default function App(): JSX.Element {
     void window.api?.toggleMode()
   }, [])
 
+  const onOverlayOpacity = useCallback((value: number) => {
+    setOverlayOpacity(value)
+    void window.api?.setOverlayOpacity(value)
+  }, [])
+
   const onChooseDevice = useCallback((deviceId: string | null) => {
     window.api?.chooseDevice(deviceId)
     setCandidates(null)
@@ -52,25 +60,44 @@ export default function App(): JSX.Element {
   const { geometry, snapshot, engine, layers } = keyboard
   const ready = geometry !== null && snapshot !== null && engine !== null && layers !== null
 
-  return (
-    <div className="app-shell flex h-full flex-col overflow-hidden">
-      <Toolbar
-        status={keyboard.status}
-        deviceLabel={keyboard.deviceLabel}
-        displayLayer={layers?.displayLayer ?? 0}
-        activeLayers={layers?.activeLayers ?? [0]}
-        labelMode={labelMode}
-        windowMode={windowMode}
-        reloading={keyboard.reloading}
-        onReload={() => void keyboard.reload()}
-        onConnect={() => void keyboard.connect()}
-        onConnectMock={() => void keyboard.connectMock()}
-        onDisconnect={() => void keyboard.disconnect()}
-        onLabelMode={onLabelMode}
-        onToggleWindowMode={onToggleWindowMode}
-      />
+  const overlay = windowMode === 'overlay'
 
-      <main className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+  return (
+    <div className="app-shell relative flex h-full flex-col overflow-hidden">
+      {overlay && (
+        <OverlayControls
+          displayLayer={layers?.displayLayer ?? 0}
+          opacity={overlayOpacity}
+          onOpacity={onOverlayOpacity}
+          onExit={onToggleWindowMode}
+        />
+      )}
+
+      {!overlay && (
+        <Toolbar
+          status={keyboard.status}
+          deviceLabel={keyboard.deviceLabel}
+          displayLayer={layers?.displayLayer ?? 0}
+          activeLayers={layers?.activeLayers ?? [0]}
+          labelMode={labelMode}
+          windowMode={windowMode}
+          reloading={keyboard.reloading}
+          onReload={() => void keyboard.reload()}
+          onConnect={() => void keyboard.connect()}
+          onConnectMock={() => void keyboard.connectMock()}
+          onDisconnect={() => void keyboard.disconnect()}
+          onLabelMode={onLabelMode}
+          onToggleWindowMode={onToggleWindowMode}
+        />
+      )}
+
+      <main
+        className={
+          overlay
+            ? 'flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
+            : 'flex min-h-0 flex-1 flex-col gap-3 p-4'
+        }
+      >
         {keyboard.error && (
           <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
             {keyboard.error}
@@ -87,17 +114,19 @@ export default function App(): JSX.Element {
 
         {ready ? (
           /*
-           * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取る。
-           * 視線がキーの上にあっても、レイヤーが変わったことに気づけるように。
+           * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、
+           * 背景にも薄く同じ色を敷く。視線がキーの上にあっても気づけるように。
            */
           <div
-            className="min-h-0 flex-1 rounded-lg border-2 p-1 transition-colors"
-            style={{
-              borderColor:
-                layers.displayLayer === 0
-                  ? 'transparent'
-                  : `var(--layer-${layers.displayLayer % 10})`
-            }}
+            className="min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
+            style={
+              layers.displayLayer === 0
+                ? { borderColor: 'transparent', backgroundColor: 'transparent' }
+                : {
+                    borderColor: `var(--layer-${layers.displayLayer % 10})`,
+                    backgroundColor: `color-mix(in srgb, var(--layer-${layers.displayLayer % 10}) 14%, transparent)`
+                  }
+            }
           >
             <KeyboardView
               geometry={geometry}

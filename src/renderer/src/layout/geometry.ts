@@ -36,11 +36,26 @@ export interface EncoderKey {
   rotationY: number
 }
 
+export interface Bounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+}
+
 export interface KeyboardGeometry {
   keys: PhysicalKey[]
   encoders: EncoderKey[]
-  /** 回転後の外接矩形(1u 単位)。 */
-  bounds: { minX: number; minY: number; maxX: number; maxY: number }
+  /** キーとエンコーダーを含めた、回転後の外接矩形(1u 単位)。 */
+  bounds: Bounds
+  /**
+   * キーだけの外接矩形。
+   *
+   * 定義によっては、エンコーダーが実際の物理位置ではなく図の端に並べて
+   * 置かれていることがある(Cornix LP は右端にまとめて置いてある)。
+   * それを含めて枠を取ると横に間延びするので、描画はこちらを使う。
+   */
+  keyBounds: Bounds
 }
 
 /** `row,col` を 1 本の文字列キーにする。Map のキーに使う。 */
@@ -150,26 +165,32 @@ export function buildGeometry(
     keys.push({ row, col, layoutIndex, layoutOption, ...geometryOf(key) })
   }
 
+  return {
+    keys,
+    encoders,
+    bounds: boundsOf([...keys, ...encoders]),
+    keyBounds: boundsOf(keys)
+  }
+}
+
+/** 回転後の角をすべて含む外接矩形。空なら原点の一点。 */
+function boundsOf(
+  items: ReadonlyArray<Parameters<typeof keyCorners>[0]>
+): Bounds {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
-  for (const key of [...keys, ...encoders]) {
-    for (const [px, py] of keyCorners(key)) {
+  for (const item of items) {
+    for (const [px, py] of keyCorners(item)) {
       minX = Math.min(minX, px)
       minY = Math.min(minY, py)
       maxX = Math.max(maxX, px)
       maxY = Math.max(maxY, py)
     }
   }
-  if (!Number.isFinite(minX)) {
-    minX = 0
-    minY = 0
-    maxX = 0
-    maxY = 0
-  }
-
-  return { keys, encoders, bounds: { minX, minY, maxX, maxY } }
+  if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
+  return { minX, minY, maxX, maxY }
 }
 
 /**

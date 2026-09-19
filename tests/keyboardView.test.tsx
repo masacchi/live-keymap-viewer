@@ -167,6 +167,59 @@ describe('KeyboardView', () => {
     expect(html).toContain('↻ ↓ ホイール')
   })
 
+  it('ノブは KLE 上の位置ではなく、キーの下に横一列でまとめる', () => {
+    // Cornix の定義はエンコーダーを図の右端(x=15.25〜)に並べて置いてある。
+    // そのまま描くと横に間延びするので、キーだけの幅に合わせる。
+    expect(geometry.bounds.maxX).toBeCloseTo(19.75)
+    expect(geometry.keyBounds.maxX).toBeCloseTo(14.5)
+
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const viewBox = /viewBox="([^"]+)"/.exec(render(engine, layers))![1].split(' ').map(Number)
+    // 幅はキーの範囲(+余白)で決まる。エンコーダーの置き場所に引きずられない
+    expect(viewBox[2]).toBeLessThan(geometry.bounds.maxX * 58)
+    expect(viewBox[2]).toBeCloseTo((geometry.keyBounds.maxX + 0.4) * 58, 0)
+  })
+
+  it('ノブの一列はキーの中央に揃え、下に置く', () => {
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = render(engine, layers)
+
+    const circles = [...html.matchAll(/<circle class="encoder" cx="([\d.]+)" cy="([\d.]+)"/g)]
+    expect(circles).toHaveLength(2)
+
+    // 2 つとも同じ高さ = 横一列
+    expect(circles[0][2]).toBe(circles[1][2])
+    // キーの下端より下にある
+    expect(Number(circles[0][2])).toBeGreaterThan(geometry.keyBounds.maxY * 58)
+
+    // 左端の丸と右端の文字の中点が、キー範囲の中央に来る
+    const labelXs = [...html.matchAll(/<text class="encoder-label" x="([\d.]+)"/g)].map((m) =>
+      Number(m[1])
+    )
+    const keyCenter = ((geometry.keyBounds.minX + geometry.keyBounds.maxX) / 2) * 58
+    expect(Number(circles[0][1])).toBeLessThan(keyCenter)
+    expect(Math.max(...labelXs)).toBeGreaterThan(keyCenter)
+  })
+
+  it('ノブを上に置くこともできる', () => {
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = renderToStaticMarkup(
+      <KeyboardView
+        geometry={geometry}
+        snapshot={snapshot}
+        engine={engine}
+        layers={layers}
+        labelMode="jis"
+        encoderPlacement="top"
+      />
+    )
+    const cy = Number(/<circle class="encoder" cx="[-\d.]+" cy="([-\d.]+)"/.exec(html)![1])
+    expect(cy).toBeLessThan(geometry.keyBounds.minY * 58)
+  })
+
   it('アンロック対象のキーを目立たせる', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)

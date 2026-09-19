@@ -44,6 +44,19 @@ export interface RendererApi {
   toggleMode(): Promise<WindowMode>
   setOverlayOpacity(value: number): Promise<number>
 
+  /**
+   * オーバーレイのクリック透過を切り替える。
+   *
+   * オーバーレイは既定でクリックを透過させるので、そのままではボタンが押せない。
+   * renderer 側でポインタが操作パネルの上に来たときだけ透過を切る
+   * (`forward: true` にしてあるので、透過中でも mousemove だけは届く)。
+   */
+  setIgnoreMouseEvents(ignore: boolean): void
+  /** ウィンドウを相対移動する。オーバーレイのつまみから使う。 */
+  moveBy(dx: number, dy: number): void
+  /** ウィンドウの大きさを相対変更する。 */
+  resizeBy(dw: number, dh: number): void
+
   /** 候補が飛んできたときのハンドラを登録する。戻り値を呼ぶと解除。 */
   onChooseDevice(handler: (devices: HidCandidate[]) => void): () => void
   chooseDevice(deviceId: string | null): void

@@ -13,6 +13,12 @@ const api: RendererApi = {
   setOverlayOpacity: (value: number) =>
     ipcRenderer.invoke('window:set-overlay-opacity', value),
 
+  setIgnoreMouseEvents: (ignore: boolean) =>
+    ipcRenderer.send('window:set-ignore-mouse', ignore),
+  // ドラッグ中に毎フレーム飛ぶので invoke ではなく send
+  moveBy: (dx: number, dy: number) => ipcRenderer.send('window:move-by', dx, dy),
+  resizeBy: (dw: number, dh: number) => ipcRenderer.send('window:resize-by', dw, dh),
+
   onChooseDevice: (handler: (devices: HidCandidate[]) => void) => {
     const listener = (_event: unknown, devices: HidCandidate[]): void => handler(devices)
     ipcRenderer.on('hid:choose-device', listener)

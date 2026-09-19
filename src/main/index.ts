@@ -29,6 +29,24 @@ let mode: WindowMode = 'normal'
 /** select-hid-device のコールバックを、renderer が選ぶまで預かる。 */
 let pendingDeviceSelection: ((deviceId: string | null) => void) | null = null
 
+const MIN_WIDTH = 420
+const MIN_HEIGHT = 240
+
+/**
+ * つまみでの移動・リサイズは毎フレーム飛んでくるので、保存はまとめて行う。
+ * setPosition / setSize は 'moved' / 'resized' を必ずしも出さないため、自前で呼ぶ。
+ */
+let boundsSaveTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleBoundsSave(): void {
+  if (boundsSaveTimer !== null) clearTimeout(boundsSaveTimer)
+  boundsSaveTimer = setTimeout(() => {
+    boundsSaveTimer = null
+    if (!window || window.isDestroyed() || window.isMinimized()) return
+    const current = window.getBounds()
+    saveSettings(mode === 'overlay' ? { overlayBounds: current } : { normalBounds: current })
+  }, 400)
+}
+
 function isVialDevice(device: Electron.HIDDevice): boolean {
   return device.collections.some(
     (collection) =>
@@ -47,7 +65,10 @@ function createWindow(nextMode: WindowMode, bounds: Bounds): BrowserWindow {
     // 透明ウィンドウは作った後から切り替えられないので、モードごとに作り直す
     transparent: overlay,
     frame: !overlay,
-    resizable: !overlay,
+    // オーバーレイは枠が無いので OS のリサイズ境界は出ない。
+    // ただし resizable:false だと setSize まで効かなくなるので true にしておき、
+    // 大きさは画面内のつまみから変える。
+    resizable: true,
     skipTaskbar: overlay,
     alwaysOnTop: overlay,
     backgroundColor: overlay ? '#00000000' : '#11151a',
@@ -200,6 +221,28 @@ function setupIpc(): void {
   ipcMain.on('hid:device-chosen', (_event, deviceId: string | null) => {
     pendingDeviceSelection?.(deviceId)
     pendingDeviceSelection = null
+  })
+
+  ipcMain.on('window:set-ignore-mouse', (_event, ignore: boolean) => {
+    if (mode !== 'overlay' || !window || window.isDestroyed()) return
+    window.setIgnoreMouseEvents(ignore, { forward: true })
+  })
+
+  ipcMain.on('window:move-by', (_event, dx: number, dy: number) => {
+    if (!window || window.isDestroyed()) return
+    const [x, y] = window.getPosition()
+    window.setPosition(Math.round(x + dx), Math.round(y + dy))
+    scheduleBoundsSave()
+  })
+
+  ipcMain.on('window:resize-by', (_event, dw: number, dh: number) => {
+    if (!window || window.isDestroyed()) return
+    const [width, height] = window.getSize()
+    window.setSize(
+      Math.max(MIN_WIDTH, Math.round(width + dw)),
+      Math.max(MIN_HEIGHT, Math.round(height + dh))
+    )
+    scheduleBoundsSave()
   })
 }
 
