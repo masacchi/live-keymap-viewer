@@ -40,6 +40,8 @@ export interface HeldKey {
   interrupted: boolean
   /** このキーの tapping term。 */
   tappingTerm: number
+  /** いま実際にレイヤーを出しているか(MO は押した瞬間から、LT / TD は長押し確定後)。 */
+  holdActive: boolean
 }
 
 export interface LayerSnapshot {
@@ -140,7 +142,8 @@ export class LayerEngine {
       holdLayer,
       heldSince: null,
       interrupted: false,
-      tappingTerm: this.tappingTermOf(keycode)
+      tappingTerm: this.tappingTermOf(keycode),
+      holdActive: false
     })
 
     this.applyPressEffect(keycode)
@@ -223,12 +226,16 @@ export class LayerEngine {
   snapshot(): LayerSnapshot {
     const active = this.computeActiveLayers()
     const activeLayers = [...active].sort((a, b) => a - b)
+    const held = new Map<string, HeldKey>()
+    for (const [id, key] of this.held) {
+      held.set(id, { ...key, holdActive: this.isHoldActive(key) })
+    }
     return {
       activeLayers,
       displayLayer: activeLayers[activeLayers.length - 1] ?? 0,
       defaultLayer: this.defaultLayer,
       toggledLayers: [...this.toggled].sort((a, b) => a - b),
-      held: new Map(this.held)
+      held
     }
   }
 

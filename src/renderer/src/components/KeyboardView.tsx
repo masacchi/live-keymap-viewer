@@ -98,7 +98,7 @@ export function KeyboardView({
             keycode={resolved.effective}
             holdLayer={holdLayer}
             pressed={held !== undefined}
-            holding={held !== undefined && held.holdLayer !== null && isHoldActive(held)}
+            holding={held?.holdActive === true}
             transparent={resolved.transparent}
             unlockHint={unlockSet.has(id)}
             unit={unit}
@@ -123,8 +123,4 @@ function holdLayerOf(
     if (hold.kind === 'layer' && hold.op === 'MO') return hold.layer
   }
   return null
-}
-
-function isHoldActive(held: { keycode: { kind: string }; heldSince: number | null }): boolean {
-  return held.keycode.kind === 'layer' || held.heldSince !== null
 }
