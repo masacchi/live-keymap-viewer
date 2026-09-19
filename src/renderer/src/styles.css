@@ -1,0 +1,144 @@
+@import 'tailwindcss';
+
+/*
+ * 色づかいは reference/keymap-preview.html を踏襲している。
+ * レイヤー色 L0〜L4 は同じ値、それ以上は足したもの。
+ */
+:root {
+  --ground: #121518;
+  --surface: #1d2226;
+  --surface-2: #181c1f;
+  --ink: #e4e7e8;
+  --muted: #98a0a5;
+  --faint: #5d656a;
+  --line: #3a4247;
+  --line-soft: #2b3236;
+  --sym-fill: #15343a;
+  --sym-ink: #7fd3db;
+  --press: #f2c230;
+  --layer-0: #b9c0c4;
+  --layer-1: #e6a13f;
+  --layer-2: #3db5c1;
+  --layer-3: #a58beb;
+  --layer-4: #eb7a92;
+  --layer-5: #7fd38f;
+  --layer-6: #d9a0e0;
+  --layer-7: #8fa8ef;
+  --layer-8: #e3c56a;
+  --layer-9: #9ad4c8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family:
+    'IBM Plex Sans JP', 'Hiragino Sans', 'Yu Gothic UI', Meiryo, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* オーバーレイでは背景を透かす。ウィンドウ自体も transparent で作られている。 */
+body.overlay {
+  background: transparent;
+}
+
+body.overlay .app-shell {
+  background: color-mix(in srgb, var(--ground) 72%, transparent);
+  border-radius: 14px;
+}
+
+/* --- キーキャップ --- */
+.cap {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.key-sym .cap {
+  fill: var(--sym-fill);
+  stroke: color-mix(in srgb, var(--sym-ink) 45%, transparent);
+}
+
+.key-none .cap {
+  fill: none;
+  stroke: var(--line-soft);
+  stroke-dasharray: 3 3;
+}
+
+.key-trns .cap {
+  fill: var(--surface-2);
+}
+
+.key-trns .main,
+.key-trns .shift,
+.key-trns .sub {
+  opacity: 0.45;
+}
+
+.key-pressed .cap {
+  fill: var(--press);
+  stroke: var(--press);
+}
+
+.key-pressed .main,
+.key-pressed .shift,
+.key-pressed .sub {
+  fill: #101315;
+  opacity: 1;
+}
+
+.key-unlock .cap {
+  fill: color-mix(in srgb, var(--layer-4) 35%, var(--surface));
+  stroke: var(--layer-4);
+  stroke-width: 2;
+}
+
+.main {
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-weight: 600;
+}
+
+.key-sym .main {
+  fill: var(--sym-ink);
+}
+
+.shift {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: start;
+  dominant-baseline: hanging;
+}
+
+.sub {
+  fill: var(--muted);
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.band {
+  opacity: 0.9;
+}
+
+.band-text {
+  fill: #101315;
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.encoder {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
