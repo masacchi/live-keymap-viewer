@@ -61,6 +61,8 @@ export default function App(): JSX.Element {
         activeLayers={layers?.activeLayers ?? [0]}
         labelMode={labelMode}
         windowMode={windowMode}
+        reloading={keyboard.reloading}
+        onReload={() => void keyboard.reload()}
         onConnect={() => void keyboard.connect()}
         onConnectMock={() => void keyboard.connectMock()}
         onDisconnect={() => void keyboard.disconnect()}
@@ -84,7 +86,19 @@ export default function App(): JSX.Element {
         )}
 
         {ready ? (
-          <div className="min-h-0 flex-1">
+          /*
+           * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取る。
+           * 視線がキーの上にあっても、レイヤーが変わったことに気づけるように。
+           */
+          <div
+            className="min-h-0 flex-1 rounded-lg border-2 p-1 transition-colors"
+            style={{
+              borderColor:
+                layers.displayLayer === 0
+                  ? 'transparent'
+                  : `var(--layer-${layers.displayLayer % 10})`
+            }}
+          >
             <KeyboardView
               geometry={geometry}
               snapshot={snapshot}

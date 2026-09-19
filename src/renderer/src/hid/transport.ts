@@ -12,6 +12,15 @@ export interface SendOptions {
   timeoutMs?: number
   /** タイムアウトしたときに投げ直す回数。 */
   retries?: number
+  /**
+   * 受け取ったパケットが、このリクエストへの応答かどうかを判定する。
+   *
+   * raw HID の入力レポートは、その HID を開いている**すべて**のプロセスに配られる。
+   * つまり Vial や Pipette を同時に開いていると、相手宛ての応答もこちらに届く。
+   * ここで弾かないと、matrix の値やキーマップが他アプリの応答で汚れる。
+   * false を返したパケットは捨てて、タイムアウトまで待ち続ける。
+   */
+  validate?: (data: Uint8Array) => boolean
 }
 
 export interface Transport {
@@ -51,12 +60,18 @@ export class RequestQueue {
 /** WebHID 上の実デバイス。 */
 export class WebHidTransport implements Transport {
   private readonly queue = new RequestQueue()
-  private pending: ((data: Uint8Array) => void) | null = null
+  /** 受け取ったパケットを渡す。引き取ったら true、自分宛てでなければ false。 */
+  private pending: ((data: Uint8Array) => boolean) | null = null
   private readonly onInputReport = (event: HIDInputReportEvent): void => {
-    const resolve = this.pending
-    if (!resolve) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
-    this.pending = null
-    resolve(new Uint8Array(event.data.buffer.slice(event.data.byteOffset, event.data.byteOffset + event.data.byteLength)))
+    const deliver = this.pending
+    if (!deliver) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
+    const data = new Uint8Array(
+      event.data.buffer.slice(
+        event.data.byteOffset,
+        event.data.byteOffset + event.data.byteLength
+      )
+    )
+    if (deliver(data)) this.pending = null
   }
 
   constructor(private readonly device: HIDDevice) {}
@@ -80,13 +95,13 @@ export class WebHidTransport implements Transport {
   }
 
   send(request: Uint8Array, options: SendOptions = {}): Promise<Uint8Array> {
-    const { timeoutMs = 500, retries = 1 } = options
+    const { timeoutMs = 500, retries = 1, validate } = options
     const payload = pad(request)
     return this.queue.run(async () => {
       let lastError: unknown
       for (let attempt = 0; attempt < Math.max(1, retries); attempt++) {
         try {
-          return await this.exchange(payload, timeoutMs)
+          return await this.exchange(payload, timeoutMs, validate)
         } catch (error) {
           lastError = error
         }
@@ -97,12 +112,19 @@ export class WebHidTransport implements Transport {
     })
   }
 
-  private exchange(payload: Uint8Array, timeoutMs: number): Promise<Uint8Array> {
+  private exchange(
+    payload: Uint8Array,
+    timeoutMs: number,
+    validate?: (data: Uint8Array) => boolean
+  ): Promise<Uint8Array> {
     return new Promise<Uint8Array>((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | undefined
       this.pending = (data) => {
+        // 他アプリ宛ての応答は捨てて、こちらの応答が来るまで待つ
+        if (validate && !validate(data)) return false
         if (timer !== undefined) clearTimeout(timer)
         resolve(data)
+        return true
       }
       timer = setTimeout(() => {
         this.pending = null

@@ -105,7 +105,7 @@ describe('KeyboardView', () => {
     expect(render(engine, layers)).toContain('key-pressed')
   })
 
-  it('長押し中のレイヤーキーは「押下中」になり、表示がそのレイヤーに変わる', () => {
+  it('長押し中のレイヤーキーは出しているレイヤーを名乗り、表示がそのレイヤーに変わる', () => {
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[7][5] = true // LT2(KC_SPACE)
@@ -114,12 +114,57 @@ describe('KeyboardView', () => {
     expect(layers.displayLayer).toBe(2)
 
     const html = render(engine, layers)
-    expect(html).toContain('押下中')
-    expect(html).toContain('Space 長押し')
+    expect(html).toContain('Space 長押し中')
+    expect(html).toContain('>L2<')
     // L2 の (0,1) は LSFT(KC_1) → JIS では "!"
     expect(html).toContain('>!<')
     // L2 で透過のキーは薄く出す
     expect(html).toContain('key-trns')
+  })
+
+  it('レイヤーを出しているキーは、そのレイヤーの色で塗る', () => {
+    const engine = newEngine()
+    const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    matrix[7][5] = true // LT2(KC_SPACE)
+    engine.update(matrix, 0)
+    const layers = engine.update(matrix, 300)
+
+    const html = render(engine, layers)
+    // 押下の黄色ではなく、レイヤー色で塗るためのクラスと変数が付く
+    expect(html).toContain('key-holding')
+    expect(html).toContain('--hold:var(--layer-2)')
+    // ただの押下(レイヤーを出さないキー)には付かない
+    const plain = newEngine()
+    const plainMatrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    plainMatrix[0][1] = true // Q
+    const plainHtml = render(plain, plain.update(plainMatrix, 0))
+    expect(plainHtml).toContain('key-pressed')
+    expect(plainHtml).not.toContain('key-holding')
+  })
+
+  it('Shift 側の文字を主文字の上に中央揃えで出す', () => {
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = render(engine, layers)
+    // KC_MINUS: 主文字 "-" / Shift 側 "="。どちらも同じ x(中央)に乗る
+    const main = /<text class="main" x="([\d.]+)" y="([\d.]+)" font-size="\d+">-<\/text>/.exec(
+      html
+    )
+    const shift = /<text class="shift" x="([\d.]+)" y="([\d.]+)">=<\/text>/.exec(html)
+    expect(main).not.toBeNull()
+    expect(shift).not.toBeNull()
+    expect(shift![1]).toBe(main![1]) // x が一致 = 中央揃え
+    expect(Number(shift![2])).toBeLessThan(Number(main![2])) // Shift 側が上
+  })
+
+  it('ノブの割り当てを、そのレイヤーの内容で出す', () => {
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = render(engine, layers)
+    expect(html).toContain('↺ 音量−')
+    expect(html).toContain('↻ 音量+')
+    // ホイールは "↑" だけだと曖昧なので補足が付く
+    expect(html).toContain('↻ ↓ ホイール')
   })
 
   it('アンロック対象のキーを目立たせる', () => {

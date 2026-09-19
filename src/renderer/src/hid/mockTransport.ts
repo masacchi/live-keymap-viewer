@@ -78,6 +78,9 @@ export class MockTransport implements Transport {
   /** 送られてきたリクエストの記録。テストで順序を確かめるのに使う。 */
   readonly requests: Uint8Array[] = []
 
+  /** 書き換えられるようにコピーを持つ。 */
+  private readonly keymap = [...MOCK_KEYMAP]
+
   constructor(options: MockOptions = {}) {
     this.unlocked = options.unlocked ?? false
     this.unlockKeys = options.unlockKeys ?? [
@@ -115,20 +118,38 @@ export class MockTransport implements Transport {
     this.pressed.clear()
   }
 
+  /**
+   * キーマップを書き換える。Vial 側で編集された状況を作るのに使う。
+   * 実機の set_keycode は実装していない(このアプリは読むだけなので)。
+   */
+  setKeycode(layer: number, row: number, col: number, keycode: number): void {
+    this.keymap[layer * MOCK_ROWS * MOCK_COLS + row * MOCK_COLS + col] = keycode
+  }
+
   isPressed(row: number, col: number): boolean {
     return this.pressed.has(keyId(row, col))
   }
 
   // --- Transport ---
 
-  async send(request: Uint8Array, _options?: SendOptions): Promise<Uint8Array> {
+  async send(request: Uint8Array, options?: SendOptions): Promise<Uint8Array> {
     if (!this.isOpen) throw new TransportError('デバイスが開かれていない')
     const msg = pad(request)
     this.requests.push(msg)
     if (this.latencyMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, this.latencyMs))
     }
-    return this.handle(msg)
+    const response = this.handle(msg)
+    // 実機と同じ応答を返しているなら、呼び出し側の照合は必ず通るはず。
+    // 通らないなら照合の側が間違っているので、テストで落とす。
+    if (options?.validate && !options.validate(response)) {
+      throw new TransportError(
+        `応答の照合に失敗した: request=${[...msg.subarray(0, 4)]} response=${[
+          ...response.subarray(0, 4)
+        ]}`
+      )
+    }
+    return response
   }
 
   private handle(msg: Uint8Array): Uint8Array {
@@ -169,7 +190,7 @@ export class MockTransport implements Transport {
         for (let i = 0; i < size; i++) {
           const at = offset + i
           const keyIndex = at >> 1
-          const keycode = MOCK_KEYMAP[keyIndex] ?? 0
+          const keycode = this.keymap[keyIndex] ?? 0
           out[4 + i] = at % 2 === 0 ? (keycode >> 8) & 0xff : keycode & 0xff
         }
         return out

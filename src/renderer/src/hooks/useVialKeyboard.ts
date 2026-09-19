@@ -17,6 +17,7 @@ import {
   getMatrixState,
   getUnlockStatus,
   loadKeyboard,
+  reloadKeymap,
   unlockPoll,
   unlockStart
 } from '../hid/vial'
@@ -55,6 +56,8 @@ export interface VialKeyboardState {
   unlock: UnlockState | null
   /** matrix ポーリングが実際に回っているか。 */
   polling: boolean
+  /** キーマップを読み直している最中か。 */
+  reloading: boolean
 }
 
 const INITIAL: VialKeyboardState = {
@@ -66,7 +69,8 @@ const INITIAL: VialKeyboardState = {
   engine: null,
   layers: null,
   unlock: null,
-  polling: false
+  polling: false,
+  reloading: false
 }
 
 /** 押下と表示レイヤーだけを見た指紋。これが同じなら画面は変わらない。 */
@@ -87,12 +91,18 @@ export function useVialKeyboard() {
 
   const transportRef = useRef<Transport | null>(null)
   const engineRef = useRef<LayerEngine | null>(null)
+  /** 再読み込みの判断に使う。state を依存に入れずに済ませるため。 */
+  const snapshotRef = useRef<KeyboardSnapshot | null>(null)
+  const statusRef = useRef<ConnectionStatus>('idle')
+  const reloadingRef = useRef(false)
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const unlockTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   /** ポーリング中に前の応答を待たずに次を投げないようにする。 */
   const inFlight = useRef(false)
   /** 前回描いた状態の指紋。変わらなければ再描画しない(20ms 間隔なので効く)。 */
   const lastSignature = useRef('')
+
+  statusRef.current = state.status
 
   const stopTimers = useCallback(() => {
     if (pollTimer.current !== null) clearInterval(pollTimer.current)
@@ -156,6 +166,7 @@ export function useVialKeyboard() {
         rows: snapshot.rows,
         cols: snapshot.cols
       })
+      snapshotRef.current = snapshot
 
       setState((prev) => ({
         ...prev,
@@ -230,8 +241,57 @@ export function useVialKeyboard() {
     await transportRef.current?.close().catch(() => undefined)
     transportRef.current = null
     engineRef.current = null
+    snapshotRef.current = null
     setState(INITIAL)
   }, [stopTimers])
+
+  /**
+   * キーマップを読み直す。Vial で編集したあとに呼ぶ。
+   *
+   * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
+   * 押下中のキーとトグル状態は引き継がない(新しいキーマップで解決し直すため)。
+   */
+  const reload = useCallback(async () => {
+    const transport = transportRef.current
+    const previous = snapshotRef.current
+    if (!transport || !previous) return
+    if (statusRef.current !== 'ready') return // ロック中や読み込み中は触らない
+    if (reloadingRef.current) return
+    reloadingRef.current = true
+
+    stopTimers() // ポーリングと混ざらないように一旦止める
+    setState((prev) => ({ ...prev, reloading: true }))
+    try {
+      const next = await reloadKeymap(transport, previous)
+      snapshotRef.current = next
+      const engine = new LayerEngine({
+        layers: next.layers,
+        rows: next.rows,
+        cols: next.cols,
+        keymap: next.keymap,
+        tapDance: next.tapDance
+      })
+      engineRef.current = engine
+      setState((prev) => ({
+        ...prev,
+        snapshot: next,
+        engine,
+        layers: engine.update(emptyMatrix(next.rows, next.cols), performance.now()),
+        reloading: false,
+        error: null
+      }))
+      startPolling(next)
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        status: 'error',
+        reloading: false,
+        error: describeError(error)
+      }))
+    } finally {
+      reloadingRef.current = false
+    }
+  }, [startPolling, stopTimers])
 
   /** アンロック手順を始める。進行中は VIA コマンドが通らないので matrix は止めておく。 */
   const beginUnlock = useCallback(() => {
@@ -283,7 +343,18 @@ export function useVialKeyboard() {
     }
   }, [attach])
 
+  /**
+   * ウィンドウにフォーカスが戻ったら読み直す。
+   * Vial で編集 → このアプリに切り替える、という流れがそのまま反映される。
+   * オーバーレイはクリック透過でフォーカスを取らないので、そちらでは発火しない。
+   */
+  useEffect(() => {
+    const onFocus = (): void => void reload()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [reload])
+
   useEffect(() => stopTimers, [stopTimers])
 
-  return { ...state, connect, connectMock, disconnect, beginUnlock }
+  return { ...state, connect, connectMock, disconnect, beginUnlock, reload }
 }

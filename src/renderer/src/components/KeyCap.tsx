@@ -60,7 +60,12 @@ export function KeyCap({
   if (label.category === 'none' && label.main === '') classes.push('key-none')
   if (transparent) classes.push('key-trns')
   if (pressed) classes.push('key-pressed')
+  // レイヤーを出しているキーは、そのレイヤーの色で塗る。
+  // 「いまどのキーのせいでこのレイヤーなのか」が一目で分かるように。
+  if (holding) classes.push('key-holding')
   if (unlockHint) classes.push('key-unlock')
+
+  const holdColor = holdLayer !== null ? `var(--layer-${holdLayer % 10})` : undefined
 
   const rotate =
     physical.rotationAngle !== 0
@@ -69,19 +74,27 @@ export function KeyCap({
 
   const showBand = holdLayer !== null && !transparent
   const hasSub = Boolean(label.sub) && !showBand
-  const mainY = cy - (showBand ? 6 : 0) - (hasSub ? 5 : 0)
+  const hasShift = Boolean(label.shift)
+
+  // 色帯を除いた、文字を置ける範囲の真ん中
+  const contentBottom = y + height - (showBand ? BAND_HEIGHT : 0)
+  const contentCenter = (y + contentBottom) / 2
+  // Shift 側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
+  // 左上に小さく出していたときは見落としやすかった。
+  const shiftY = y + 13
+  const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 : 0)
 
   return (
-    <g className={classes.join(' ')} transform={rotate}>
+    <g className={classes.join(' ')} transform={rotate} style={{ '--hold': holdColor } as React.CSSProperties}>
       <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
 
       {holding ? (
         <>
-          <text className="main" x={cx} y={cy - 6} fontSize={12}>
-            押下中
+          <text className="main" x={cx} y={cy - 9} fontSize={13}>
+            {`L${holdLayer}`}
           </text>
-          <text className="sub" x={cx} y={cy + 11}>
-            {`${label.main} 長押し`}
+          <text className="sub" x={cx} y={cy + 8}>
+            {`${label.main} 長押し中`}
           </text>
         </>
       ) : (
@@ -91,8 +104,8 @@ export function KeyCap({
               {label.main}
             </text>
           )}
-          {label.shift && (
-            <text className="shift" x={x + 5} y={y + 4}>
+          {hasShift && (
+            <text className="shift" x={cx} y={shiftY}>
               {label.shift}
             </text>
           )}

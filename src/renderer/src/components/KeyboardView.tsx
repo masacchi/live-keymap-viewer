@@ -45,6 +45,17 @@ export function KeyboardView({
     [geometry.keys, layoutOptions]
   )
 
+  // ノブの割り当ては "↑" だけだと何の ↑ か分からないので、短いものには補足を足す
+  const labelOf = useMemo(
+    () =>
+      (raw: number): string => {
+        const label = labelForKeycode(decodeKeycode(raw), labelMode, labelContext)
+        if (label.sub && [...label.main].length <= 2) return `${label.main} ${label.sub}`
+        return label.main
+      },
+    [labelMode, labelContext]
+  )
+
   const unlockSet = useMemo(
     () => new Set(unlockKeys.map((k) => keyId(k.row, k.col))),
     [unlockKeys]
@@ -68,20 +79,33 @@ export function KeyboardView({
     >
       {geometry.encoders
         .filter((encoder) => encoder.direction === 0)
-        .map((encoder) => (
-          <circle
-            key={`enc-${encoder.index}`}
-            className="encoder"
-            cx={(encoder.x + encoder.width / 2) * unit}
-            cy={(encoder.y + encoder.height / 2) * unit}
-            r={(Math.min(encoder.width, encoder.height) / 2) * unit * 0.8}
-            transform={
-              encoder.rotationAngle !== 0
-                ? `rotate(${encoder.rotationAngle} ${encoder.rotationX * unit} ${encoder.rotationY * unit})`
-                : undefined
-            }
-          />
-        ))}
+        .map((encoder) => {
+          const cx = (encoder.x + encoder.width / 2) * unit
+          const cy = (encoder.y + encoder.height / 2) * unit
+          const r = (Math.min(encoder.width, encoder.height) / 2) * unit * 0.8
+          const assigned = snapshot.encoders[layers.displayLayer]?.[encoder.index]
+          const ccw = assigned ? labelOf(assigned[0]) : ''
+          const cw = assigned ? labelOf(assigned[1]) : ''
+          return (
+            <g
+              key={`enc-${encoder.index}`}
+              transform={
+                encoder.rotationAngle !== 0
+                  ? `rotate(${encoder.rotationAngle} ${encoder.rotationX * unit} ${encoder.rotationY * unit})`
+                  : undefined
+              }
+            >
+              <circle className="encoder" cx={cx} cy={cy} r={r} />
+              {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
+              <text className="sub" x={cx} y={cy - 6}>
+                {ccw ? `↺ ${ccw}` : ''}
+              </text>
+              <text className="sub" x={cx} y={cy + 7}>
+                {cw ? `↻ ${cw}` : ''}
+              </text>
+            </g>
+          )
+        })}
 
       {keys.map((physical) => {
         const id = keyId(physical.row, physical.col)

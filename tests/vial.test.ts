@@ -11,6 +11,7 @@ import {
   getViaProtocol,
   isMatrixTestSupported,
   loadKeyboard,
+  reloadKeymap,
   unlockPoll,
   unlockStart
 } from '@/hid/vial'
@@ -22,7 +23,7 @@ import {
   MOCK_ROWS,
   MOCK_TAP_DANCE
 } from '@/mock/cornix.generated'
-import { RequestQueue } from '@/hid/transport'
+import { RequestQueue, WebHidTransport } from '@/hid/transport'
 
 async function openMock(unlocked = true): Promise<MockTransport> {
   const transport = new MockTransport({ unlocked })
@@ -234,4 +235,116 @@ describe('対応バージョンの確認', () => {
     }
     await expect(loadKeyboard(transport)).rejects.toBeInstanceOf(ProtocolError)
   })
+})
+
+describe('キーマップの読み直し', () => {
+  it('Vial 側で書き換えられたキーマップを拾い直す', async () => {
+    const transport = await openMock()
+    const before = await loadKeyboard(transport)
+    expect(formatKeycode(decodeKeycode(before.keymap[0][0][1]))).toBe('KC_Q')
+
+    // Vial でベースレイヤーの Q を Z に変えた、という想定
+    transport.setKeycode(0, 0, 1, 0x001d) // KC_Z
+    const after = await reloadKeymap(transport, before)
+
+    expect(formatKeycode(decodeKeycode(after.keymap[0][0][1]))).toBe('KC_Z')
+    // 触っていないところは変わらない
+    expect(formatKeycode(decodeKeycode(after.keymap[0][7][5]))).toBe('LT2(KC_SPACE)')
+  })
+
+  it('定義は読み直さない(焼き直さない限り変わらないので)', async () => {
+    const transport = await openMock()
+    const before = await loadKeyboard(transport)
+    const countBefore = transport.requests.filter(
+      (r) => r[0] === 0xfe && r[1] === 0x02 // CMD_VIAL_GET_DEFINITION
+    ).length
+    expect(countBefore).toBeGreaterThan(0)
+
+    const after = await reloadKeymap(transport, before)
+    const countAfter = transport.requests.filter((r) => r[0] === 0xfe && r[1] === 0x02).length
+
+    expect(countAfter).toBe(countBefore) // 追加で読んでいない
+    expect(after.definition).toBe(before.definition) // 同じものを使い回している
+  })
+
+  it('Tap Dance とエンコーダーも読み直す', async () => {
+    const transport = await openMock()
+    const before = await loadKeyboard(transport)
+    const after = await reloadKeymap(transport, before)
+    expect(after.tapDance).toHaveLength(before.tapDance.length)
+    expect(after.encoders).toEqual(before.encoders)
+  })
+})
+
+/**
+ * raw HID の入力レポートは、その HID を開いているすべてのプロセスに配られる。
+ * Vial を同時に開いていると相手宛ての応答も届くので、照合して捨てられること。
+ */
+describe('他アプリ宛ての応答を弾く', () => {
+  class FakeHidDevice extends EventTarget {
+    opened = false
+    productName = 'Fake Vial'
+    collections = [{ usagePage: 0xff60, usage: 0x61 }]
+    /** sendReport のたびに、この関数が返すパケットを順に流す。 */
+    responder: (request: Uint8Array) => Uint8Array[] = () => []
+
+    async open(): Promise<void> {
+      this.opened = true
+    }
+    async close(): Promise<void> {
+      this.opened = false
+    }
+    async sendReport(_reportId: number, data: BufferSource): Promise<void> {
+      const request = new Uint8Array(data as ArrayBuffer)
+      for (const packet of this.responder(request)) {
+        const event = new Event('inputreport')
+        Object.defineProperty(event, 'data', { value: new DataView(packet.buffer) })
+        this.dispatchEvent(event)
+      }
+    }
+  }
+
+  function packet(...bytes: number[]): Uint8Array {
+    const out = new Uint8Array(32)
+    out.set(bytes)
+    return out
+  }
+
+  it('コマンド ID が合わないパケットは捨てて、本来の応答を待つ', async () => {
+    const device = new FakeHidDevice()
+    // 先に他アプリ宛て(0x11 レイヤー数)が届き、そのあと本命(0x02 0x03)が来る
+    device.responder = () => [
+      packet(0x11, 0x0a),
+      packet(0x02, 0x03, 0b0000_0010)
+    ]
+    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    await transport.open()
+
+    const matrix = await getMatrixState(transport, 1, 7)
+    expect(matrix[0][1]).toBe(true)
+    expect(matrix[0][0]).toBe(false)
+  })
+
+  it('keymap バッファはオフセットとサイズまで照合する', async () => {
+    const device = new FakeHidDevice()
+    device.responder = (request) => [
+      // 同じ 0x12 でも別のオフセットへの応答は受け取らない
+      packet(0x12, 0xff, 0xff, request[3], 0xde, 0xad),
+      packet(0x12, request[1], request[2], request[3], 0x00, 0x2b)
+    ]
+    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    await transport.open()
+
+    const keymap = await getKeymap(transport, 1, 1, 1)
+    expect(formatKeycode(decodeKeycode(keymap[0][0][0]))).toBe('KC_TAB') // 0x002b
+  })
+
+  it('照合が通らないまま時間切れになれば例外にする', async () => {
+    const device = new FakeHidDevice()
+    device.responder = () => [packet(0x11, 0x0a)] // ずっと他アプリ宛てだけ
+    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    await transport.open()
+
+    await expect(getMatrixState(transport, 1, 7)).rejects.toThrow()
+  }, 10000)
 })

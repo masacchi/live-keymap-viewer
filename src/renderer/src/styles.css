@@ -15,6 +15,7 @@
   --line-soft: #2b3236;
   --sym-fill: #15343a;
   --sym-ink: #7fd3db;
+  --shift-ink: #cfd6da;
   --press: #f2c230;
   --layer-0: #b9c0c4;
   --layer-1: #e6a13f;
@@ -109,6 +110,25 @@ body.overlay .app-shell {
   opacity: 1;
 }
 
+/*
+ * レイヤーを出している最中のキー。押下の黄色ではなく「そのレイヤーの色」で塗る。
+ * ツールバーのレイヤー表示と同じ色になるので、どのキーのせいで今このレイヤーなのかが
+ * 色で直結する。輪郭も太らせて、ただの押下と区別する。
+ */
+.key-holding .cap {
+  fill: var(--hold);
+  stroke: var(--hold);
+  stroke-width: 3;
+  paint-order: stroke;
+}
+
+.key-holding .main,
+.key-holding .sub {
+  fill: #101315;
+  opacity: 1;
+  font-weight: 700;
+}
+
 .key-unlock .cap {
   fill: color-mix(in srgb, var(--layer-4) 35%, var(--surface));
   stroke: var(--layer-4);
@@ -126,11 +146,20 @@ body.overlay .app-shell {
   fill: var(--sym-ink);
 }
 
+/*
+ * Shift 側の文字。キーキャップの印字と同じく主文字の上に、中央揃えで置く。
+ * 左上に 11px で出していたときは小さくて見落としていた。
+ */
 .shift {
-  fill: var(--muted);
-  font-size: 11px;
-  text-anchor: start;
-  dominant-baseline: hanging;
+  fill: var(--shift-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.key-sym .shift {
+  fill: var(--sym-ink);
 }
 
 .sub {

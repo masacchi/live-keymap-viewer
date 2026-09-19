@@ -9,6 +9,8 @@ export interface ToolbarProps {
   activeLayers: number[]
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
+  reloading: boolean
+  onReload: () => void
   onConnect: () => void
   onConnectMock: () => void
   onDisconnect: () => void
@@ -68,6 +70,8 @@ export function Toolbar({
   activeLayers,
   labelMode,
   windowMode,
+  reloading,
+  onReload,
   onConnect,
   onConnectMock,
   onDisconnect,
@@ -86,17 +90,25 @@ export function Toolbar({
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-[var(--muted)]">レイヤー</span>
+      <div className="flex items-center gap-2">
         <span
-          className="rounded px-2 py-0.5 text-sm font-bold text-neutral-900"
+          className="rounded-md px-3 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors"
           style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
         >
           L{displayLayer}
         </span>
         {activeLayers.length > 1 && (
-          <span className="text-[11px] text-[var(--muted)]">
-            有効: {activeLayers.map((n) => `L${n}`).join(' ')}
+          <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
+            重なり
+            {activeLayers.map((n) => (
+              <span
+                key={n}
+                className="rounded px-1 font-semibold text-neutral-900"
+                style={{ backgroundColor: `var(--layer-${n % 10})` }}
+              >
+                L{n}
+              </span>
+            ))}
           </span>
         )}
       </div>
@@ -115,6 +127,12 @@ export function Toolbar({
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
           <span className="ml-1.5 text-[10px] text-[var(--muted)]">Ctrl+Alt+K</span>
         </Button>
+
+        {connected && (
+          <Button onClick={onReload}>
+            {reloading ? '読み込み中…' : 'キーマップ再読み込み'}
+          </Button>
+        )}
 
         {connected ? (
           <Button onClick={onDisconnect}>切断</Button>

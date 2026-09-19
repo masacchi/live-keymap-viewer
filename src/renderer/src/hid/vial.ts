@@ -32,7 +32,7 @@ import {
   VIA_SWITCH_MATRIX_STATE
 } from './constants'
 import { buildGeometry } from '../layout/geometry'
-import type { Transport } from './transport'
+import type { SendOptions, Transport } from './transport'
 import { decompressDefinition } from './xz'
 
 export class ProtocolError extends Error {}
@@ -115,36 +115,67 @@ function u32be(data: Uint8Array, offset: number): number {
   )
 }
 
-const LONG = { retries: 20, timeoutMs: 500 } as const
+const LONG: SendOptions = { retries: 20, timeoutMs: 500 }
+
+/**
+ * このリクエストへの応答かどうかを見分ける関数を作る。
+ *
+ * VIA コマンドはファームが `data[0]` にコマンド ID をそのまま残す(`via.c` は
+ * `command_data = &data[1]` 以降にしか書かない)ので、それで照合できる。
+ * Vial コマンド(0xFE)は `msg[0]` から上書きしてしまうため照合できない。
+ * 幸い 0xFE 系は読み込み時にしか使わず、ポーリングの本流には出てこない。
+ */
+function validatorFor(request: readonly number[]): ((data: Uint8Array) => boolean) | undefined {
+  const id = request[0]
+  if (id === CMD_VIA_VIAL_PREFIX) return undefined
+  if (id === CMD_VIA_GET_KEYBOARD_VALUE) {
+    return (data) => data[0] === id && data[1] === request[1]
+  }
+  if (id === CMD_VIA_KEYMAP_GET_BUFFER) {
+    // オフセットとサイズもそのまま返ってくるので、取り違えを厳密に弾ける
+    return (data) =>
+      data[0] === id &&
+      data[1] === request[1] &&
+      data[2] === request[2] &&
+      data[3] === request[3]
+  }
+  return (data) => data[0] === id
+}
+
+/** リクエストを組み立てて投げる。応答の照合はここで一括して付ける。 */
+function send(
+  transport: Transport,
+  request: readonly number[],
+  options: SendOptions = LONG
+): Promise<Uint8Array> {
+  return transport.send(new Uint8Array(request), {
+    ...options,
+    validate: validatorFor(request)
+  })
+}
 
 export async function getViaProtocol(transport: Transport): Promise<number> {
-  const data = await transport.send(new Uint8Array([CMD_VIA_GET_PROTOCOL_VERSION]), LONG)
+  const data = await send(transport, [CMD_VIA_GET_PROTOCOL_VERSION], LONG)
   return u16be(data, 1)
 }
 
 export async function getKeyboardId(
   transport: Transport
 ): Promise<{ vialProtocol: number; uid: string }> {
-  const data = await transport.send(
-    new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID], LONG)
   let uid = 0n
   for (let i = 7; i >= 0; i--) uid = (uid << 8n) | BigInt(data[4 + i])
   return { vialProtocol: u32le(data, 0), uid: uid.toString() }
 }
 
 export async function getLayerCount(transport: Transport): Promise<number> {
-  const data = await transport.send(new Uint8Array([CMD_VIA_GET_LAYER_COUNT]), LONG)
+  const data = await send(transport, [CMD_VIA_GET_LAYER_COUNT], LONG)
   return data[1]
 }
 
 /** 定義ブロックを全部集めて展開し、JSON にする。 */
 export async function getDefinition(transport: Transport): Promise<VialDefinition> {
-  const sizeData = await transport.send(
-    new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE]),
-    LONG
-  )
+  const sizeData = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE], LONG)
   let remaining = u32le(sizeData, 0)
   if (remaining === 0 || remaining > 1 << 20) {
     throw new ProtocolError(`定義サイズが異常: ${remaining}`)
@@ -153,18 +184,15 @@ export async function getDefinition(transport: Transport): Promise<VialDefinitio
   const chunks: Uint8Array[] = []
   let total = 0
   for (let block = 0; remaining > 0; block++) {
-    const data = await transport.send(
-      // ファームは下位 2 バイトしか読まないが、vial-gui に合わせて u32 LE で送る
-      new Uint8Array([
-        CMD_VIA_VIAL_PREFIX,
-        CMD_VIAL_GET_DEFINITION,
-        block & 0xff,
-        (block >> 8) & 0xff,
-        (block >> 16) & 0xff,
-        (block >> 24) & 0xff
-      ]),
-      LONG
-    )
+    // ファームは下位 2 バイトしか読まないが、vial-gui に合わせて u32 LE で送る
+    const data = await send(transport, [
+      CMD_VIA_VIAL_PREFIX,
+      CMD_VIAL_GET_DEFINITION,
+      block & 0xff,
+      (block >> 8) & 0xff,
+      (block >> 16) & 0xff,
+      (block >> 24) & 0xff
+    ])
     const take = Math.min(remaining, MSG_LEN)
     chunks.push(data.subarray(0, take))
     total += take
@@ -194,15 +222,7 @@ export async function getKeymap(
 
   for (let offset = 0; offset < size; offset += BUFFER_FETCH_CHUNK) {
     const chunk = Math.min(size - offset, BUFFER_FETCH_CHUNK)
-    const data = await transport.send(
-      new Uint8Array([
-        CMD_VIA_KEYMAP_GET_BUFFER,
-        (offset >> 8) & 0xff,
-        offset & 0xff,
-        chunk
-      ]),
-      LONG
-    )
+    const data = await send(transport, [CMD_VIA_KEYMAP_GET_BUFFER, (offset >> 8) & 0xff, offset & 0xff, chunk], LONG)
     buffer.set(data.subarray(4, 4 + chunk), offset)
   }
 
@@ -231,10 +251,7 @@ export async function getEncoders(
   for (let layer = 0; layer < layers; layer++) {
     const perLayer: number[][] = []
     for (let index = 0; index < count; index++) {
-      const data = await transport.send(
-        new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, index]),
-        LONG
-      )
+      const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, index], LONG)
       perLayer.push([u16be(data, 0), u16be(data, 2)])
     }
     out.push(perLayer)
@@ -243,24 +260,14 @@ export async function getEncoders(
 }
 
 export async function getLayoutOptions(transport: Transport): Promise<number> {
-  const data = await transport.send(
-    new Uint8Array([CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS], LONG)
   return u32be(data, 2)
 }
 
 export async function getDynamicEntryCount(
   transport: Transport
 ): Promise<{ tapDance: number; combo: number; keyOverride: number; altRepeatKey: number }> {
-  const data = await transport.send(
-    new Uint8Array([
-      CMD_VIA_VIAL_PREFIX,
-      CMD_VIAL_DYNAMIC_ENTRY_OP,
-      DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES
-    ]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES], LONG)
   return {
     tapDance: data[0],
     combo: data[1],
@@ -273,15 +280,7 @@ export async function getTapDance(
   transport: Transport,
   index: number
 ): Promise<TapDanceEntry> {
-  const data = await transport.send(
-    new Uint8Array([
-      CMD_VIA_VIAL_PREFIX,
-      CMD_VIAL_DYNAMIC_ENTRY_OP,
-      DYNAMIC_VIAL_TAP_DANCE_GET,
-      index
-    ]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_TAP_DANCE_GET, index], LONG)
   if (data[0] !== 0) throw new ProtocolError(`Tap Dance ${index} を読めなかった`)
   return {
     onTap: u16le(data, 1),
@@ -293,10 +292,7 @@ export async function getTapDance(
 }
 
 export async function getUnlockStatus(transport: Transport): Promise<UnlockStatus> {
-  const data = await transport.send(
-    new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_UNLOCK_STATUS]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_UNLOCK_STATUS], LONG)
   const keys: Array<{ row: number; col: number }> = []
   for (let i = 0; i < 15; i++) {
     const row = data[2 + i * 2]
@@ -307,19 +303,16 @@ export async function getUnlockStatus(transport: Transport): Promise<UnlockStatu
 }
 
 export async function unlockStart(transport: Transport): Promise<void> {
-  await transport.send(new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_UNLOCK_START]), LONG)
+  await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_UNLOCK_START], LONG)
 }
 
 export async function unlockPoll(transport: Transport): Promise<UnlockProgress> {
-  const data = await transport.send(
-    new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_UNLOCK_POLL]),
-    LONG
-  )
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_UNLOCK_POLL], LONG)
   return { unlocked: data[0] === 1, inProgress: data[1] === 1, counter: data[2] }
 }
 
 export async function lock(transport: Transport): Promise<void> {
-  await transport.send(new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_LOCK]), LONG)
+  await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_LOCK], LONG)
 }
 
 /**
@@ -353,10 +346,10 @@ export async function getMatrixState(
   rows: number,
   cols: number
 ): Promise<boolean[][]> {
-  const data = await transport.send(
-    new Uint8Array([CMD_VIA_GET_KEYBOARD_VALUE, VIA_SWITCH_MATRIX_STATE]),
-    { retries: 3, timeoutMs: 200 }
-  )
+  const data = await send(transport, [CMD_VIA_GET_KEYBOARD_VALUE, VIA_SWITCH_MATRIX_STATE], {
+    retries: 3,
+    timeoutMs: 200
+  })
   return decodeMatrixState(data, rows, cols)
 }
 
@@ -420,6 +413,41 @@ export async function loadKeyboard(transport: Transport): Promise<KeyboardSnapsh
     layoutOptions,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, rows, cols)
   }
+}
+
+/**
+ * キーマップまわりだけ読み直す。
+ *
+ * 物理配置・customKeycodes が入っている定義 JSON は、ファームを焼き直さないと
+ * 変わらない(焼き直せば USB ごと繋ぎ直しになる)。なので定義は使い回して、
+ * Vial で編集され得るところ ― キーマップ、Tap Dance、エンコーダー、
+ * レイアウトオプション ― だけを取り直す。図が組み直されないので描画も跳ねない。
+ */
+export async function reloadKeymap(
+  transport: Transport,
+  previous: KeyboardSnapshot
+): Promise<KeyboardSnapshot> {
+  const layers = await getLayerCount(transport)
+  const dynamic =
+    previous.vialProtocol >= VIAL_PROTOCOL_DYNAMIC
+      ? await getDynamicEntryCount(transport)
+      : { tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 0 }
+
+  const keymap = await getKeymap(transport, layers, previous.rows, previous.cols)
+
+  const tapDance: TapDanceEntry[] = []
+  for (let i = 0; i < dynamic.tapDance; i++) {
+    tapDance.push(await getTapDance(transport, i))
+  }
+
+  const encoderCount = countEncoders(previous.definition)
+  const encoders = encoderCount > 0 ? await getEncoders(transport, layers, encoderCount) : []
+
+  const layoutOptions = previous.definition.layouts.labels
+    ? await getLayoutOptions(transport)
+    : 0
+
+  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions }
 }
 
 /** 定義の KLE から、エンコーダーが何個あるかを数える。 */
