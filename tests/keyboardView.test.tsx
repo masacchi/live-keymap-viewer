@@ -5,9 +5,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { KeyboardView } from '@/components/KeyboardView'
-import { LayerEngine, emptyMatrix, type LayerSnapshot } from '@/engine/layerState'
+import { emptyMatrix, LayerEngine, type LayerSnapshot } from '@/engine/layerState'
 import { MockTransport } from '@/hid/mockTransport'
-import { loadKeyboard, type KeyboardSnapshot } from '@/hid/vial'
+import { type KeyboardSnapshot, loadKeyboard } from '@/hid/vial'
 import { buildGeometry, type KeyboardGeometry } from '@/layout/geometry'
 
 let snapshot: KeyboardSnapshot
@@ -147,9 +147,7 @@ describe('KeyboardView', () => {
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
     // KC_MINUS: 主文字 "-" / Shift 側 "="。どちらも同じ x(中央)に乗る
-    const main = /<text class="main" x="([\d.]+)" y="([\d.]+)" font-size="\d+">-<\/text>/.exec(
-      html
-    )
+    const main = /<text class="main" x="([\d.]+)" y="([\d.]+)" font-size="\d+">-<\/text>/.exec(html)
     const shift = /<text class="shift" x="([\d.]+)" y="([\d.]+)">=<\/text>/.exec(html)
     expect(main).not.toBeNull()
     expect(shift).not.toBeNull()

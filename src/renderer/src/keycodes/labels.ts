@@ -7,14 +7,14 @@
  */
 import type { Keycode } from './decode'
 import {
+  decodeKeycode,
+  formatKeycode,
+  hasShift,
   MOD_ALT,
   MOD_CTRL,
   MOD_GUI,
   MOD_RIGHT,
-  MOD_SHIFT,
-  decodeKeycode,
-  formatKeycode,
-  hasShift
+  MOD_SHIFT
 } from './decode'
 
 export type LabelMode = 'jis' | 'us'

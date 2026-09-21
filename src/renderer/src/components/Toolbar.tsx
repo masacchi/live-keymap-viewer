@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
-import type { LabelMode } from '../keycodes/labels'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
+import type { LabelMode } from '../keycodes/labels'
 
 export interface ToolbarProps {
   status: ConnectionStatus
@@ -127,9 +127,7 @@ export function Toolbar({
         </Button>
 
         {connected && (
-          <Button onClick={onReload}>
-            {reloading ? '読み込み中…' : 'キーマップ再読み込み'}
-          </Button>
+          <Button onClick={onReload}>{reloading ? '読み込み中…' : 'キーマップ再読み込み'}</Button>
         )}
 
         {connected ? (

@@ -5,28 +5,8 @@
  * キーマップと Tap Dance は reference/Cornix_設定_LT.vil、定義 JSON は
  * Cornix LP V1.12 のファームから取り出した実物(XZ 圧縮のまま)を使う。
  */
-import {
-  CMD_VIAL_DYNAMIC_ENTRY_OP,
-  CMD_VIAL_GET_DEFINITION,
-  CMD_VIAL_GET_ENCODER,
-  CMD_VIAL_GET_KEYBOARD_ID,
-  CMD_VIAL_GET_SIZE,
-  CMD_VIAL_GET_UNLOCK_STATUS,
-  CMD_VIAL_LOCK,
-  CMD_VIAL_UNLOCK_POLL,
-  CMD_VIAL_UNLOCK_START,
-  CMD_VIA_GET_KEYBOARD_VALUE,
-  CMD_VIA_GET_LAYER_COUNT,
-  CMD_VIA_GET_PROTOCOL_VERSION,
-  CMD_VIA_KEYMAP_GET_BUFFER,
-  CMD_VIA_VIAL_PREFIX,
-  DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
-  DYNAMIC_VIAL_TAP_DANCE_GET,
-  MSG_LEN,
-  VIAL_UNLOCK_COUNTER_MAX,
-  VIA_LAYOUT_OPTIONS,
-  VIA_SWITCH_MATRIX_STATE
-} from './constants'
+
+import { keyId } from '../layout/geometry'
 import {
   MOCK_COLS,
   MOCK_DEFINITION_XZ_BASE64,
@@ -36,12 +16,33 @@ import {
   MOCK_ROWS,
   MOCK_TAP_DANCE,
   MOCK_UID,
-  MOCK_VIAL_PROTOCOL,
-  MOCK_VIA_PROTOCOL
+  MOCK_VIA_PROTOCOL,
+  MOCK_VIAL_PROTOCOL
 } from '../mock/cornix.generated'
-import { keyId } from '../layout/geometry'
+import {
+  CMD_VIA_GET_KEYBOARD_VALUE,
+  CMD_VIA_GET_LAYER_COUNT,
+  CMD_VIA_GET_PROTOCOL_VERSION,
+  CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_VIAL_PREFIX,
+  CMD_VIAL_DYNAMIC_ENTRY_OP,
+  CMD_VIAL_GET_DEFINITION,
+  CMD_VIAL_GET_ENCODER,
+  CMD_VIAL_GET_KEYBOARD_ID,
+  CMD_VIAL_GET_SIZE,
+  CMD_VIAL_GET_UNLOCK_STATUS,
+  CMD_VIAL_LOCK,
+  CMD_VIAL_UNLOCK_POLL,
+  CMD_VIAL_UNLOCK_START,
+  DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
+  DYNAMIC_VIAL_TAP_DANCE_GET,
+  MSG_LEN,
+  VIA_LAYOUT_OPTIONS,
+  VIA_SWITCH_MATRIX_STATE,
+  VIAL_UNLOCK_COUNTER_MAX
+} from './constants'
 import type { SendOptions, Transport } from './transport'
-import { TransportError, pad } from './transport'
+import { pad, TransportError } from './transport'
 
 /** atob はブラウザにも Node 16+ にもある。 */
 function fromBase64(base64: string): Uint8Array {

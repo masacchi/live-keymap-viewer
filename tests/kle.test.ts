@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseKle } from '@/layout/kle'
 import { buildGeometry, keyCorners, visibleKeys } from '@/layout/geometry'
+import { parseKle } from '@/layout/kle'
 import definition from '../reference/cornix-vial-definition.json'
 
 describe('parseKle', () => {
@@ -65,12 +65,7 @@ describe('buildGeometry (Cornix LP の実定義)', () => {
 
   it('親指キーが回転している', () => {
     const rotated = geometry.keys.filter((k) => k.rotationAngle !== 0)
-    expect(rotated.map((k) => `${k.row},${k.col}`).sort()).toEqual([
-      '3,4',
-      '3,5',
-      '7,4',
-      '7,5'
-    ])
+    expect(rotated.map((k) => `${k.row},${k.col}`).sort()).toEqual(['3,4', '3,5', '7,4', '7,5'])
     // 左右で符号が逆
     const left = rotated.find((k) => k.row === 3 && k.col === 5)!
     const right = rotated.find((k) => k.row === 7 && k.col === 5)!

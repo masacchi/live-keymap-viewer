@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  decodeKeycode,
+  formatKeycode,
   MOD_ALT,
   MOD_CTRL,
   MOD_GUI,
-  MOD_SHIFT,
-  decodeKeycode,
-  formatKeycode
+  MOD_SHIFT
 } from '@/keycodes/decode'
 
 /** 生の値 → Vial の文字列表記。値は keycodes_v6.py の定数から。 */

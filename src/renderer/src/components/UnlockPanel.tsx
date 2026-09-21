@@ -18,9 +18,7 @@ export function UnlockPanel({ unlock }: UnlockPanelProps): JSX.Element {
 
   return (
     <div className="rounded-lg border border-[var(--layer-4)] bg-[var(--surface)] px-4 py-3">
-      <p className="text-sm font-semibold">
-        図で色が付いているキーを、バーが埋まるまで押し続ける
-      </p>
+      <p className="text-sm font-semibold">図で色が付いているキーを、バーが埋まるまで押し続ける</p>
       <p className="mt-1 text-xs text-[var(--muted)]">
         押しているキーを読むには Vial のアンロックが要る。離すとやり直しになる。
         解除したままにしたくなければ、使い終わったらキーボードを挿し直す。

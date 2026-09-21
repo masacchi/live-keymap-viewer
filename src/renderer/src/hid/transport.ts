@@ -66,10 +66,7 @@ export class WebHidTransport implements Transport {
     const deliver = this.pending
     if (!deliver) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
     const data = new Uint8Array(
-      event.data.buffer.slice(
-        event.data.byteOffset,
-        event.data.byteOffset + event.data.byteLength
-      )
+      event.data.buffer.slice(event.data.byteOffset, event.data.byteOffset + event.data.byteLength)
     )
     if (deliver(data)) this.pending = null
   }
@@ -147,8 +144,7 @@ export class WebHidTransport implements Transport {
 /** Vial の raw HID インターフェースを持つデバイスかどうか。 */
 export function isVialDevice(device: HIDDevice): boolean {
   return device.collections.some(
-    (collection) =>
-      collection.usagePage === VIAL_USAGE_PAGE && collection.usage === VIAL_USAGE
+    (collection) => collection.usagePage === VIAL_USAGE_PAGE && collection.usage === VIAL_USAGE
   )
 }
 

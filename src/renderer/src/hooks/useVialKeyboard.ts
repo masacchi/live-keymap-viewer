@@ -12,12 +12,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MockTransport } from '../hid/mockTransport'
-import {
-  VIAL_HID_FILTERS,
-  WebHidTransport,
-  isVialDevice,
-  type Transport
-} from '../hid/transport'
+import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
 import { KeyboardSession, type SessionState, type SessionStatus } from '../session/keyboardSession'
 
 export type { UnlockState } from '../session/keyboardSession'

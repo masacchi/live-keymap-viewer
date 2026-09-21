@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type JSX } from 'react'
+import { type JSX, useCallback, useEffect, useState } from 'react'
+import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
 import { OverlayControls } from './components/OverlayControls'
@@ -6,7 +7,6 @@ import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import type { LabelMode } from './keycodes/labels'
-import type { HidCandidate } from '../../shared/ipc'
 
 type WindowMode = 'normal' | 'overlay'
 
@@ -134,7 +134,10 @@ export default function App(): JSX.Element {
             />
           </div>
         ) : (
-          <EmptyState onConnect={() => void keyboard.connect()} onMock={() => void keyboard.connectMock()} />
+          <EmptyState
+            onConnect={() => void keyboard.connect()}
+            onMock={() => void keyboard.connectMock()}
+          />
         )}
       </main>
 

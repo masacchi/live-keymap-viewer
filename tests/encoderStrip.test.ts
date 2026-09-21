@@ -61,7 +61,13 @@ describe('layoutEncoderStrip', () => {
       unit: UNIT,
       fontSize: 13
     })!
-    const top = layoutEncoderStrip({ items, keyBounds, placement: 'top', unit: UNIT, fontSize: 13 })!
+    const top = layoutEncoderStrip({
+      items,
+      keyBounds,
+      placement: 'top',
+      unit: UNIT,
+      fontSize: 13
+    })!
     expect(bottom.y).toBeGreaterThan(keyBounds.maxY * UNIT)
     expect(top.y).toBeLessThan(keyBounds.minY * UNIT)
   })

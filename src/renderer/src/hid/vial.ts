@@ -5,8 +5,16 @@
  * VIA コマンドの戻り値は data[1] 以降、Vial コマンド(0xFE)の戻り値は
  * data[0] 以降という非対称に注意。
  */
+
+import type { TapDanceEntry } from '../keycodes/tapDance'
+import { buildGeometry } from '../layout/geometry'
 import {
   BUFFER_FETCH_CHUNK,
+  CMD_VIA_GET_KEYBOARD_VALUE,
+  CMD_VIA_GET_LAYER_COUNT,
+  CMD_VIA_GET_PROTOCOL_VERSION,
+  CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_VIAL_PREFIX,
   CMD_VIAL_DYNAMIC_ENTRY_OP,
   CMD_VIAL_GET_DEFINITION,
   CMD_VIAL_GET_ENCODER,
@@ -16,23 +24,16 @@ import {
   CMD_VIAL_LOCK,
   CMD_VIAL_UNLOCK_POLL,
   CMD_VIAL_UNLOCK_START,
-  CMD_VIA_GET_KEYBOARD_VALUE,
-  CMD_VIA_GET_LAYER_COUNT,
-  CMD_VIA_GET_PROTOCOL_VERSION,
-  CMD_VIA_KEYMAP_GET_BUFFER,
-  CMD_VIA_VIAL_PREFIX,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
-  SUPPORTED_VIAL_PROTOCOL,
   SUPPORTED_VIA_PROTOCOL,
-  VIAL_PROTOCOL_DYNAMIC,
-  VIAL_PROTOCOL_MATRIX_TESTER,
+  SUPPORTED_VIAL_PROTOCOL,
   VIA_LAYOUT_OPTIONS,
-  VIA_SWITCH_MATRIX_STATE
+  VIA_SWITCH_MATRIX_STATE,
+  VIAL_PROTOCOL_DYNAMIC,
+  VIAL_PROTOCOL_MATRIX_TESTER
 } from './constants'
-import type { TapDanceEntry } from '../keycodes/tapDance'
-import { buildGeometry } from '../layout/geometry'
 import type { SendOptions, Transport } from './transport'
 import { decompressDefinition } from './xz'
 
@@ -127,10 +128,7 @@ function validatorFor(request: readonly number[]): ((data: Uint8Array) => boolea
   if (id === CMD_VIA_KEYMAP_GET_BUFFER) {
     // オフセットとサイズもそのまま返ってくるので、取り違えを厳密に弾ける
     return (data) =>
-      data[0] === id &&
-      data[1] === request[1] &&
-      data[2] === request[2] &&
-      data[3] === request[3]
+      data[0] === id && data[1] === request[1] && data[2] === request[2] && data[3] === request[3]
   }
   return (data) => data[0] === id
 }
@@ -215,7 +213,11 @@ export async function getKeymap(
 
   for (let offset = 0; offset < size; offset += BUFFER_FETCH_CHUNK) {
     const chunk = Math.min(size - offset, BUFFER_FETCH_CHUNK)
-    const data = await send(transport, [CMD_VIA_KEYMAP_GET_BUFFER, (offset >> 8) & 0xff, offset & 0xff, chunk], LONG)
+    const data = await send(
+      transport,
+      [CMD_VIA_KEYMAP_GET_BUFFER, (offset >> 8) & 0xff, offset & 0xff, chunk],
+      LONG
+    )
     buffer.set(data.subarray(4, 4 + chunk), offset)
   }
 
@@ -244,7 +246,11 @@ export async function getEncoders(
   for (let layer = 0; layer < layers; layer++) {
     const perLayer: number[][] = []
     for (let index = 0; index < count; index++) {
-      const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, index], LONG)
+      const data = await send(
+        transport,
+        [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, index],
+        LONG
+      )
       perLayer.push([u16be(data, 0), u16be(data, 2)])
     }
     out.push(perLayer)
@@ -260,7 +266,11 @@ export async function getLayoutOptions(transport: Transport): Promise<number> {
 export async function getDynamicEntryCount(
   transport: Transport
 ): Promise<{ tapDance: number; combo: number; keyOverride: number; altRepeatKey: number }> {
-  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES], LONG)
+  const data = await send(
+    transport,
+    [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES],
+    LONG
+  )
   return {
     tapDance: data[0],
     combo: data[1],
@@ -269,11 +279,12 @@ export async function getDynamicEntryCount(
   }
 }
 
-export async function getTapDance(
-  transport: Transport,
-  index: number
-): Promise<TapDanceEntry> {
-  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_TAP_DANCE_GET, index], LONG)
+export async function getTapDance(transport: Transport, index: number): Promise<TapDanceEntry> {
+  const data = await send(
+    transport,
+    [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_TAP_DANCE_GET, index],
+    LONG
+  )
   if (data[0] !== 0) throw new ProtocolError(`Tap Dance ${index} を読めなかった`)
   return {
     onTap: u16le(data, 1),
@@ -330,11 +341,7 @@ export async function lock(transport: Transport): Promise<void> {
  * 行ごとに ceil(cols/8) バイト。行内は MSB のバイトが先頭に来るので、
  * col が入っているバイトは末尾から数える(docs/PROTOCOL.md §2)。
  */
-export function decodeMatrixState(
-  data: Uint8Array,
-  rows: number,
-  cols: number
-): boolean[][] {
+export function decodeMatrixState(data: Uint8Array, rows: number, cols: number): boolean[][] {
   const rowSize = Math.ceil(cols / 8)
   const matrix: boolean[][] = []
   for (let row = 0; row < rows; row++) {
@@ -343,7 +350,7 @@ export function decodeMatrixState(
     const rowState: boolean[] = []
     for (let col = 0; col < cols; col++) {
       const byte = rowData.length - 1 - Math.floor(col / 8)
-      rowState.push(((rowData[byte] >> col % 8) & 1) === 1)
+      rowState.push(((rowData[byte] >> (col % 8)) & 1) === 1)
     }
     matrix.push(rowState)
   }
@@ -363,11 +370,7 @@ export async function getMatrixState(
 }
 
 /** vial-gui の MatrixTest.valid() と同じ条件。 */
-export function isMatrixTestSupported(
-  vialProtocol: number,
-  rows: number,
-  cols: number
-): boolean {
+export function isMatrixTestSupported(vialProtocol: number, rows: number, cols: number): boolean {
   return (
     vialProtocol >= VIAL_PROTOCOL_MATRIX_TESTER &&
     (Math.floor(cols / 8) + 1) * rows <= BUFFER_FETCH_CHUNK
@@ -452,9 +455,7 @@ export async function reloadKeymap(
   const encoderCount = countEncoders(previous.definition)
   const encoders = encoderCount > 0 ? await getEncoders(transport, layers, encoderCount) : []
 
-  const layoutOptions = previous.definition.layouts.labels
-    ? await getLayoutOptions(transport)
-    : 0
+  const layoutOptions = previous.definition.layouts.labels ? await getLayoutOptions(transport) : 0
 
   return { ...previous, layers, keymap, tapDance, encoders, layoutOptions }
 }

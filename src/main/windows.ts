@@ -4,15 +4,16 @@
  * 透明ウィンドウは作った後から切り替えられないので、モードを変えるたびに
  * ウィンドウを作り直し、位置とサイズを引き継ぐ。
  */
-import { BrowserWindow, screen, shell } from 'electron'
+
 import { join } from 'node:path'
+import { BrowserWindow, screen, shell } from 'electron'
 import {
   type Bounds,
-  type WindowMode,
+  clampOpacity,
+  ensureOnScreen,
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
-  clampOpacity,
-  ensureOnScreen
+  type WindowMode
 } from '../shared/settings'
 import { loadSettings, saveSettings } from './settings'
 

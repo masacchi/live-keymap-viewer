@@ -1,23 +1,12 @@
 {
-  "include": [
-    "src/renderer/src/**/*",
-    "src/shared/**/*",
-    "tests/**/*"
-  ],
+  "include": ["src/renderer/src/**/*", "src/shared/**/*", "tests/**/*"],
   "compilerOptions": {
     "composite": true,
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "types": [
-      "w3c-web-hid",
-      "vitest/globals"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["w3c-web-hid", "vitest/globals"],
     "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
@@ -30,12 +19,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/renderer/src/*"
-      ]
+      "@/*": ["src/renderer/src/*"]
     }
   },
-  "exclude": [
-    "tests/main/**/*"
-  ]
+  "exclude": ["tests/main/**/*"]
 }

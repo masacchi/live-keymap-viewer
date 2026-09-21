@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clampOpacity,
   DEFAULT_SETTINGS,
+  ensureOnScreen,
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
   OVERLAY_OPACITY_MIN,
-  clampOpacity,
-  ensureOnScreen,
   sanitizeBounds,
   sanitizeSettings
 } from '../src/shared/settings'

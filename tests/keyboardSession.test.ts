@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
-import { formatKeycode, decodeKeycode } from '@/keycodes/decode'
-import {
-  KeyboardSession,
-  type SessionOptions,
-  type SessionState
-} from '@/session/keyboardSession'
+import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
+import { KeyboardSession, type SessionOptions, type SessionState } from '@/session/keyboardSession'
 
 /** ループが毎回イベントループに制御を返すようにする(でないとテスト側が進めない)。 */
 const yieldSleep = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))

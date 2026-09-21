@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { decodeKeycode } from '@/keycodes/decode'
-import { labelForKeycode, type LabelContext } from '@/keycodes/labels'
+import { type LabelContext, labelForKeycode } from '@/keycodes/labels'
 import { MOCK_COLS, MOCK_KEYMAP, MOCK_ROWS, MOCK_TAP_DANCE } from '@/mock/cornix.generated'
 import definition from '../reference/cornix-vial-definition.json'
 

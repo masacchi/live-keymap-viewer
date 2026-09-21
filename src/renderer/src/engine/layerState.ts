@@ -9,7 +9,7 @@
  * - TG(n) / TO(n) / DF(n) は押した時点で反映する
  */
 import { decodeKeycode, type Keycode } from '../keycodes/decode'
-import { holdLayerOf, tappingTermOf, type TapDanceEntry } from '../keycodes/tapDance'
+import { holdLayerOf, type TapDanceEntry, tappingTermOf } from '../keycodes/tapDance'
 import { keyId } from '../layout/geometry'
 
 export const DEFAULT_TAPPING_TERM = 200

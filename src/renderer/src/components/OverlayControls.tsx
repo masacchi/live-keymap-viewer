@@ -8,7 +8,7 @@
  *
  * パネル内の要素には `data-interactive` を付ける。判定はその有無で行う。
  */
-import { useCallback, useEffect, useRef, useState, type JSX, type PointerEvent } from 'react'
+import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 
 export interface OverlayControlsProps {
   displayLayer: number

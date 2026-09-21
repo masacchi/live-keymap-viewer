@@ -2,9 +2,10 @@
  * 設定の読み書き(userData/settings.json)。小さいので外部ライブラリは使わない。
  * 値の検証は shared/settings.ts の sanitizeSettings に任せる。
  */
-import { app } from 'electron'
+
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { app } from 'electron'
 import { type GrantedDevice, type Settings, sanitizeSettings } from '../shared/settings'
 
 export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from '../shared/settings'

@@ -19,19 +19,20 @@
  *      世代を進めると、古いループは次の確認で抜ける。応答待ちの途中でも、
  *      戻ってきた時点で自分が古いと分かるので、状態を書き換えない。
  */
+
+import { emptyMatrix, LayerEngine, type LayerSnapshot } from '../engine/layerState'
 import { VIAL_UNLOCK_COUNTER_MAX } from '../hid/constants'
 import type { Transport } from '../hid/transport'
 import {
-  type KeyboardSnapshot,
   getMatrixState,
   getUnlockStatus,
+  type KeyboardSnapshot,
   loadKeyboard,
   nextUnlockAction,
   reloadKeymap,
   unlockPoll,
   unlockStart
 } from '../hid/vial'
-import { LayerEngine, emptyMatrix, type LayerSnapshot } from '../engine/layerState'
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
 
 /** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §7)。 */

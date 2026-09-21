@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { LayerEngine, emptyMatrix } from '@/engine/layerState'
+import { emptyMatrix, LayerEngine } from '@/engine/layerState'
 import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
 import { labelForKeycode } from '@/keycodes/labels'
+import type { TapDanceEntry } from '@/keycodes/tapDance'
 import {
   MOCK_COLS,
   MOCK_KEYMAP,
@@ -9,7 +10,6 @@ import {
   MOCK_ROWS,
   MOCK_TAP_DANCE
 } from '@/mock/cornix.generated'
-import type { TapDanceEntry } from '@/keycodes/tapDance'
 
 function mockKeymap(): number[][][] {
   const keymap: number[][][] = []
@@ -313,9 +313,7 @@ describe('Tap Dance の長押し', () => {
       cols: 1,
       keymap,
       // 長押しで Shift
-      tapDance: [
-        { onTap: 0x0004, onHold: 0x00e1, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
-      ]
+      tapDance: [{ onTap: 0x0004, onHold: 0x00e1, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }]
     })
     const matrix = [[true]]
     engine.update(matrix, 0)

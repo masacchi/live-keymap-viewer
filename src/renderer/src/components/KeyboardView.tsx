@@ -1,17 +1,13 @@
 /** キーボード全体の SVG。物理配置は定義の KLE から来るので固定データは持たない。 */
-import { useMemo, type JSX } from 'react'
+import { type JSX, useMemo } from 'react'
 import type { LayerEngine, LayerSnapshot } from '../engine/layerState'
-import { decodeKeycode } from '../keycodes/decode'
-import { labelForKeycode, type LabelContext, type LabelMode } from '../keycodes/labels'
-import { holdLayerOf } from '../keycodes/tapDance'
-import {
-  layoutEncoderStrip,
-  viewBoxFor,
-  type EncoderPlacement
-} from '../layout/encoderStrip'
-import { keyId, visibleKeys, type KeyboardGeometry } from '../layout/geometry'
-import { decodeLayoutOptions } from '../layout/layoutOptions'
 import type { KeyboardSnapshot } from '../hid/vial'
+import { decodeKeycode } from '../keycodes/decode'
+import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
+import { holdLayerOf } from '../keycodes/tapDance'
+import { type EncoderPlacement, layoutEncoderStrip, viewBoxFor } from '../layout/encoderStrip'
+import { type KeyboardGeometry, keyId, visibleKeys } from '../layout/geometry'
+import { decodeLayoutOptions } from '../layout/layoutOptions'
 import { KeyCap } from './KeyCap'
 
 export interface KeyboardViewProps {
@@ -68,10 +64,7 @@ export function KeyboardView({
     [labelMode, labelContext]
   )
 
-  const unlockSet = useMemo(
-    () => new Set(unlockKeys.map((k) => keyId(k.row, k.col))),
-    [unlockKeys]
-  )
+  const unlockSet = useMemo(() => new Set(unlockKeys.map((k) => keyId(k.row, k.col))), [unlockKeys])
 
   const strip = useMemo(() => {
     const items = geometry.encoders

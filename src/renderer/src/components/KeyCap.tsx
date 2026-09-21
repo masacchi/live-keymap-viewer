@@ -85,7 +85,11 @@ export function KeyCap({
   const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 : 0)
 
   return (
-    <g className={classes.join(' ')} transform={rotate} style={{ '--hold': holdColor } as React.CSSProperties}>
+    <g
+      className={classes.join(' ')}
+      transform={rotate}
+      style={{ '--hold': holdColor } as React.CSSProperties}
+    >
       <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
 
       {holding ? (

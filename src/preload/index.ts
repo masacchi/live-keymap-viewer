@@ -1,6 +1,6 @@
 /** renderer に渡す最小限の IPC。HID そのものは renderer の WebHID で扱う。 */
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type HidCandidate, type LabelMode, type RendererApi } from '../shared/ipc'
+import { type HidCandidate, IPC, type LabelMode, type RendererApi } from '../shared/ipc'
 
 const api: RendererApi = {
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),

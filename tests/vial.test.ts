@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
+import { RequestQueue, WebHidTransport } from '@/hid/transport'
 import {
-  ProtocolError,
   countEncoders,
   decodeMatrixState,
   getKeymap,
@@ -12,6 +12,7 @@ import {
   isMatrixTestSupported,
   loadKeyboard,
   nextUnlockAction,
+  ProtocolError,
   reloadKeymap,
   unlockPoll,
   unlockStart
@@ -24,7 +25,6 @@ import {
   MOCK_ROWS,
   MOCK_TAP_DANCE
 } from '@/mock/cornix.generated'
-import { RequestQueue, WebHidTransport } from '@/hid/transport'
 
 async function openMock(unlocked = true): Promise<MockTransport> {
   const transport = new MockTransport({ unlocked })
@@ -53,8 +53,7 @@ describe('プロトコルの読み出し', () => {
     for (let layer = 0; layer < MOCK_LAYERS; layer++) {
       for (let row = 0; row < MOCK_ROWS; row++) {
         for (let col = 0; col < MOCK_COLS; col++) {
-          const expected =
-            MOCK_KEYMAP[layer * MOCK_ROWS * MOCK_COLS + row * MOCK_COLS + col]
+          const expected = MOCK_KEYMAP[layer * MOCK_ROWS * MOCK_COLS + row * MOCK_COLS + col]
           expect(keymap[layer][row][col]).toBe(expected)
         }
       }
@@ -337,10 +336,7 @@ describe('他アプリ宛ての応答を弾く', () => {
   it('コマンド ID が合わないパケットは捨てて、本来の応答を待つ', async () => {
     const device = new FakeHidDevice()
     // 先に他アプリ宛て(0x11 レイヤー数)が届き、そのあと本命(0x02 0x03)が来る
-    device.responder = () => [
-      packet(0x11, 0x0a),
-      packet(0x02, 0x03, 0b0000_0010)
-    ]
+    device.responder = () => [packet(0x11, 0x0a), packet(0x02, 0x03, 0b0000_0010)]
     const transport = new WebHidTransport(device as unknown as HIDDevice)
     await transport.open()
 

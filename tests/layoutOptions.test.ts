@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  decodeLayoutOptions,
-  encodeLayoutOptions,
-  optionBits
-} from '@/layout/layoutOptions'
+import { decodeLayoutOptions, encodeLayoutOptions, optionBits } from '@/layout/layoutOptions'
 import definition from '../reference/cornix-vial-definition.json'
 
 describe('optionBits', () => {
@@ -40,9 +36,7 @@ describe('decodeLayoutOptions', () => {
       [3, 0, 1],
       [2, 1, 0]
     ]) {
-      expect(decodeLayoutOptions(encodeLayoutOptions(choices, labels), labels)).toEqual(
-        choices
-      )
+      expect(decodeLayoutOptions(encodeLayoutOptions(choices, labels), labels)).toEqual(choices)
     }
   })
 

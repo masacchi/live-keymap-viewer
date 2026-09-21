@@ -6,7 +6,7 @@
  * 一度許可したデバイスを次の起動でも使えるようにすることだけ。
  */
 import { session } from 'electron'
-import { IPC, type HidCandidate } from '../shared/ipc'
+import { type HidCandidate, IPC } from '../shared/ipc'
 import { isDeviceGranted, rememberDevice } from './settings'
 import type { WindowManager } from './windows'
 
@@ -48,7 +48,11 @@ export class HidPermissions {
 
       const choose = (device: Electron.HIDDevice | undefined): void => {
         if (device) {
-          rememberDevice({ vendorId: device.vendorId, productId: device.productId, name: device.name })
+          rememberDevice({
+            vendorId: device.vendorId,
+            productId: device.productId,
+            name: device.name
+          })
         }
         callback(device?.deviceId)
       }
