@@ -101,6 +101,9 @@ export default function App(): JSX.Element {
         {keyboard.error && (
           <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
             {keyboard.error}
+            {keyboard.reconnecting && (
+              <span className="ml-2 text-[var(--muted)]">自動で繋ぎ直す…</span>
+            )}
           </div>
         )}
 
