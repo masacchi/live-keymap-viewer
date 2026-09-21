@@ -161,6 +161,7 @@ stateDiagram-v2
 | **モードを変えるたびにウィンドウを作り直す** | 透明ウィンドウは作った後から切り替えられない |
 | **オーバーレイの操作パネルの上だけクリック透過を切る** | `setIgnoreMouseEvents(true, { forward: true })` なら透過中でも mousemove は届く。ポインタが `data-interactive` の上に来たときだけ透過を解く |
 | **Windows 版は公式 zip を展開して `out/` を置くだけ** | electron-builder などは exe の情報書き換えに rcedit を使い、Linux からだと wine が要る。このアプリはネイティブモジュールが無いので不要 |
+| **ビルドは Vite を直接使う(electron-vite を使わない)** | electron-vite の安定版(5.0.0)が Vite 8 に対応していなかった。任せていたのは「main / preload / renderer を別々にビルドする」「dev で Electron を起動・再起動する」だけなので、Vite の設定 3 つと `scripts/dev.mjs`(Vite の公開 API だけを使う)で足りる |
 | **lint とフォーマットは Biome、コミット時の検査は husky** | どちらも依存が小さく設定が 1 か所で済む(ESLint + Prettier は 6 パッケージ・設定 2 ファイルになる)。husky は誰でも見れば分かる標準的な置き場所 |
 | **設定は項目ごとに検証して読む**(`sanitizeSettings`) | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す |
 

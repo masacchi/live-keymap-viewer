@@ -17,7 +17,7 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 
 | コマンド | やること |
 |---|---|
-| `npm run dev` | 開発サーバーつきで起動(renderer はホットリロード) |
+| `npm run dev` | 開発サーバーつきで起動(下記) |
 | `npm run build` | 型チェック + `out/` にビルド |
 | `npm start` | ビルド済みの `out/` を起動 |
 | `npm test` | 単体テスト(vitest) |
@@ -28,6 +28,25 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | **`npm run check`** | **型チェック + lint + テスト。コミット時に自動で走る(下記)** |
 | `npm run package:win` | ビルドして `dist/win32-x64/` に Windows 版一式を作る |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
+
+### ビルドの構成
+
+Vite で 3 つを別々にビルドして `out/` に置く。electron-vite は使っていない(理由は
+[ARCHITECTURE.md §6](ARCHITECTURE.md#6-設計の判断とその理由))。
+
+| 対象 | 設定 | 出力 |
+|---|---|---|
+| renderer | [vite.config.ts](../vite.config.ts) | `out/renderer/` |
+| main | [vite.main.config.ts](../vite.main.config.ts) | `out/main/index.js` |
+| preload | [vite.preload.config.ts](../vite.preload.config.ts) | `out/preload/index.mjs` |
+
+`npm run dev`([scripts/dev.mjs](../scripts/dev.mjs))は renderer の開発サーバーを立て、main と preload を
+監視つきでビルドしてから Electron を起動する。
+
+- renderer を変える → ホットリロード
+- main を変える → Electron を再起動
+- preload を変える → 画面を再読み込み
+- Electron のウィンドウを閉じる → `npm run dev` も終わる
 
 ### コミット時の自動チェック
 
