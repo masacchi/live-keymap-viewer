@@ -17,7 +17,7 @@ export function UnlockPanel({ unlock }: UnlockPanelProps): JSX.Element {
   const progress = unlock.max > 0 ? (unlock.max - unlock.counter) / unlock.max : 0
 
   return (
-    <div className="rounded-lg border border-[var(--layer-4)] bg-[var(--surface)] px-4 py-3">
+    <div className="rounded-lg border border-[var(--unlock)] bg-[var(--surface)] px-4 py-3">
       <p className="text-sm font-semibold">図で色が付いているキーを、バーが埋まるまで押し続ける</p>
       <p className="mt-1 text-xs text-[var(--muted)]">
         押しているキーを読むには Vial のアンロックが要る。離すとやり直しになる。
@@ -25,7 +25,7 @@ export function UnlockPanel({ unlock }: UnlockPanelProps): JSX.Element {
       </p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--line-soft)]">
         <div
-          className="h-full rounded-full bg-[var(--layer-4)] transition-[width] duration-150"
+          className="h-full rounded-full bg-[var(--unlock)] transition-[width] duration-150"
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </div>

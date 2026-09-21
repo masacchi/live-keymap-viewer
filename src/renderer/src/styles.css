@@ -27,6 +27,11 @@
   --layer-7: #8fa8ef;
   --layer-8: #e3c56a;
   --layer-9: #9ad4c8;
+  /*
+   * アンロックで押し続けるキーの色。以前は L4 の色を借りていて、「長押し→L4」の色帯と
+   * 見分けが付かなかった。どのレイヤー色とも押下の黄色とも重ならない、白に近い色にする。
+   */
+  --unlock: #f4f7f8;
 }
 
 html,
@@ -186,11 +191,24 @@ body.overlay .app-shell {
   font-weight: 700;
 }
 
-/* アンロックのために押し続けるキー */
+/* アンロックのために押し続けるキー。レイヤー色と区別できるよう、専用の色で脈打たせる */
 .key-unlock .cap {
-  fill: color-mix(in srgb, var(--layer-4) 35%, var(--surface));
-  stroke: var(--layer-4);
-  stroke-width: 2;
+  fill: color-mix(in srgb, var(--unlock) 16%, var(--surface));
+  stroke: var(--unlock);
+  stroke-width: 2.5;
+  animation: unlock-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes unlock-pulse {
+  50% {
+    stroke-opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key-unlock .cap {
+    animation: none;
+  }
 }
 
 /*
