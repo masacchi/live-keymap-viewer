@@ -14,12 +14,13 @@
  * ので、公式の win32 zip を展開して out/ を resources/app に置き、
  * electron.exe をリネームするだけで動く。wine は要らない。
  */
-import { downloadArtifact } from '@electron/get'
+
 import { execFileSync } from 'node:child_process'
-import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { downloadArtifact } from '@electron/get'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const ARCH = process.argv[2] ?? 'x64' // x64 | arm64
@@ -77,6 +78,6 @@ console.log(`\n完成: ${OUT_DIR}`)
 console.log('')
 console.log('  ⚠ exe 単体では動かない。フォルダごとコピーすること。')
 console.log('')
-console.log(`    cp -r ${OUT_DIR.replace(ROOT + '/', '')} /mnt/c/Users/$USER/Desktop/LiveKeymapViewer`)
+console.log(`    cp -r ${relative(ROOT, OUT_DIR)} /mnt/c/Users/$USER/Desktop/LiveKeymapViewer`)
 console.log('')
 console.log(`  コピーしたフォルダの中の ${EXE_NAME} を実行する。`)

@@ -6,7 +6,7 @@
  *   labels[4] = "e" ならエンコーダー
  *   labels[8] = "layout_index,layout_option"
  */
-import { parseKle, type KleKey } from './kle'
+import { type KleKey, parseKle } from './kle'
 
 export interface PhysicalKey {
   row: number
@@ -88,7 +88,9 @@ function rotatePoint(
   return [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos]
 }
 
-function geometryOf(key: KleKey): Omit<PhysicalKey, 'row' | 'col' | 'layoutIndex' | 'layoutOption'> {
+function geometryOf(
+  key: KleKey
+): Omit<PhysicalKey, 'row' | 'col' | 'layoutIndex' | 'layoutOption'> {
   return {
     x: key.x,
     y: key.y,
@@ -113,9 +115,7 @@ export function keyCorners(
     [key.x + key.width, key.y + key.height],
     [key.x, key.y + key.height]
   ]
-  return pts.map(([px, py]) =>
-    rotatePoint(px, py, key.rotationX, key.rotationY, key.rotationAngle)
-  )
+  return pts.map(([px, py]) => rotatePoint(px, py, key.rotationX, key.rotationY, key.rotationAngle))
 }
 
 /**
@@ -144,7 +144,7 @@ export function buildGeometry(
       continue
     }
 
-    if (!key.decal && !(first && first.includes(','))) continue
+    if (!key.decal && !first?.includes(',')) continue
 
     const pair = first ? parsePair(first) : null
     const [row, col] = pair ?? [0, 0]
@@ -174,9 +174,7 @@ export function buildGeometry(
 }
 
 /** 回転後の角をすべて含む外接矩形。空なら原点の一点。 */
-function boundsOf(
-  items: ReadonlyArray<Parameters<typeof keyCorners>[0]>
-): Bounds {
+function boundsOf(items: ReadonlyArray<Parameters<typeof keyCorners>[0]>): Bounds {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity

@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /*
  * 色づかいは reference/keymap-preview.html を踏襲している。
@@ -43,9 +43,9 @@ body,
  */
 :root {
   --sans:
-    'IBM Plex Sans JP', 'Yu Gothic UI', 'Meiryo', 'Hiragino Sans', 'Noto Sans CJK JP',
-    'Noto Sans JP', 'Source Han Sans JP', 'IPAexGothic', 'VL PGothic', 'TakaoPGothic',
-    system-ui, sans-serif;
+    "IBM Plex Sans JP", "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans CJK JP",
+    "Noto Sans JP", "Source Han Sans JP", "IPAexGothic", "VL PGothic", "TakaoPGothic", system-ui,
+    sans-serif;
 }
 
 body {
@@ -70,16 +70,70 @@ body.overlay .app-shell {
   border-radius: 14px;
 }
 
-/* --- キーキャップ --- */
+/*
+ * ===== キーキャップ =====
+ *
+ * 並びは「基本 → 種類(記号・空き)→ 状態(透過・押下・長押し・アンロック)」。
+ * 種類と状態のセレクタは詳細度が同じなので、**後に書いた方が勝つ**。
+ * 状態を最後に置くことで、押下中の記号キーでも押下の配色が優先される。
+ * (以前は記号キーの文字色が押下より後ろにあり、黄色の上にシアンの文字が出ていた)
+ */
+
+/* --- 基本 --- */
 .cap {
   fill: var(--surface);
   stroke: var(--line);
   stroke-width: 1;
 }
 
+.main {
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-weight: 600;
+}
+
+/*
+ * Shift 側の文字。キーキャップの印字と同じく主文字の上に、中央揃えで置く。
+ * 左上に 11px で出していたときは小さくて見落としていた。
+ */
+.shift {
+  fill: var(--shift-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.sub {
+  fill: var(--muted);
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* 長押しでレイヤーが出るキーの下端の色帯 */
+.band {
+  opacity: 0.9;
+}
+
+.band-text {
+  fill: #101315;
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* --- 種類 --- */
 .key-sym .cap {
   fill: var(--sym-fill);
   stroke: color-mix(in srgb, var(--sym-ink) 45%, transparent);
+}
+
+.key-sym .main,
+.key-sym .shift {
+  fill: var(--sym-ink);
 }
 
 .key-none .cap {
@@ -88,6 +142,9 @@ body.overlay .app-shell {
   stroke-dasharray: 3 3;
 }
 
+/* --- 状態 --- */
+
+/* 透過(KC_TRNS)。下のレイヤーの値を薄く出す */
 .key-trns .cap {
   fill: var(--surface-2);
 }
@@ -129,59 +186,17 @@ body.overlay .app-shell {
   font-weight: 700;
 }
 
+/* アンロックのために押し続けるキー */
 .key-unlock .cap {
   fill: color-mix(in srgb, var(--layer-4) 35%, var(--surface));
   stroke: var(--layer-4);
   stroke-width: 2;
 }
 
-.main {
-  fill: var(--ink);
-  text-anchor: middle;
-  dominant-baseline: middle;
-  font-weight: 600;
-}
-
-.key-sym .main {
-  fill: var(--sym-ink);
-}
-
 /*
- * Shift 側の文字。キーキャップの印字と同じく主文字の上に、中央揃えで置く。
- * 左上に 11px で出していたときは小さくて見落としていた。
+ * ===== ノブ =====
+ * 図の上下どちらかに横一列でまとめる(KLE 上の座標では描かない)。
  */
-.shift {
-  fill: var(--shift-ink);
-  font-size: 14px;
-  font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
-.key-sym .shift {
-  fill: var(--sym-ink);
-}
-
-.sub {
-  fill: var(--muted);
-  font-size: 9px;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
-.band {
-  opacity: 0.9;
-}
-
-.band-text {
-  fill: #101315;
-  font-size: 9px;
-  font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
-/* ノブは図の上下どちらかに横一列でまとめる(KLE 上の座標では描かない) */
 .encoder {
   fill: none;
   stroke: var(--muted);

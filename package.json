@@ -10,14 +10,18 @@
     "build": "npm run typecheck && electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "biome check .",
+    "format": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test",
     "package:win": "npm run build && node scripts/package-win.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.14",
     "@electron/get": "^5.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.10.0",
