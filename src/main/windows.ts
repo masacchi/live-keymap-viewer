@@ -141,7 +141,11 @@ export class WindowManager {
         preload: join(import.meta.dirname, '../preload/index.mjs'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false
+        sandbox: false,
+        // 最小化や、他のウィンドウに完全に隠れたとき(Windows は隠れたら非表示扱い)に
+        // タイマーが 1 秒に 1 回まで間引かれると、20ms の matrix ポーリングが止まったも同然になる。
+        // その間の TG / DF の押下を取りこぼし、戻ったときに表示するレイヤーがずれる
+        backgroundThrottling: false
       }
     })
 
