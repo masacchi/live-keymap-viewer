@@ -249,16 +249,22 @@ OS レベルでは答えることを確かめた(§2.6)。残りは**アプリ�
 §3 の実験をそのままテストにできる。スキップしたテストとして置いてある
 (`BLE 並みの往復でも、押したキーを正しい回に読む`)。**P3 を実装したらスキップを外し、通ること。**
 実測に合わせて、遅延を 250ms から **500ms** に上げたケースも足すとよい。
-読み込み全体を 250ms で回すと 110 往復 × 250ms ≈ 30 秒かかるので、テストは matrix だけにする。
+読み込み全体を 250ms で回すと 95 往復 × 250ms ≈ 24 秒かかるので、テストは matrix だけにする。
 
-### P4. 出力先の切り替えや抜き差しに追従する
+読み込みの往復は 2026-09-21 に減らした(Tap Dance は使う枠と先頭 5 個だけ、定義はキャッシュ)。
+モックで数えて、初回 95 往復、定義がキャッシュにあれば 71 往復。BT の 470ms なら約 45 秒と 33 秒。
 
-今は起動時に 1 回繋ぐだけ。USB を抜く・`SWITCH` で出力先を変える、と今のセッションが時間切れで
-エラーになり、そのまま止まる(HANDOFF §3「以前許可したデバイスには自動で再接続する」を満たしていない)。
+### P4. 出力先の切り替えや抜き差しに追従する — **繋ぎ直しの土台は済み**
 
-- `navigator.hid` の `connect` / `disconnect` イベントを聞く(`hooks/useVialKeyboard.ts`)
-- セッションがエラーになったとき、または `disconnect` のとき、`connectToResponsive` で答える
-  インターフェースを探し直す。すぐに見つからなければ数秒おきに試す
+2026-09-21 に `session/keyboardConnection.ts` を入れた。一度でも動いた実機のセッションが
+error になったら、2 秒ごとに許可済みのデバイスを探し直して `connectToResponsive` で繋ぐ。
+`navigator.hid` の `connect` イベントが来たら待たずに試す(`disconnect` イベントは聞いていない。
+使っていたデバイスが消えればセッションが通信に失敗して error になるので、それで足りる)。
+
+残っていること:
+
+- `SWITCH` で出力先を変えたときに、実機で追従するか確かめる。USB → BT は P3 が入るまで
+  遅さで読み込みに失敗するはず
 - 出力先を切り替えた直後は、新しい側が答え始めるまで少しかかるはず(実測)
 - アンロックは接続し直すたびに要るかもしれない(RMK の `VialLock` は再起動で消える。
   USB ⇄ BLE の切り替えで消えるかは未確認)
@@ -308,7 +314,7 @@ P3 で往復時間を記録するので、それを出すだけ。WebHID から�
 | `src/renderer/src/hid/transport.ts`(`WebHidTransport`: 往復時間の記録、時間切れの伸長、取り残された応答の破棄) | P3 |
 | `src/renderer/src/hid/vial.ts`(時間切れの既定値) | P3 |
 | `tests/webhidTransport.test.ts`(スキップを外す、500ms の遅延のテストを足す) | P3 |
-| `src/renderer/src/hooks/useVialKeyboard.ts`(抜き差し・切り替えへの追従) | P4 |
+| `src/renderer/src/session/keyboardConnection.ts`(抜き差し・切り替えへの追従。土台は済み) | P4 |
 | `src/renderer/src/session/keyboardSession.ts`(エラー時の通知、アンロックの最大値) | P4, P5 |
 | `src/renderer/src/hid/mockTransport.ts`(RMK 流のアンロック) | P5 |
 | `src/renderer/src/components/Toolbar.tsx`(往復時間の表示) | P6 |
