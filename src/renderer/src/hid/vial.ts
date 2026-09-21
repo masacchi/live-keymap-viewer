@@ -166,13 +166,19 @@ export async function getLayerCount(transport: Transport): Promise<number> {
   return data[1]
 }
 
-/** 定義ブロックを全部集めて展開し、JSON にする。 */
-export async function getDefinition(transport: Transport): Promise<VialDefinition> {
-  const sizeData = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE], LONG)
-  let remaining = u32le(sizeData, 0)
-  if (remaining === 0 || remaining > 1 << 20) {
-    throw new ProtocolError(`定義サイズが異常: ${remaining}`)
+/** 定義ブロック(XZ で圧縮した JSON)のバイト数。 */
+export async function getDefinitionSize(transport: Transport): Promise<number> {
+  const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE], LONG)
+  const size = u32le(data, 0)
+  if (size === 0 || size > 1 << 20) {
+    throw new ProtocolError(`定義サイズが異常: ${size}`)
   }
+  return size
+}
+
+/** 定義ブロックを全部集めて展開し、JSON にする。size を渡さなければ先に問い合わせる。 */
+export async function getDefinition(transport: Transport, size?: number): Promise<VialDefinition> {
+  let remaining = size ?? (await getDefinitionSize(transport))
 
   const chunks: Uint8Array[] = []
   let total = 0
@@ -419,8 +425,45 @@ export function isMatrixTestSupported(vialProtocol: number, rows: number, cols: 
   )
 }
 
+/**
+ * 読み込んだ定義の置き場所。キーボードの UID と、圧縮した定義のバイト数で引く。
+ *
+ * 定義はファームを焼き直さない限り変わらないので、繋ぐたびに読まなくてよい。読まずに済めば、
+ * 応答を照合できない 0xFE 系の要求(Bluetooth では取り違えると定義の展開が壊れる)も減る。
+ * 焼き直して中身が変わってもバイト数が同じ、ということはあり得るので、手動の再読み込みでは
+ * キャッシュを使わずに読み直す(LoadOptions.refreshDefinition)。
+ */
+export interface DefinitionCache {
+  get(uid: string, size: number): VialDefinition | null
+  set(uid: string, size: number, definition: VialDefinition): void
+}
+
+export interface LoadOptions {
+  /** 定義のキャッシュ。無ければ毎回読む。 */
+  definitionCache?: DefinitionCache
+  /** true ならキャッシュがあっても読み、読んだものでキャッシュを置き換える。 */
+  refreshDefinition?: boolean
+}
+
+async function loadDefinition(
+  transport: Transport,
+  uid: string,
+  { definitionCache, refreshDefinition = false }: LoadOptions
+): Promise<VialDefinition> {
+  if (!definitionCache) return getDefinition(transport)
+  const size = await getDefinitionSize(transport)
+  const cached = refreshDefinition ? null : definitionCache.get(uid, size)
+  if (cached) return cached
+  const definition = await getDefinition(transport, size)
+  definitionCache.set(uid, size, definition)
+  return definition
+}
+
 /** キーマップ・定義・Tap Dance を一通り読み込む。 */
-export async function loadKeyboard(transport: Transport): Promise<KeyboardSnapshot> {
+export async function loadKeyboard(
+  transport: Transport,
+  options: LoadOptions = {}
+): Promise<KeyboardSnapshot> {
   const viaProtocol = await getViaProtocol(transport)
   const { vialProtocol, uid } = await getKeyboardId(transport)
 
@@ -431,7 +474,7 @@ export async function loadKeyboard(transport: Transport): Promise<KeyboardSnapsh
     )
   }
 
-  const definition = await getDefinition(transport)
+  const definition = await loadDefinition(transport, uid, options)
   const rows = definition.matrix.rows
   const cols = definition.matrix.cols
   const layers = await getLayerCount(transport)

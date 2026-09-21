@@ -24,6 +24,7 @@ import { emptyMatrix, LayerEngine, type LayerSnapshot } from '../engine/layerSta
 import { VIAL_UNLOCK_COUNTER_MAX } from '../hid/constants'
 import type { Transport } from '../hid/transport'
 import {
+  type DefinitionCache,
   getMatrixState,
   getUnlockStatus,
   type KeyboardSnapshot,
@@ -71,6 +72,16 @@ export interface SessionOptions {
   now?: () => number
   /** 待ち。テストで差し替える。 */
   sleep?: (ms: number) => Promise<void>
+  /** キーボード定義のキャッシュ。無ければ繋ぐたびに読む。 */
+  definitionCache?: DefinitionCache
+}
+
+export interface ReloadOptions {
+  /**
+   * 定義もキャッシュを使わずに読み直す。手動の再読み込みで使う。
+   * ファームを焼き直して、定義のバイト数が変わらないまま中身だけ変わったときの逃げ道。
+   */
+  full?: boolean
 }
 
 export type SessionListener = (state: SessionState) => void
@@ -104,6 +115,7 @@ export class KeyboardSession {
   private readonly unlockPollMs: number
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
+  private readonly definitionCache: DefinitionCache | undefined
 
   constructor(
     private readonly transport: Transport,
@@ -113,6 +125,7 @@ export class KeyboardSession {
     this.unlockPollMs = options.unlockPollMs ?? UNLOCK_POLL_MS
     this.now = options.now ?? (() => performance.now())
     this.sleep = options.sleep ?? defaultSleep
+    this.definitionCache = options.definitionCache
     this.current = {
       status: 'connecting',
       error: null,
@@ -153,7 +166,9 @@ export class KeyboardSession {
       if (!this.alive(gen)) return
       this.update({ status: 'loading' })
 
-      const snapshot = await loadKeyboard(this.transport)
+      const snapshot = await loadKeyboard(this.transport, {
+        definitionCache: this.definitionCache
+      })
       if (!this.alive(gen)) return
       const engine = this.install(snapshot, false)
 
@@ -192,8 +207,10 @@ export class KeyboardSession {
    * エンジンを作り直し、TG の固定や押しているキーは前のエンジンから引き継ぐ(キーボード側は
    * 覚えたままなので、捨てると表示がずれる)。
    * ポーリング中でなければ何もしない(アンロック中は VIA コマンドが通らない)。
+   *
+   * full のときは定義もキャッシュを使わずに読み直し、変わっていれば物理配置も組み直す。
    */
-  async reload(): Promise<void> {
+  async reload({ full = false }: ReloadOptions = {}): Promise<void> {
     const previous = this.current.snapshot
     if (this.disposed || !previous) return
     if (this.current.status !== 'ready' || this.current.reloading) return
@@ -201,15 +218,23 @@ export class KeyboardSession {
     const gen = ++this.generation // ポーリングを止める
     this.update({ reloading: true })
     try {
-      const next = await reloadKeymap(this.transport, previous)
+      const next = full
+        ? await loadKeyboard(this.transport, {
+            definitionCache: this.definitionCache,
+            refreshDefinition: true
+          })
+        : await reloadKeymap(this.transport, previous)
       if (!this.alive(gen)) return
+      const sameDefinition =
+        next.definition === previous.definition ||
+        JSON.stringify(next.definition) === JSON.stringify(previous.definition)
       const current = this.current.engine
-      if (current && keymapUnchanged(previous, next)) {
+      if (current && sameDefinition && keymapUnchanged(previous, next)) {
         this.update({ reloading: false })
         void this.runPolling(gen, previous, current)
         return
       }
-      const engine = this.install(next, true, current)
+      const engine = this.install(next, sameDefinition, current)
       this.update({ reloading: false })
       void this.runPolling(gen, next, engine)
     } catch (error) {

@@ -238,6 +238,23 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
+  it('手動の読み直し(full)では定義も読み直すが、ふだんの読み直しでは読まない', async () => {
+    const { session, mock } = await readySession()
+    const definitionReads = () => mock.requests.filter((r) => r[0] === 0xfe && r[1] === 0x02).length
+    const afterLoad = definitionReads()
+
+    await session.reload()
+    expect(definitionReads()).toBe(afterLoad)
+
+    const geometry = session.state.geometry
+    await session.reload({ full: true })
+    expect(definitionReads()).toBeGreaterThan(afterLoad)
+    expect(session.state.status).toBe('ready')
+    // 定義が変わっていなければ、物理配置は組み直さない
+    expect(session.state.geometry).toBe(geometry)
+    await session.dispose()
+  })
+
   it('読み直しを重ねて呼んでも、実際に読むのは 1 回だけ', async () => {
     const { session, mock } = await readySession()
     const before = mock.requests.filter((r) => r[0] === 0x12).length

@@ -11,10 +11,16 @@
  * だけ。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LocalStorageDefinitionCache } from '../hid/definitionCache'
 import { pickResponsiveDevice } from '../hid/deviceProbe'
 import { MockTransport } from '../hid/mockTransport'
 import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
-import { KeyboardSession, type SessionState, type SessionStatus } from '../session/keyboardSession'
+import {
+  KeyboardSession,
+  type SessionOptions,
+  type SessionState,
+  type SessionStatus
+} from '../session/keyboardSession'
 
 export type { UnlockState } from '../session/keyboardSession'
 
@@ -38,6 +44,9 @@ const IDLE: VialKeyboardState = {
   reloading: false
 }
 
+/** 実機の定義はキャッシュする(モックには使わない)。 */
+const definitionCache = new LocalStorageDefinitionCache()
+
 export function useVialKeyboard() {
   const [state, setState] = useState<VialKeyboardState>(IDLE)
   const sessionRef = useRef<KeyboardSession | null>(null)
@@ -50,9 +59,9 @@ export function useVialKeyboard() {
    * 参照は await より前に差し替える。こうしておくと、接続を連打しても
    * 「最後に作ったセッション」だけが生き残り、それ以前のものは必ず破棄される。
    */
-  const attach = useCallback(async (transport: Transport) => {
+  const attach = useCallback(async (transport: Transport, options: SessionOptions = {}) => {
     const previous = sessionRef.current
-    const session = new KeyboardSession(transport)
+    const session = new KeyboardSession(transport, options)
     sessionRef.current = session
     session.subscribe(setState)
 
@@ -92,7 +101,7 @@ export function useVialKeyboard() {
         })
         return
       }
-      await attach(new WebHidTransport(device))
+      await attach(new WebHidTransport(device), { definitionCache })
     },
     [attach]
   )
@@ -134,9 +143,12 @@ export function useVialKeyboard() {
     await session?.dispose()
   }, [])
 
-  /** キーマップを読み直す。ポーリング中でなければ何もしない。 */
+  /**
+   * 手動の読み直し。定義もキャッシュを使わずに読み直す(ファームを焼き直したときの逃げ道)。
+   * ポーリング中でなければ何もしない。
+   */
   const reload = useCallback(async () => {
-    await sessionRef.current?.reload()
+    await sessionRef.current?.reload({ full: true })
   }, [])
 
   /** 起動時、前に許可したデバイスがあれば、答えるものに自動で繋ぐ。 */
@@ -158,10 +170,11 @@ export function useVialKeyboard() {
    * オーバーレイはクリック透過でフォーカスを取らないので、そちらでは発火しない。
    */
   useEffect(() => {
-    const onFocus = (): void => void reload()
+    // こちらはキーマップだけ。フォーカスのたびに定義まで読むのは重い
+    const onFocus = (): void => void sessionRef.current?.reload()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [reload])
+  }, [])
 
   // アンマウントで閉じる
   useEffect(

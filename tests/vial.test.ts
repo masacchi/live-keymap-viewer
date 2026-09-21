@@ -4,6 +4,7 @@ import {
   CMD_VIAL_DYNAMIC_ENTRY_OP,
   DYNAMIC_VIAL_TAP_DANCE_GET
 } from '@/hid/constants'
+import { LocalStorageDefinitionCache } from '@/hid/definitionCache'
 import { MockTransport } from '@/hid/mockTransport'
 import { RequestQueue, WebHidTransport } from '@/hid/transport'
 import {
@@ -150,6 +151,40 @@ describe('Tap Dance は要る枠だけ読む', () => {
     const encoders = [[[0x5700 + 12, 0x0004]]]
     expect(tapDanceToRead(32, keymap, encoders)).toEqual([0, 1, 2, 3, 4, 9, 12])
     expect(tapDanceToRead(3, [[[0x0004]]], [])).toEqual([0, 1, 2])
+  })
+})
+
+describe('定義のキャッシュ', () => {
+  const definitionReads = (transport: MockTransport): number =>
+    transport.requests.filter((r) => r[0] === 0xfe && r[1] === 0x02).length // CMD_VIAL_GET_DEFINITION
+
+  function memoryCache() {
+    const items = new Map<string, string>()
+    return new LocalStorageDefinitionCache({
+      getItem: (key) => items.get(key) ?? null,
+      setItem: (key, value) => void items.set(key, value)
+    })
+  }
+
+  it('2 回目からは定義を読まずにキャッシュを使う', async () => {
+    const definitionCache = memoryCache()
+    const first = await openMock()
+    const a = await loadKeyboard(first, { definitionCache })
+    expect(definitionReads(first)).toBeGreaterThan(0)
+
+    const second = await openMock()
+    const b = await loadKeyboard(second, { definitionCache })
+    expect(definitionReads(second)).toBe(0)
+    expect(b.definition).toEqual(a.definition)
+    expect(b.keymap).toEqual(a.keymap)
+  })
+
+  it('refreshDefinition ならキャッシュがあっても読み直す', async () => {
+    const definitionCache = memoryCache()
+    await loadKeyboard(await openMock(), { definitionCache })
+    const transport = await openMock()
+    await loadKeyboard(transport, { definitionCache, refreshDefinition: true })
+    expect(definitionReads(transport)).toBeGreaterThan(0)
   })
 })
 
