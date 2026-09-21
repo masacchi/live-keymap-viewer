@@ -119,6 +119,15 @@ export class MockTransport implements Transport {
   }
 
   /**
+   * 進行中のアンロック手順を外から打ち切る。
+   * キーボードの挿し直しや、別アプリからの vial_lock を再現するのに使う。
+   */
+  abortUnlock(): void {
+    this.unlockInProgress = false
+    this.unlockCounter = VIAL_UNLOCK_COUNTER_MAX
+  }
+
+  /**
    * キーマップを書き換える。Vial 側で編集された状況を作るのに使う。
    * 実機の set_keycode は実装していない(このアプリは読むだけなので)。
    */

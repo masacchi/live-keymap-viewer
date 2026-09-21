@@ -86,6 +86,8 @@ export class WebHidTransport implements Transport {
 
   async open(): Promise<void> {
     if (!this.device.opened) await this.device.open()
+    // 二重に開かれてもリスナーが重ならないように、いったん外してから付ける
+    this.device.removeEventListener('inputreport', this.onInputReport)
     this.device.addEventListener('inputreport', this.onInputReport)
   }
 

@@ -7,7 +7,7 @@
  * (オーバーレイはクリックが透過するので、そもそも押せない)
  */
 import type { JSX } from 'react'
-import type { UnlockState } from '../hooks/useVialKeyboard'
+import type { UnlockState } from '../session/keyboardSession'
 
 export interface UnlockPanelProps {
   unlock: UnlockState

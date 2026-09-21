@@ -1,8 +1,14 @@
 /**
- * 接続 → 読み出し → アンロック → matrix ポーリング、の一連を持つフック。
+ * KeyboardSession を React につなぐ薄いフック。
  *
- * HID は renderer の WebHID で扱う(HANDOFF §4)。transport をインターフェースに
- * してあるので、実機が無くてもモックで同じ画面が出せる。
+ * 接続のライフサイクル(読み込み・アンロック・ポーリング・読み直し)は
+ * session/keyboardSession.ts が持つ。ここでやるのは
+ *
+ *   - デバイスの選び方(WebHID の選択ダイアログ / 前回許可したもの / モック)
+ *   - セッションの差し替えと破棄
+ *   - ウィンドウのフォーカス復帰で読み直す
+ *
+ * だけ。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MockTransport } from '../hid/mockTransport'
@@ -12,55 +18,19 @@ import {
   isVialDevice,
   type Transport
 } from '../hid/transport'
-import {
-  type KeyboardSnapshot,
-  getMatrixState,
-  getUnlockStatus,
-  loadKeyboard,
-  nextUnlockAction,
-  reloadKeymap,
-  unlockPoll,
-  unlockStart
-} from '../hid/vial'
-import { VIAL_UNLOCK_COUNTER_MAX } from '../hid/constants'
-import { LayerEngine, emptyMatrix, type LayerSnapshot } from '../engine/layerState'
-import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
+import { KeyboardSession, type SessionState, type SessionStatus } from '../session/keyboardSession'
 
-/** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §7)。 */
-export const MATRIX_POLL_MS = 20
-/** アンロックのポーリング間隔。 */
-export const UNLOCK_POLL_MS = 200
+export type { UnlockState } from '../session/keyboardSession'
 
-export type ConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'loading'
-  | 'unlocking'
-  | 'ready'
-  | 'error'
+/** セッションが無いときの 'idle' を足したもの。 */
+export type ConnectionStatus = 'idle' | SessionStatus
 
-export interface UnlockState {
-  keys: Array<{ row: number; col: number }>
-  counter: number
-  max: number
-}
-
-export interface VialKeyboardState {
+export type VialKeyboardState = Omit<SessionState, 'status' | 'deviceLabel'> & {
   status: ConnectionStatus
-  error: string | null
   deviceLabel: string | null
-  snapshot: KeyboardSnapshot | null
-  geometry: KeyboardGeometry | null
-  engine: LayerEngine | null
-  layers: LayerSnapshot | null
-  unlock: UnlockState | null
-  /** matrix ポーリングが実際に回っているか。 */
-  polling: boolean
-  /** キーマップを読み直している最中か。 */
-  reloading: boolean
 }
 
-const INITIAL: VialKeyboardState = {
+const IDLE: VialKeyboardState = {
   status: 'idle',
   error: null,
   deviceLabel: null,
@@ -69,224 +39,39 @@ const INITIAL: VialKeyboardState = {
   engine: null,
   layers: null,
   unlock: null,
-  polling: false,
   reloading: false
 }
 
-/** 押下と表示レイヤーだけを見た指紋。これが同じなら画面は変わらない。 */
-function signatureOf(layers: LayerSnapshot): string {
-  const held: string[] = []
-  for (const [id, key] of layers.held) held.push(`${id}:${key.holdActive ? 1 : 0}`)
-  held.sort()
-  return `${layers.displayLayer}|${layers.activeLayers.join(',')}|${held.join(' ')}`
-}
-
-function describeError(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return String(error)
-}
-
 export function useVialKeyboard() {
-  const [state, setState] = useState<VialKeyboardState>(INITIAL)
-
-  const transportRef = useRef<Transport | null>(null)
-  const engineRef = useRef<LayerEngine | null>(null)
-  /** 再読み込みの判断に使う。state を依存に入れずに済ませるため。 */
-  const snapshotRef = useRef<KeyboardSnapshot | null>(null)
-  const statusRef = useRef<ConnectionStatus>('idle')
-  const reloadingRef = useRef(false)
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  const unlockTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  /** ポーリング中に前の応答を待たずに次を投げないようにする。 */
-  const inFlight = useRef(false)
-  /** 前回描いた状態の指紋。変わらなければ再描画しない(20ms 間隔なので効く)。 */
-  const lastSignature = useRef('')
-
-  statusRef.current = state.status
-
-  const stopTimers = useCallback(() => {
-    if (pollTimer.current !== null) clearInterval(pollTimer.current)
-    if (unlockTimer.current !== null) clearInterval(unlockTimer.current)
-    pollTimer.current = null
-    unlockTimer.current = null
-    inFlight.current = false
-  }, [])
-
-  const startPolling = useCallback((snapshot: KeyboardSnapshot) => {
-    const transport = transportRef.current
-    const engine = engineRef.current
-    if (!transport || !engine) return
-
-    stopTimers()
-    lastSignature.current = ''
-    setState((prev) => ({ ...prev, status: 'ready', polling: true, unlock: null }))
-
-    pollTimer.current = setInterval(() => {
-      if (inFlight.current) return // 前の往復が終わるまで待つ
-      inFlight.current = true
-      void getMatrixState(transport, snapshot.rows, snapshot.cols)
-        .then((matrix) => {
-          const layers = engine.update(matrix, performance.now())
-          const signature = signatureOf(layers)
-          if (signature === lastSignature.current) return
-          lastSignature.current = signature
-          setState((prev) => (prev.status === 'ready' ? { ...prev, layers } : prev))
-        })
-        .catch((error: unknown) => {
-          stopTimers()
-          setState((prev) => ({
-            ...prev,
-            status: 'error',
-            polling: false,
-            error: describeError(error)
-          }))
-        })
-        .finally(() => {
-          inFlight.current = false
-        })
-    }, MATRIX_POLL_MS)
-  }, [stopTimers])
+  const [state, setState] = useState<VialKeyboardState>(IDLE)
+  const sessionRef = useRef<KeyboardSession | null>(null)
 
   /**
-   * アンロック手順を進める。
+   * 新しい transport でセッションを作り直す。
    *
-   * ボタンを置いて待つ意味がないので、ロックを見つけたら自動で始める。
-   * 押下を読むにはアンロックするしかなく、選択肢が 1 つしかないため。
-   * オーバーレイはクリックが透過するのでボタンはそもそも押せない、という事情もある。
-   *
-   * アンロック進行中は VIA コマンドが通らない(docs/PROTOCOL.md §2)ので、
-   * matrix のポーリングは止めておく。
+   * 参照は await より前に差し替える。こうしておくと、接続を連打しても
+   * 「最後に作ったセッション」だけが生き残り、それ以前のものは必ず破棄される。
    */
-  const startUnlock = useCallback(
-    (snapshot: KeyboardSnapshot) => {
-      const transport = transportRef.current
-      if (!transport) return
+  const attach = useCallback(async (transport: Transport) => {
+    const previous = sessionRef.current
+    const session = new KeyboardSession(transport)
+    sessionRef.current = session
+    session.subscribe(setState)
 
-      stopTimers()
-      setState((prev) => ({ ...prev, status: 'unlocking', polling: false }))
-
-      const fail = (error: unknown): void => {
-        stopTimers()
-        setState((prev) => ({ ...prev, status: 'error', error: describeError(error) }))
-      }
-
-      void unlockStart(transport)
-        .then(() => {
-          unlockTimer.current = setInterval(() => {
-            void unlockPoll(transport)
-              .then((progress) => {
-                setState((prev) => ({
-                  ...prev,
-                  unlock: prev.unlock
-                    ? { ...prev.unlock, counter: progress.counter }
-                    : {
-                        keys: [],
-                        counter: progress.counter,
-                        max: VIAL_UNLOCK_COUNTER_MAX
-                      }
-                }))
-                const action = nextUnlockAction(progress)
-                if (action === 'done') {
-                  stopTimers()
-                  startPolling(snapshot)
-                } else if (action === 'restart') {
-                  void unlockStart(transport).catch(fail)
-                }
-              })
-              .catch(fail)
-          }, UNLOCK_POLL_MS)
-        })
-        .catch(fail)
-    },
-    [startPolling, stopTimers]
-  )
-
-  /** 読み込みが終わったあと、ロック状態に応じて次の状態へ進む。 */
-  const afterLoad = useCallback(
-    async (snapshot: KeyboardSnapshot) => {
-      const transport = transportRef.current
-      if (!transport) return
-
-      const engine = new LayerEngine({
-        layers: snapshot.layers,
-        rows: snapshot.rows,
-        cols: snapshot.cols,
-        keymap: snapshot.keymap,
-        tapDance: snapshot.tapDance
-      })
-      engineRef.current = engine
-
-      const geometry = buildGeometry(snapshot.definition.layouts.keymap, {
-        rows: snapshot.rows,
-        cols: snapshot.cols
-      })
-      snapshotRef.current = snapshot
-
-      setState((prev) => ({
-        ...prev,
-        snapshot,
-        geometry,
-        engine,
-        layers: engine.update(emptyMatrix(snapshot.rows, snapshot.cols), performance.now()),
-        error: null
-      }))
-
-      if (!snapshot.matrixTestSupported) {
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: 'このキーボードでは matrix state を読めない(プロトコルまたは行列サイズの制限)'
-        }))
-        return
-      }
-
-      const status = await getUnlockStatus(transport)
-      if (status.unlocked) {
-        startPolling(snapshot)
-        return
-      }
-      setState((prev) => ({
-        ...prev,
-        unlock: {
-          keys: status.keys,
-          counter: VIAL_UNLOCK_COUNTER_MAX,
-          max: VIAL_UNLOCK_COUNTER_MAX
-        }
-      }))
-      startUnlock(snapshot)
-    },
-    [startPolling, startUnlock]
-  )
-
-  const attach = useCallback(
-    async (transport: Transport) => {
-      stopTimers()
-      await transportRef.current?.close().catch(() => undefined)
-      transportRef.current = transport
-
-      setState({ ...INITIAL, status: 'connecting', deviceLabel: transport.label })
-      try {
-        await transport.open()
-        setState((prev) => ({ ...prev, status: 'loading' }))
-        const snapshot = await loadKeyboard(transport)
-        await afterLoad(snapshot)
-      } catch (error) {
-        setState((prev) => ({ ...prev, status: 'error', error: describeError(error) }))
-      }
-    },
-    [afterLoad, stopTimers]
-  )
+    await previous?.dispose()
+    if (sessionRef.current !== session) return // さらに新しい接続に取って代わられた
+    await session.start()
+  }, [])
 
   /** デバイス選択ダイアログを出して繋ぐ。 */
   const connect = useCallback(async () => {
     if (!navigator.hid) {
-      setState((prev) => ({ ...prev, status: 'error', error: 'WebHID が使えない' }))
+      setState({ ...IDLE, status: 'error', error: 'WebHID が使えない' })
       return
     }
     const devices = await navigator.hid.requestDevice({ filters: VIAL_HID_FILTERS })
     const device = devices.find(isVialDevice) ?? devices[0]
-    if (!device) return
-    await attach(new WebHidTransport(device))
+    if (device) await attach(new WebHidTransport(device))
   }, [attach])
 
   /** 実機なしで画面を確かめる用。 */
@@ -295,61 +80,16 @@ export function useVialKeyboard() {
   }, [attach])
 
   const disconnect = useCallback(async () => {
-    stopTimers()
-    await transportRef.current?.close().catch(() => undefined)
-    transportRef.current = null
-    engineRef.current = null
-    snapshotRef.current = null
-    setState(INITIAL)
-  }, [stopTimers])
+    const session = sessionRef.current
+    sessionRef.current = null
+    setState(IDLE)
+    await session?.dispose()
+  }, [])
 
-  /**
-   * キーマップを読み直す。Vial で編集したあとに呼ぶ。
-   *
-   * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
-   * 押下中のキーとトグル状態は引き継がない(新しいキーマップで解決し直すため)。
-   */
+  /** キーマップを読み直す。ポーリング中でなければ何もしない。 */
   const reload = useCallback(async () => {
-    const transport = transportRef.current
-    const previous = snapshotRef.current
-    if (!transport || !previous) return
-    if (statusRef.current !== 'ready') return // ロック中や読み込み中は触らない
-    if (reloadingRef.current) return
-    reloadingRef.current = true
-
-    stopTimers() // ポーリングと混ざらないように一旦止める
-    setState((prev) => ({ ...prev, reloading: true }))
-    try {
-      const next = await reloadKeymap(transport, previous)
-      snapshotRef.current = next
-      const engine = new LayerEngine({
-        layers: next.layers,
-        rows: next.rows,
-        cols: next.cols,
-        keymap: next.keymap,
-        tapDance: next.tapDance
-      })
-      engineRef.current = engine
-      setState((prev) => ({
-        ...prev,
-        snapshot: next,
-        engine,
-        layers: engine.update(emptyMatrix(next.rows, next.cols), performance.now()),
-        reloading: false,
-        error: null
-      }))
-      startPolling(next)
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        status: 'error',
-        reloading: false,
-        error: describeError(error)
-      }))
-    } finally {
-      reloadingRef.current = false
-    }
-  }, [startPolling, stopTimers])
+    await sessionRef.current?.reload()
+  }, [])
 
   /** 起動時、前に許可したデバイスがあれば自動で繋ぐ。 */
   useEffect(() => {
@@ -376,7 +116,13 @@ export function useVialKeyboard() {
     return () => window.removeEventListener('focus', onFocus)
   }, [reload])
 
-  useEffect(() => stopTimers, [stopTimers])
+  // アンマウントで閉じる
+  useEffect(
+    () => () => {
+      void sessionRef.current?.dispose()
+    },
+    []
+  )
 
   return { ...state, connect, connectMock, disconnect, reload }
 }
