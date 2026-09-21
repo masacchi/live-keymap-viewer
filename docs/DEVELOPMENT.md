@@ -28,6 +28,8 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | **`npm run check`** | **型チェック + lint + テスト。コミット時に自動で走る(下記)** |
 | `npm run package:win` | ビルドして `dist/win32-x64/` に Windows 版一式を作る |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
+| `npm run diag:hid` | Windows の HID API から Cornix のインターフェースを調べ、Vial が答えるか・往復時間を見る(Chromium を通さない) |
+| `npm run diag:webhid` | Electron(WebHID)の選択ダイアログに何が並ぶかを調べる(先に `package:win`) |
 
 ### ビルドの構成
 
@@ -93,6 +95,15 @@ fc-cache -f
 - `libnss3.so` などが無いと言われる → `sudo apt install -y libnss3 libnspr4 libasound2t64`
 - `app` が undefined で落ちる → 環境変数 `ELECTRON_RUN_AS_NODE` が立っている。
   一部のツール(Claude Code など)の中から実行すると付いていることがある。`env -u ELECTRON_RUN_AS_NODE npm run dev`
+
+### 実機の通信を切り分ける
+
+アプリで「繋がらない」「候補に出ない」ときは、Chromium の手前と先のどちらで止まっているかを見る。
+
+- `npm run diag:hid` … OS から見て答えるか。答えるならファームと OS は問題ない
+- `npm run diag:webhid` … Chromium(WebHID)に見えているか、名前がどう出るか
+
+詳しい使い方と、2026-09-21 に分かったことは [BLUETOOTH.md §2.6・§8](BLUETOOTH.md)。
 
 ## 4. テスト
 

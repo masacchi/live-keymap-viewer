@@ -87,7 +87,7 @@ Windows が JIS として扱ったときに実際に入る文字を出す。
 | 接続 | 状態 |
 |---|---|
 | USB | ✅ 2026-09-20、Windows + Cornix LP で動作 |
-| Bluetooth | ⬜ 未確認。USB が出力先のあいだ BT 側は応答しない(ファームの仕様)。BT を出力先にした状態は未確認で、アプリ側にも対応が要る([docs/BLUETOOTH.md](docs/BLUETOOTH.md)) |
+| Bluetooth | 🔶 OS レベルでは Vial が答える(往復 約 450ms)が、アプリはまだ対応していない。選択ダイアログでは「不明なデバイス(E118:0001)」と出る([docs/BLUETOOTH.md](docs/BLUETOOTH.md)) |
 
 USB と Bluetooth の両方で繋がっていても大丈夫。Windows には同じキーボードが 2 つ見えるが、
 実際に答える方(両方答えるなら速い USB)を自動で選ぶ。

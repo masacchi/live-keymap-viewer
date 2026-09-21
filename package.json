@@ -17,7 +17,9 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "package:win": "npm run build && node scripts/package-win.mjs",
     "deploy:win": "npm run package:win && node scripts/deploy-win.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "diag:hid": "node scripts/diag/hid-probe.mjs",
+    "diag:webhid": "node scripts/diag/webhid-list.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
