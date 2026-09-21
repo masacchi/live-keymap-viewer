@@ -77,14 +77,12 @@ export default function App(): JSX.Element {
         <Toolbar
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
-          displayLayer={layers?.displayLayer ?? 0}
+          displayLayer={ready ? layers.displayLayer : null}
           activeLayers={layers?.activeLayers ?? [0]}
           labelMode={labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}
           onReload={() => void keyboard.reload()}
-          onConnect={() => void keyboard.connect()}
-          onConnectMock={() => void keyboard.connectMock()}
           onDisconnect={() => void keyboard.disconnect()}
           onLabelMode={onLabelMode}
           onToggleWindowMode={onToggleWindowMode}
@@ -99,10 +97,18 @@ export default function App(): JSX.Element {
         }
       >
         {keyboard.error && (
-          <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
-            {keyboard.error}
-            {keyboard.reconnecting && (
-              <span className="ml-2 text-[var(--muted)]">自動で繋ぎ直す…</span>
+          <div className="flex items-center gap-3 rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
+            <span className="min-w-0 flex-1">{keyboard.error}</span>
+            {keyboard.reconnecting ? (
+              <span className="shrink-0 text-[var(--muted)]">自動で繋ぎ直す…</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void keyboard.connect()}
+                className="shrink-0 rounded-md bg-[var(--surface)] px-3 py-1 font-medium text-[var(--ink)] hover:bg-[var(--line-soft)]"
+              >
+                接続し直す
+              </button>
             )}
           </div>
         )}

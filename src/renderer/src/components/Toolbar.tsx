@@ -5,14 +5,13 @@ import type { LabelMode } from '../keycodes/labels'
 export interface ToolbarProps {
   status: ConnectionStatus
   deviceLabel: string | null
-  displayLayer: number
+  /** 表示しているレイヤー。キーボードを読み込むまでは null(出さない)。 */
+  displayLayer: number | null
   activeLayers: number[]
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
   onReload: () => void
-  onConnect: () => void
-  onConnectMock: () => void
   onDisconnect: () => void
   onLabelMode: (mode: LabelMode) => void
   onToggleWindowMode: () => void
@@ -70,14 +69,11 @@ export function Toolbar({
   windowMode,
   reloading,
   onReload,
-  onConnect,
-  onConnectMock,
   onDisconnect,
   onLabelMode,
   onToggleWindowMode
 }: ToolbarProps): JSX.Element {
-  const connected = status !== 'idle' && status !== 'error'
-
+  // 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-[var(--line-soft)] px-4 py-2.5">
       <div className="flex items-center gap-2">
@@ -88,28 +84,30 @@ export function Toolbar({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span
-          className="rounded-md px-3 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors"
-          style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
-        >
-          L{displayLayer}
-        </span>
-        {activeLayers.length > 1 && (
-          <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
-            重なり
-            {activeLayers.map((n) => (
-              <span
-                key={n}
-                className="rounded px-1 font-semibold text-neutral-900"
-                style={{ backgroundColor: `var(--layer-${n % 10})` }}
-              >
-                L{n}
-              </span>
-            ))}
+      {displayLayer !== null && (
+        <div className="flex items-center gap-2">
+          <span
+            className="rounded-md px-3 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors"
+            style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
+          >
+            L{displayLayer}
           </span>
-        )}
-      </div>
+          {activeLayers.length > 1 && (
+            <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
+              重なり
+              {activeLayers.map((n) => (
+                <span
+                  key={n}
+                  className="rounded px-1 font-semibold text-neutral-900"
+                  style={{ backgroundColor: `var(--layer-${n % 10})` }}
+                >
+                  L{n}
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <div className="flex overflow-hidden rounded-md border border-[var(--line-soft)]">
@@ -126,18 +124,13 @@ export function Toolbar({
           <span className="ml-1.5 text-[10px] text-[var(--muted)]">Ctrl+Alt+K</span>
         </Button>
 
-        {connected && (
+        {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない)ので出さない */}
+        {status === 'ready' && (
           <Button onClick={onReload}>{reloading ? '読み込み中…' : 'キーマップ再読み込み'}</Button>
         )}
 
-        {connected ? (
-          <Button onClick={onDisconnect}>切断</Button>
-        ) : (
-          <>
-            <Button onClick={onConnect}>キーボードに接続</Button>
-            <Button onClick={onConnectMock}>モックで試す</Button>
-          </>
-        )}
+        {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}
+        {status !== 'idle' && <Button onClick={onDisconnect}>切断</Button>}
       </div>
     </header>
   )
