@@ -138,7 +138,7 @@ export class WindowManager {
       alwaysOnTop: overlay,
       backgroundColor: overlay ? '#00000000' : '#11151a',
       webPreferences: {
-        preload: join(__dirname, '../preload/index.mjs'),
+        preload: join(import.meta.dirname, '../preload/index.mjs'),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false
@@ -174,7 +174,7 @@ export class WindowManager {
     if (process.env.ELECTRON_RENDERER_URL) {
       void win.loadURL(process.env.ELECTRON_RENDERER_URL)
     } else {
-      void win.loadFile(join(__dirname, '../renderer/index.html'))
+      void win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
     }
 
     return win
