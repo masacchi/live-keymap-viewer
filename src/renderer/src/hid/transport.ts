@@ -3,7 +3,7 @@
  *
  * ファームはリクエストとレスポンスを対応づける ID を持たないので、
  * 実装側で必ず直列化する。matrix ポーリングとキーマップ読み出しが
- * 並走すると応答を取り違える(docs/PROTOCOL.md §6)。
+ * 並走すると応答を取り違える(docs/PROTOCOL.md §7)。
  */
 import { MSG_LEN, VIAL_USAGE, VIAL_USAGE_PAGE } from './constants'
 

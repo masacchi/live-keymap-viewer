@@ -116,7 +116,7 @@ vial-gui が u32 LE で送っているのは上位 2 バイトが常に 0 にな
 
 ## 4. 定義 JSON
 
-Cornix LP V1.12 から実測した構造(`src/renderer/src/mock/cornixDefinition.ts` にそのまま入れてある):
+Cornix LP V1.12 から実測した構造(`reference/cornix-vial-definition.json` に置き、モックは `scripts/gen-mock.py` で XZ に固めて `src/renderer/src/mock/cornix.generated.ts` に埋め込んでいる):
 
 ```jsonc
 {
@@ -174,7 +174,7 @@ Cornix の親指キーは `{"r": 11.93, "rx": 5, "ry": 4.75}` / `{"r": 23}` / `{
 対応バージョン:`keyboard_comm.py:27-28` は `via_protocol == 9`、`vial_protocol ∈ 0..6` を受け付ける。
 本アプリは HANDOFF の方針どおり **vial_protocol 6 / via_protocol 9 のみ**を対象とし、他はエラー表示にする。
 
-## 5.5 エンコーダーの回転は取得できない
+## 6. エンコーダーの回転は取得できない
 
 `vial_get_encoder`(`[0xFE, 0x03, layer, idx]`)で取れるのは、そのエンコーダーの
 **各方向に割り当てられたキーコード**であって、回された事実ではない(`vial.c:130-139`)。
@@ -196,7 +196,7 @@ Cornix の親指キーは `{"r": 11.93, "rx": 5, "ry": 4.75}` / `{"r": 23}` / `{
 通常のキーとして配線されているため。Cornix LP では左が `2,6`(`KC_MUTE`)、
 右が `5,6`(`KC_BTN3`)。
 
-## 6. リクエストの直列化
+## 7. リクエストの直列化
 
 ファームは 1 リクエストにつき 1 レスポンスを返すだけで、**リクエストとレスポンスを対応づける ID がない**。
 したがってホスト側でキューを持ち、前のレスポンスが来るまで次を送らない、という直列化が必須になる。
@@ -204,19 +204,19 @@ matrix state のポーリング(20ms 間隔)と、キーマップ読み出しの
 並走すると取り違えが起きる。本アプリでは `src/renderer/src/hid/transport.ts` の
 `WebHidTransport` が 1 本のキューで全リクエストを直列化し、ポーリングは読み出し完了後にだけ回す。
 
-## 7. ポーリング間隔
+## 8. ポーリング間隔
 
 - matrix state:vial-gui は 20ms(`matrix_test.py:152`)。HANDOFF の「15〜20ms」と整合。
 - unlock poll:200ms(`unlocker.py:104`)。
 
-## 8. ライセンス
+## 9. ライセンス
 
 vial-gui / vial-qmk はいずれも **GPL-2.0-or-later**。本リポジトリのコードは
 仕様(バイト列レイアウト・定数値)を参照して**独自に TypeScript で書き起こした**もので、
 GPL コードの複製・翻案は行っていない。`table.generated.ts` は `keycodes_v6.py` の
 **数値定数**(事実データ)を抽出したもの。Pipette (`darakuneko/pipette-desktop`) のコードは参照していない。
 
-## 9. HANDOFF §5 との差分
+## 10. HANDOFF §5 との差分
 
 | # | HANDOFF の記述 | 確認結果 |
 |---|---|---|

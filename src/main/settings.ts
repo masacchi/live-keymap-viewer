@@ -8,8 +8,6 @@ import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { type GrantedDevice, type Settings, sanitizeSettings } from '../shared/settings'
 
-export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from '../shared/settings'
-
 let cached: Settings | null = null
 
 function settingsPath(): string {

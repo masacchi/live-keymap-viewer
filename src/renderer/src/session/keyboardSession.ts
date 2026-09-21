@@ -35,7 +35,7 @@ import {
 } from '../hid/vial'
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
 
-/** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §7)。 */
+/** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §8)。 */
 export const MATRIX_POLL_MS = 20
 /** アンロックのポーリング間隔。vial-gui と同じ。 */
 export const UNLOCK_POLL_MS = 200

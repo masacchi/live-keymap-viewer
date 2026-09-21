@@ -1,0 +1,178 @@
+# 設計
+
+Live Keymap Viewer の中身の地図。**何がどこにあり、なぜそうなっているか**を書く。
+手順(ビルド・テスト・機能の足し方)は [DEVELOPMENT.md](DEVELOPMENT.md)、
+Vial のバイト列の話は [PROTOCOL.md](PROTOCOL.md) にある。
+
+---
+
+## 1. 前提
+
+- **固定データを持たない。** キーマップ・レイヤー数・物理配置・カスタムキーコード名は、
+  すべて接続したキーボードから読む。アプリに埋め込んであるのはキーコードの
+  「値 → 名前」表と、JIS / US の文字表だけ。
+- **対象は Windows。** 開発は WSL で行うが、WSL からは USB が見えないので実機では動かない
+  ([DEVELOPMENT.md §3](DEVELOPMENT.md#3-wsl-で開発するときの注意))。
+- **対応は Vial protocol 6 / VIA protocol 9 のみ。** Cornix LP で確かめている。
+
+## 2. プロセス構成
+
+```mermaid
+flowchart LR
+  subgraph main["main プロセス(Node)"]
+    idx[index.ts<br/>起動の段取り]
+    win[windows.ts<br/>通常 / オーバーレイ]
+    hid[hid.ts<br/>HID の許可]
+    ipc[ipc.ts<br/>要求の受け口]
+    set[settings.ts<br/>settings.json]
+  end
+  subgraph preload["preload"]
+    api[window.api]
+  end
+  subgraph renderer["renderer(Chromium)"]
+    ui[React UI]
+    webhid[WebHID]
+  end
+  kb[(Vial キーボード<br/>raw HID)]
+
+  ui -- IPC --> api --> ipc
+  ipc --> win & set
+  hid -. デバイス選択 .-> ui
+  webhid <-- 32 バイトの往復 --> kb
+  ui --> webhid
+```
+
+**HID は renderer の WebHID で扱う。** main は許可を出すだけで、キーボードとは話さない。
+node-hid を使うとネイティブモジュールのビルドが要り、Windows 向けの配布が重くなるため。
+
+main と preload の間の約束は [src/shared/ipc.ts](../src/shared/ipc.ts) の `IPC`(チャネル名)と
+`RendererApi`(公開する関数)にまとまっている。renderer が使わないものは公開しない。
+
+## 3. renderer の層
+
+```mermaid
+flowchart BT
+  keycodes["keycodes/<br/>u16 ⇄ 構造体、JIS / US の文字、Tap Dance の規則"]
+  layout["layout/<br/>KLE → 物理配置、ノブの帯、レイアウトオプション"]
+  engine["engine/<br/>押下 → 有効なレイヤー"]
+  hid["hid/<br/>transport、Vial プロトコル、モック"]
+  session["session/<br/>1 接続のライフサイクル"]
+  hooks["hooks/<br/>セッションを React に"]
+  components["components/ + App.tsx<br/>SVG と操作"]
+
+  layout --> keycodes
+  engine --> keycodes
+  engine --> layout
+  hid --> keycodes
+  hid --> layout
+  session --> hid
+  session --> engine
+  session --> layout
+  hooks --> session
+  components --> hooks
+  components --> engine
+  components --> layout
+  components --> keycodes
+```
+
+矢印は「依存する向き」。**下の層は上の層を知らない。** `keycodes` / `layout` / `engine` は
+DOM にも HID にも触らない純粋なロジックで、そのぶん単体テストが厚い。
+
+| ディレクトリ | 主なファイル | 役割 |
+|---|---|---|
+| `keycodes/` | `decode.ts` | 生の u16 を `Keycode`(判別共用体)にする。範囲は PROTOCOL.md §5 |
+| | `labels.ts` | `Keycode` → 画面の文字。**JIS 表と US 表**、Shift 面、日本語の補足 |
+| | `tapDance.ts` | `TapDanceEntry` と「長押しで出るレイヤー」の規則(engine と描画が共用) |
+| | `table.generated.ts` | vial-gui の `keycodes_v6.py` から生成した名前表 |
+| `layout/` | `kle.ts` | KLE のパース。vial-gui の `kle_serial.py` と同じ挙動 |
+| | `geometry.ts` | KLE → 物理キー / エンコーダー / 外接矩形 |
+| | `encoderStrip.ts` | ノブの割り当てを横一列に並べる配置計算と viewBox |
+| | `layoutOptions.ts` | VIA のレイアウトオプション(ビット詰め)をほどく |
+| `engine/` | `layerState.ts` | `LayerEngine`。押下の列からアクティブなレイヤーを出す(HANDOFF §6) |
+| `hid/` | `transport.ts` | `Transport` インターフェース、直列化キュー、`WebHidTransport` |
+| | `vial.ts` | プロトコルの各コマンドと `loadKeyboard` / `reloadKeymap` |
+| | `mockTransport.ts` | ファームと同じバイト並びで答える偽デバイス |
+| | `xz.ts` | 定義 JSON の XZ 展開 |
+| `session/` | `keyboardSession.ts` | 接続 → 読み込み → アンロック → ポーリング → 読み直し |
+| `hooks/` | `useVialKeyboard.ts` | デバイスの選び方と、セッションの差し替え・破棄 |
+| `components/` | `KeyboardView.tsx` ほか | SVG の描画、ツールバー、オーバーレイ操作、アンロック案内 |
+| `mock/` | `cornix.generated.ts` | モックのデータ(.vil と実機の定義から生成) |
+
+## 4. キーを押してから画面が変わるまで
+
+```mermaid
+sequenceDiagram
+  participant KB as キーボード
+  participant T as WebHidTransport
+  participant S as KeyboardSession
+  participant E as LayerEngine
+  participant R as React / KeyboardView
+
+  loop 20ms ごと(1 往復 → 残りを待つ)
+    S->>T: [0x02, 0x03] matrix state
+    T->>KB: sendReport(0, 32 バイト)
+    KB-->>T: inputreport(32 バイト)
+    Note over T: data[0..1] が 0x02 0x03 か照合。<br/>他アプリ宛てなら捨てて待つ
+    T-->>S: 応答
+    S->>E: update(matrix, now)
+    Note over E: 新しく押されたキーは<br/>その瞬間のレイヤーで解決
+    E-->>S: LayerSnapshot
+    alt 見た目が変わった(指紋が違う)
+      S->>R: 状態を通知 → 再描画
+    end
+  end
+```
+
+- **matrix state はアンロックしないと読めない**(ファームがキーロガー対策で止めている)。
+- 押下の指紋(表示レイヤー + 押されているキー + 長押し確定)が前回と同じなら通知しない。
+  20ms ごとに 50 キーの SVG を描き直さずに済む。
+
+## 5. セッションの状態
+
+```mermaid
+stateDiagram-v2
+  [*] --> connecting
+  connecting --> loading: open()
+  loading --> unlocking: ロックされている
+  loading --> ready: アンロック済み
+  unlocking --> ready: カウンタが 0 になった
+  unlocking --> unlocking: 打ち切られた → unlock_start からやり直す
+  ready --> ready: reload()(キーマップだけ読み直す)
+  connecting --> error
+  loading --> error
+  unlocking --> error
+  ready --> error: 通信失敗
+  error --> [*]
+```
+
+`KeyboardSession` は 1 接続につき 1 つ作り、切断や再接続で**捨てて作り直す**。
+フック側には `'idle'`(セッションが無い)が足される。
+
+## 6. 設計の判断と、その理由
+
+| 判断 | 理由 |
+|---|---|
+| **リクエストは 1 本のキューで直列化する**(`RequestQueue`) | ファームは応答にリクエスト ID を持たない。並走させると取り違える |
+| **応答は照合してから受け取る**(`SendOptions.validate`) | raw HID の入力レポートは、その HID を開いている**全プロセス**に配られる。Vial を開いたままだと相手宛ての応答が届く。VIA コマンドは `data[0]` にコマンド ID が残るので、それで見分ける(PROTOCOL.md §2) |
+| **接続のライフサイクルは React の外**(`KeyboardSession`) | フックで setInterval と ref を組み合わせていた頃、切断直後の遅れた応答が新しい画面に書き込めた。ループを await で回し、世代番号で止め、破棄後は一切通知しない形にした |
+| **読み直しでは定義(物理配置)を読まない** | 定義はファームを焼き直さないと変わらず、焼き直せば USB ごと繋ぎ直しになる。図を組み直さないので描画も跳ねない |
+| **ロックを見つけたら自動でアンロックを始める** | 押下を読むには他に道が無く、確認ボタンは答えが 1 つしかない。オーバーレイはクリックが透過するのでボタンは押せない |
+| **ノブは KLE の座標ではなく、キーの下に横一列** | Cornix の定義はエンコーダーを図の右端に並べて置いてある。回転は matrix に出ない(PROTOCOL.md §6)ので位置に意味が無い |
+| **モードを変えるたびにウィンドウを作り直す** | 透明ウィンドウは作った後から切り替えられない |
+| **オーバーレイの操作パネルの上だけクリック透過を切る** | `setIgnoreMouseEvents(true, { forward: true })` なら透過中でも mousemove は届く。ポインタが `data-interactive` の上に来たときだけ透過を解く |
+| **Windows 版は公式 zip を展開して `out/` を置くだけ** | electron-builder などは exe の情報書き換えに rcedit を使い、Linux からだと wine が要る。このアプリはネイティブモジュールが無いので不要 |
+| **設定は項目ごとに検証して読む**(`sanitizeSettings`) | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す |
+
+## 7. 壊しやすいところ
+
+変更するときに踏みやすい落とし穴。
+
+- **VIA と Vial で応答の位置が違う。** VIA コマンドの戻り値は `data[1]` 以降、Vial コマンド
+  (`0xFE`)は `data[0]` から(PROTOCOL.md §1)。
+- **アンロック進行中は VIA コマンドが通らない。** その間に keymap や matrix を読みに行くと、
+  ファームは書き換えずにリクエストをそのまま返す。
+- **キーコードは押した瞬間のレイヤーで確定する。** レイヤーキーを先に離しても、押しっぱなしの
+  キーのキーコードは変わらない(QMK と同じ)。`LayerEngine.update` は「離す → 押す」の順に処理する。
+- **CSS は「基本 → 種類 → 状態」の順に並べる。** 種類(`.key-sym`)と状態(`.key-pressed`)は
+  詳細度が同じなので後勝ち。逆にすると押下中の記号キーの文字色が壊れる。
+- **Windows 版は exe 単体では動かない。** `icudtl.dat` や `resources/app` が隣に要る。
