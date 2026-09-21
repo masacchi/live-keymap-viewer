@@ -1,19 +1,13 @@
-/** userData の JSON に置く設定。小さいので外部ライブラリは使わない。 */
+/**
+ * 設定の読み書き(userData/settings.json)。小さいので外部ライブラリは使わない。
+ * 値の検証は shared/settings.ts の sanitizeSettings に任せる。
+ */
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { GrantedDevice, Settings } from '../shared/ipc'
+import { type GrantedDevice, type Settings, sanitizeSettings } from '../shared/settings'
 
-export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from '../shared/ipc'
-
-const DEFAULTS: Settings = {
-  mode: 'normal',
-  labelMode: 'jis',
-  normalBounds: { x: 80, y: 80, width: 1180, height: 620 },
-  overlayBounds: { x: 80, y: 80, width: 1180, height: 620 },
-  overlayOpacity: 0.82,
-  grantedDevices: []
-}
+export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from '../shared/settings'
 
 let cached: Settings | null = null
 
@@ -23,30 +17,31 @@ function settingsPath(): string {
 
 export function loadSettings(): Settings {
   if (cached) return cached
+  let raw: unknown = null
   try {
-    const raw = readFileSync(settingsPath(), 'utf8')
-    cached = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) }
+    raw = JSON.parse(readFileSync(settingsPath(), 'utf8'))
   } catch {
-    cached = { ...DEFAULTS }
+    // 無い・壊れている → 既定値で始める
   }
+  cached = sanitizeSettings(raw)
   return cached
 }
 
 export function saveSettings(patch: Partial<Settings>): Settings {
-  const next = { ...loadSettings(), ...patch }
+  const next = sanitizeSettings({ ...loadSettings(), ...patch })
   cached = next
   const path = settingsPath()
-  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
+  mkdirSync(dirname(path), { recursive: true })
+  // 書き込み途中で落ちても壊れたファイルが残らないよう、別名に書いてから差し替える
+  const temp = `${path}.tmp`
+  writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
+  renameSync(temp, path)
   return next
 }
 
 export function rememberDevice(device: GrantedDevice): void {
   const settings = loadSettings()
-  const known = settings.grantedDevices.some(
-    (d) => d.vendorId === device.vendorId && d.productId === device.productId
-  )
-  if (known) return
+  if (isDeviceGranted(device.vendorId, device.productId)) return
   saveSettings({ grantedDevices: [...settings.grantedDevices, device] })
 }
 

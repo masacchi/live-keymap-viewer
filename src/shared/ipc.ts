@@ -1,29 +1,25 @@
 /** main / preload / renderer で共有する型。electron には依存しない。 */
 
-export type WindowMode = 'normal' | 'overlay'
-export type LabelMode = 'jis' | 'us'
+import type { LabelMode, Settings, WindowMode } from './settings'
 
-export interface Bounds {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from './settings'
 
-export interface GrantedDevice {
-  vendorId: number
-  productId: number
-  name?: string
-}
-
-export interface Settings {
-  mode: WindowMode
-  labelMode: LabelMode
-  normalBounds: Bounds
-  overlayBounds: Bounds
-  overlayOpacity: number
-  grantedDevices: GrantedDevice[]
-}
+/**
+ * IPC のチャネル名。main / preload の両方がここを参照する。
+ * 文字列を直に書くと、片方だけ直して食い違ったときに気づけないので。
+ */
+export const IPC = {
+  settingsGet: 'settings:get',
+  settingsSetLabelMode: 'settings:set-label-mode',
+  windowGetMode: 'window:get-mode',
+  windowToggleMode: 'window:toggle-mode',
+  windowSetOverlayOpacity: 'window:set-overlay-opacity',
+  windowSetIgnoreMouse: 'window:set-ignore-mouse',
+  windowMoveBy: 'window:move-by',
+  windowResizeBy: 'window:resize-by',
+  hidChooseDevice: 'hid:choose-device',
+  hidDeviceChosen: 'hid:device-chosen'
+} as const
 
 /** select-hid-device で候補が複数あったときに renderer へ渡すもの。 */
 export interface HidCandidate {
@@ -33,15 +29,14 @@ export interface HidCandidate {
   productId: number
 }
 
-/** preload が contextBridge で公開する API。 */
+/** preload が contextBridge で公開する API。renderer が使うものだけを置く。 */
 export interface RendererApi {
   getSettings(): Promise<Settings>
-  setSettings(patch: Partial<Settings>): Promise<Settings>
   setLabelMode(mode: LabelMode): Promise<LabelMode>
 
   getMode(): Promise<WindowMode>
-  setMode(mode: WindowMode): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>
+  /** 範囲外は丸めて保存し、実際に使った値を返す。 */
   setOverlayOpacity(value: number): Promise<number>
 
   /**
