@@ -208,6 +208,36 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
+  it('何も変わっていなければ、エンジンも画面もそのまま使う', async () => {
+    const { session } = await readySession()
+    const { engine, snapshot, geometry } = session.state
+    await session.reload()
+    expect(session.state.status).toBe('ready')
+    expect(session.state.engine).toBe(engine)
+    expect(session.state.snapshot).toBe(snapshot)
+    expect(session.state.geometry).toBe(geometry)
+    await session.dispose()
+  })
+
+  it('キーマップが変わっても、TG で固定したレイヤーは残る(キーボード側は固定したまま)', async () => {
+    const mock = new MockTransport({ unlocked: true })
+    mock.setKeycode(0, 0, 2, 0x5261) // L0 の W を TG(1) に
+    const { session } = await readySession(mock)
+
+    mock.press(0, 2)
+    await waitFor(session, (s) => s.layers?.toggledLayers.includes(1) === true)
+    mock.release(0, 2)
+    await waitFor(session, (s) => s.layers?.held.size === 0)
+
+    const engineBefore = session.state.engine
+    mock.setKeycode(0, 0, 1, 0x001d) // 別のところを Q → Z(エンジンを作り直させる)
+    await session.reload()
+    expect(session.state.engine).not.toBe(engineBefore)
+    expect(session.state.layers?.toggledLayers).toEqual([1])
+    expect(session.state.layers?.displayLayer).toBe(1)
+    await session.dispose()
+  })
+
   it('読み直しを重ねて呼んでも、実際に読むのは 1 回だけ', async () => {
     const { session, mock } = await readySession()
     const before = mock.requests.filter((r) => r[0] === 0x12).length

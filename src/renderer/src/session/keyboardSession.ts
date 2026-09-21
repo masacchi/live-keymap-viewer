@@ -27,6 +27,7 @@ import {
   getMatrixState,
   getUnlockStatus,
   type KeyboardSnapshot,
+  keymapUnchanged,
   loadKeyboard,
   nextUnlockAction,
   reloadKeymap,
@@ -187,7 +188,9 @@ export class KeyboardSession {
    * キーマップを読み直す。Vial で編集したあとに呼ぶ。
    *
    * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
-   * 押下中のキーとトグル状態は引き継がない(新しいキーマップで解決し直すため)。
+   * 中身が変わっていなければ、エンジンも画面もそのまま使う。変わっていれば新しいキーマップで
+   * エンジンを作り直し、TG の固定や押しているキーは前のエンジンから引き継ぐ(キーボード側は
+   * 覚えたままなので、捨てると表示がずれる)。
    * ポーリング中でなければ何もしない(アンロック中は VIA コマンドが通らない)。
    */
   async reload(): Promise<void> {
@@ -200,7 +203,13 @@ export class KeyboardSession {
     try {
       const next = await reloadKeymap(this.transport, previous)
       if (!this.alive(gen)) return
-      const engine = this.install(next, true)
+      const current = this.current.engine
+      if (current && keymapUnchanged(previous, next)) {
+        this.update({ reloading: false })
+        void this.runPolling(gen, previous, current)
+        return
+      }
+      const engine = this.install(next, true, current)
       this.update({ reloading: false })
       void this.runPolling(gen, next, engine)
     } catch (error) {
@@ -234,8 +243,15 @@ export class KeyboardSession {
     this.update({ status: 'error', reloading: false, error: describeError(error) })
   }
 
-  /** 読んだキーマップでエンジンを作り直し、状態に載せる。 */
-  private install(snapshot: KeyboardSnapshot, reuseGeometry: boolean): LayerEngine {
+  /**
+   * 読んだキーマップでエンジンを作り直し、状態に載せる。
+   * previous を渡すと、レイヤーの状態をそこから引き継ぐ(読み直しのとき)。
+   */
+  private install(
+    snapshot: KeyboardSnapshot,
+    reuseGeometry: boolean,
+    previous: LayerEngine | null = null
+  ): LayerEngine {
     const engine = new LayerEngine({
       layers: snapshot.layers,
       rows: snapshot.rows,
@@ -243,6 +259,7 @@ export class KeyboardSession {
       keymap: snapshot.keymap,
       tapDance: snapshot.tapDance
     })
+    if (previous) engine.inheritFrom(previous)
     const geometry =
       reuseGeometry && this.current.geometry
         ? this.current.geometry
@@ -254,7 +271,10 @@ export class KeyboardSession {
       snapshot,
       geometry,
       engine,
-      layers: engine.update(emptyMatrix(snapshot.rows, snapshot.cols), this.now()),
+      // 引き継いだときは押しているキーを離したことにしない(次のポーリングで押し直しになる)
+      layers: previous
+        ? engine.snapshot()
+        : engine.update(emptyMatrix(snapshot.rows, snapshot.cols), this.now()),
       error: null
     })
     return engine

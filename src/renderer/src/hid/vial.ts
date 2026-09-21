@@ -460,6 +460,16 @@ export async function reloadKeymap(
   return { ...previous, layers, keymap, tapDance, encoders, layoutOptions }
 }
 
+/**
+ * 読み直した結果が前と同じか(Vial で編集され得るところだけを比べる)。
+ * 読み直しはウィンドウにフォーカスが戻るたびに走るが、たいていは何も変わっていない。
+ */
+export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
+  const editable = (s: KeyboardSnapshot) =>
+    JSON.stringify([s.layers, s.keymap, s.tapDance, s.encoders, s.layoutOptions])
+  return editable(before) === editable(after)
+}
+
 /** 定義の KLE から、エンコーダーが何個あるかを数える。 */
 export function countEncoders(definition: VialDefinition): number {
   const { encoders } = buildGeometry(definition.layouts.keymap)

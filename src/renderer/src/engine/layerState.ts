@@ -87,6 +87,24 @@ export class LayerEngine {
   }
 
   /**
+   * キーマップを読み直す前のエンジンから、レイヤーの状態を引き継ぐ。
+   *
+   * 既定レイヤー(DF / TO)と TG の固定はキーボード側が覚えたままなので、読み直しのたびに
+   * 捨てると表示だけがずれる。押しているキーも、押した時点のキーコードのまま引き継ぐ
+   * (キーコードは押した瞬間に確定する扱い)。捨てると次のポーリングで押し直されたことになり、
+   * 押しっぱなしの TG がもう一度効いてしまう。
+   *
+   * レイヤー数が違えば何も引き継がない。ファームが変わったということなので。
+   */
+  inheritFrom(previous: LayerEngine): void {
+    if (previous.config.layers !== this.config.layers) return
+    this.defaultLayer = previous.defaultLayer
+    this.toggled.clear()
+    for (const layer of previous.toggled) this.toggled.add(layer)
+    this.held = new Map([...previous.held].map(([id, key]) => [id, { ...key }]))
+  }
+
+  /**
    * matrix のスナップショットを流し込む。
    *
    * @param matrix `[row][col]` の押下状態

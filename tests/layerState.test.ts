@@ -266,6 +266,40 @@ describe('MO / TG / TO', () => {
     expect(snapshot.toggledLayers).toEqual([])
   })
 
+  it('読み直した新しいエンジンは、TG の固定と押しているキーを引き継ぐ', () => {
+    const engine = synthetic()
+    const matrix = emptyMatrix(1, 4)
+    matrix[0][1] = true // TG(1) を押したまま読み直しになる
+    engine.update(matrix, 0)
+
+    const next = synthetic()
+    next.inheritFrom(engine)
+    expect(next.snapshot().toggledLayers).toEqual([1])
+    // 押しっぱなしの TG(1) は押し直しにならない(なるともう一度切り替わってしまう)
+    expect(next.update(matrix, 10).toggledLayers).toEqual([1])
+    matrix[0][1] = false
+    expect(next.update(matrix, 20).displayLayer).toBe(1)
+  })
+
+  it('レイヤー数が変わったら何も引き継がない', () => {
+    const engine = synthetic()
+    const matrix = emptyMatrix(1, 4)
+    matrix[0][1] = true
+    engine.update(matrix, 0)
+
+    const smaller = new LayerEngine({
+      layers: 2,
+      rows: 1,
+      cols: 4,
+      keymap: [[[MO2, TG1, TO0, 0x0004]], [[TRNS, TRNS, TRNS, 0x0005]]],
+      tapDance: []
+    })
+    smaller.inheritFrom(engine)
+    const snapshot = smaller.snapshot()
+    expect(snapshot.toggledLayers).toEqual([])
+    expect(snapshot.held.size).toBe(0)
+  })
+
   it('MO で上がったレイヤーのキーコードが押下時に確定する', () => {
     const engine = synthetic()
     const matrix = emptyMatrix(1, 4)
