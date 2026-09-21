@@ -111,6 +111,19 @@ function u32be(data: Uint8Array, offset: number): number {
   )
 }
 
+/**
+ * 読み込みがどこまで進んだか。1 往復ごとに知らせる。
+ * USB なら一瞬だが、Bluetooth では 1 往復 約 0.5 秒で、読み込み全体が数十秒かかる。
+ */
+export interface LoadProgress {
+  stage: 'definition' | 'keymap' | 'encoders' | 'tapDance'
+  done: number
+  total: number
+}
+
+/** 各段の読み出しが、何往復のうち何往復目まで済んだかを知らせる口。 */
+type StepReporter = (done: number, total: number) => void
+
 const LONG: SendOptions = { retries: 20, timeoutMs: 500 }
 
 /**
@@ -177,8 +190,13 @@ export async function getDefinitionSize(transport: Transport): Promise<number> {
 }
 
 /** 定義ブロックを全部集めて展開し、JSON にする。size を渡さなければ先に問い合わせる。 */
-export async function getDefinition(transport: Transport, size?: number): Promise<VialDefinition> {
+export async function getDefinition(
+  transport: Transport,
+  size?: number,
+  onStep?: StepReporter
+): Promise<VialDefinition> {
   let remaining = size ?? (await getDefinitionSize(transport))
+  const blocks = Math.ceil(remaining / MSG_LEN)
 
   const chunks: Uint8Array[] = []
   let total = 0
@@ -196,6 +214,7 @@ export async function getDefinition(transport: Transport, size?: number): Promis
     chunks.push(data.subarray(0, take))
     total += take
     remaining -= MSG_LEN
+    onStep?.(block + 1, blocks)
   }
 
   const payload = new Uint8Array(total)
@@ -214,10 +233,12 @@ export async function getKeymap(
   transport: Transport,
   layers: number,
   rows: number,
-  cols: number
+  cols: number,
+  onStep?: StepReporter
 ): Promise<number[][][]> {
   const size = layers * rows * cols * 2
   const buffer = new Uint8Array(size)
+  const chunks = Math.ceil(size / BUFFER_FETCH_CHUNK)
 
   for (let offset = 0; offset < size; offset += BUFFER_FETCH_CHUNK) {
     const chunk = Math.min(size - offset, BUFFER_FETCH_CHUNK)
@@ -227,6 +248,7 @@ export async function getKeymap(
       LONG
     )
     buffer.set(data.subarray(4, 4 + chunk), offset)
+    onStep?.(offset / BUFFER_FETCH_CHUNK + 1, chunks)
   }
 
   const keymap: number[][][] = []
@@ -248,7 +270,8 @@ export async function getKeymap(
 export async function getEncoders(
   transport: Transport,
   layers: number,
-  count: number
+  count: number,
+  onStep?: StepReporter
 ): Promise<number[][][]> {
   const out: number[][][] = []
   for (let layer = 0; layer < layers; layer++) {
@@ -260,6 +283,7 @@ export async function getEncoders(
         LONG
       )
       perLayer.push([u16be(data, 0), u16be(data, 2)])
+      onStep?.(layer * count + index + 1, layers * count)
     }
     out.push(perLayer)
   }
@@ -334,11 +358,14 @@ async function readTapDance(
   transport: Transport,
   count: number,
   keymap: number[][][],
-  encoders: number[][][]
+  encoders: number[][][],
+  onStep?: StepReporter
 ): Promise<Array<TapDanceEntry | undefined>> {
   const entries = new Array<TapDanceEntry | undefined>(count).fill(undefined)
-  for (const index of tapDanceToRead(count, keymap, encoders)) {
+  const indices = tapDanceToRead(count, keymap, encoders)
+  for (const [i, index] of indices.entries()) {
     entries[index] = await getTapDance(transport, index)
+    onStep?.(i + 1, indices.length)
   }
   return entries
 }
@@ -443,18 +470,28 @@ export interface LoadOptions {
   definitionCache?: DefinitionCache
   /** true ならキャッシュがあっても読み、読んだものでキャッシュを置き換える。 */
   refreshDefinition?: boolean
+  /** 1 往復ごとに進み具合を知らせる。 */
+  onProgress?: (progress: LoadProgress) => void
+}
+
+/** onProgress を段ごとの StepReporter にする。 */
+function reporter(options: LoadOptions, stage: LoadProgress['stage']): StepReporter | undefined {
+  const { onProgress } = options
+  return onProgress && ((done, total) => onProgress({ stage, done, total }))
 }
 
 async function loadDefinition(
   transport: Transport,
   uid: string,
-  { definitionCache, refreshDefinition = false }: LoadOptions
+  options: LoadOptions
 ): Promise<VialDefinition> {
-  if (!definitionCache) return getDefinition(transport)
+  const { definitionCache, refreshDefinition = false } = options
+  const onStep = reporter(options, 'definition')
+  if (!definitionCache) return getDefinition(transport, undefined, onStep)
   const size = await getDefinitionSize(transport)
   const cached = refreshDefinition ? null : definitionCache.get(uid, size)
   if (cached) return cached
-  const definition = await getDefinition(transport, size)
+  const definition = await getDefinition(transport, size, onStep)
   definitionCache.set(uid, size, definition)
   return definition
 }
@@ -484,13 +521,22 @@ export async function loadKeyboard(
       ? await getDynamicEntryCount(transport)
       : { tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 0 }
 
-  const keymap = await getKeymap(transport, layers, rows, cols)
+  const keymap = await getKeymap(transport, layers, rows, cols, reporter(options, 'keymap'))
 
   // ノブにも TD を割り当てられるので、どの Tap Dance を読むかはノブまで読んでから決める
   const encoderCount = countEncoders(definition)
-  const encoders = encoderCount > 0 ? await getEncoders(transport, layers, encoderCount) : []
+  const encoders =
+    encoderCount > 0
+      ? await getEncoders(transport, layers, encoderCount, reporter(options, 'encoders'))
+      : []
 
-  const tapDance = await readTapDance(transport, dynamic.tapDance, keymap, encoders)
+  const tapDance = await readTapDance(
+    transport,
+    dynamic.tapDance,
+    keymap,
+    encoders,
+    reporter(options, 'tapDance')
+  )
 
   const layoutOptions = definition.layouts.labels ? await getLayoutOptions(transport) : 0
 

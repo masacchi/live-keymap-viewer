@@ -29,6 +29,7 @@ import {
   getUnlockStatus,
   type KeyboardSnapshot,
   keymapUnchanged,
+  type LoadProgress,
   loadKeyboard,
   nextUnlockAction,
   reloadKeymap,
@@ -63,6 +64,8 @@ export interface SessionState {
   unlock: UnlockState | null
   /** キーマップを読み直している最中か。 */
   reloading: boolean
+  /** 最初の読み込みの進み具合。読み込み中だけ入る。 */
+  loading: LoadProgress | null
 }
 
 export interface SessionOptions {
@@ -135,7 +138,8 @@ export class KeyboardSession {
       engine: null,
       layers: null,
       unlock: null,
-      reloading: false
+      reloading: false,
+      loading: null
     }
   }
 
@@ -167,9 +171,13 @@ export class KeyboardSession {
       this.update({ status: 'loading' })
 
       const snapshot = await loadKeyboard(this.transport, {
-        definitionCache: this.definitionCache
+        definitionCache: this.definitionCache,
+        onProgress: (loading) => {
+          if (this.alive(gen)) this.update({ loading })
+        }
       })
       if (!this.alive(gen)) return
+      this.update({ loading: null })
       const engine = this.install(snapshot, false)
 
       if (!snapshot.matrixTestSupported) {
@@ -265,7 +273,7 @@ export class KeyboardSession {
 
   private fail(error: unknown): void {
     this.generation++ // 動いているループを止める
-    this.update({ status: 'error', reloading: false, error: describeError(error) })
+    this.update({ status: 'error', reloading: false, loading: null, error: describeError(error) })
   }
 
   /**

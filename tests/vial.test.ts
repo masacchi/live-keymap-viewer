@@ -188,6 +188,36 @@ describe('定義のキャッシュ', () => {
   })
 })
 
+describe('読み込みの進み具合', () => {
+  it('段ごとに、1 往復ずつ total まで数え上げる', async () => {
+    const seen: Array<{ stage: string; done: number; total: number }> = []
+    await loadKeyboard(await openMock(), { onProgress: (p) => seen.push(p) })
+
+    const stages = [...new Set(seen.map((p) => p.stage))]
+    expect(stages).toEqual(['definition', 'keymap', 'encoders', 'tapDance'])
+    for (const stage of stages) {
+      const steps = seen.filter((p) => p.stage === stage)
+      expect(steps.map((p) => p.done)).toEqual(steps.map((_, i) => i + 1))
+      expect(steps.at(-1)?.done).toBe(steps[0].total)
+    }
+    // Cornix: 10 レイヤー × 8 × 7 × 2 バイト = 1120 バイトを 28 バイトずつ
+    expect(seen.find((p) => p.stage === 'keymap')?.total).toBe(40)
+  })
+
+  it('定義がキャッシュにあれば、定義の段は出ない', async () => {
+    const items = new Map<string, string>()
+    const definitionCache = new LocalStorageDefinitionCache({
+      getItem: (key) => items.get(key) ?? null,
+      setItem: (key, value) => void items.set(key, value)
+    })
+    await loadKeyboard(await openMock(), { definitionCache })
+    const seen: string[] = []
+    await loadKeyboard(await openMock(), { definitionCache, onProgress: (p) => seen.push(p.stage) })
+    expect(seen).not.toContain('definition')
+    expect(seen).toContain('keymap')
+  })
+})
+
 describe('matrix state', () => {
   it('行ごとに MSB バイトが先に来る並びをほどく', () => {
     // 3 行 × 10 列。row_size = 2、col 8 は先頭バイトの bit0 に入る

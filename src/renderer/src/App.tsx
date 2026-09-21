@@ -2,6 +2,7 @@ import { type JSX, useCallback, useEffect, useState } from 'react'
 import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
+import { LoadingPanel } from './components/LoadingPanel'
 import { OverlayControls } from './components/OverlayControls'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
@@ -142,6 +143,8 @@ export default function App(): JSX.Element {
               unlockKeys={keyboard.unlock?.keys ?? []}
             />
           </div>
+        ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (
+          <LoadingPanel deviceLabel={keyboard.deviceLabel} progress={keyboard.loading} />
         ) : (
           <EmptyState
             onConnect={() => void keyboard.connect()}

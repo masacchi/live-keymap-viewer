@@ -58,6 +58,7 @@ export const IDLE: ConnectionState = {
   layers: null,
   unlock: null,
   reloading: false,
+  loading: null,
   reconnecting: false
 }
 

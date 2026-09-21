@@ -73,6 +73,20 @@ describe('KeyboardSession: 接続と読み込み', () => {
     await session.dispose()
   })
 
+  it('読み込みのあいだだけ進み具合を載せる', async () => {
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, options())
+    const stages = new Set<string>()
+    session.subscribe((s) => {
+      if (s.loading) stages.add(s.loading.stage)
+    })
+    await session.start()
+    const ready = await waitFor(session, (s) => s.status === 'ready')
+    expect([...stages]).toEqual(['definition', 'keymap', 'encoders', 'tapDance'])
+    expect(ready.loading).toBeNull()
+    await session.dispose()
+  })
+
   it('start() は 1 回しか呼べない', async () => {
     const { session } = await readySession()
     await expect(session.start()).rejects.toThrow()
