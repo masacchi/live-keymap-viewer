@@ -25,9 +25,20 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | `npm run typecheck` | main 側と renderer 側を別々の tsconfig で型チェック |
 | `npm run lint` | Biome で lint + フォーマット確認 |
 | `npm run format` | Biome で整形と import の並べ替え |
-| **`npm run check`** | **型チェック + lint + テスト。コミット前に必ず通す** |
+| **`npm run check`** | **型チェック + lint + テスト。コミット時に自動で走る(下記)** |
 | `npm run package:win` | ビルドして `dist/win32-x64/` に Windows 版一式を作る |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
+
+### コミット時の自動チェック
+
+`git commit` のたびに **husky** の pre-commit フック([.husky/pre-commit](../.husky/pre-commit))が
+`npm run check` を走らせ、通らなければコミットを止める。5 秒ほどかかる。
+
+- `npm install` で自動的に有効になる(`prepare` で `husky` が `core.hooksPath` を設定する)
+- 急ぎで飛ばしたいときは `git commit --no-verify`(または環境変数 `HUSKY=0`)
+- 整形だけで落ちたなら `npm run format` で直る
+- 見るのは作業ツリー全体。一部だけステージしてコミットしても、ステージしていない変更込みで検査される
+- VS Code のソース管理画面からのコミットで `npm` が見つからない場合に備えて、フックは nvm を読み込み直す
 
 ## 3. WSL で開発するときの注意
 
@@ -191,7 +202,7 @@ python3 scripts/gen-mock.py       # .vil + 定義 JSON → mock/cornix.generated
 
 ## 7. 決まりごと
 
-- **コミット前に `npm run check`。** 型・lint・テストが全部通ること
+- **`npm run check` が通らないものはコミットしない。** pre-commit フックが止めるので、`--no-verify` で逃げない
 - コミットは小さく。リポジトリはローカルのみ(リモートは無い)
 - コメントは日本語で、**何をしているかより、なぜそうしているか**を書く
 - 依存は増やしすぎない(HANDOFF §2「最小限・保守しやすい構成」)

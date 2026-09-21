@@ -96,7 +96,7 @@ WSL 上で起動した場合は、USB でもキーボードは見えない(WSL2 
 
 ```bash
 npm run dev      # 開発サーバーつきで起動
-npm run check    # 型チェック + lint + テスト(コミット前に)
+npm run check    # 型チェック + lint + テスト(コミット時に husky が自動で走らせる)
 ```
 
 | ドキュメント | 内容 |

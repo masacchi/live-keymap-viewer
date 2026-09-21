@@ -1,0 +1,23 @@
+# コミット前に、型チェック・lint(Biome)・テストを通す(npm run check)。
+# 5 秒ほどかかる。急ぎで飛ばしたいときは `git commit --no-verify`(または HUSKY=0)。
+#
+# 注意: 見るのは作業ツリー全体で、ステージした内容だけではない。
+# 一部だけステージしてコミットすると、ステージしていない変更も込みで検査される。
+
+# VS Code のソース管理画面などから呼ばれると、nvm の PATH が通っていないことがある
+if ! command -v npm >/dev/null 2>&1; then
+  NVM_SH="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+  # shellcheck disable=SC1090
+  [ -s "$NVM_SH" ] && . "$NVM_SH"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "pre-commit: npm が見つからない。Node.js の PATH を確かめること(飛ばすなら --no-verify)" >&2
+  exit 1
+fi
+
+if ! npm run --silent check; then
+  echo "" >&2
+  echo "pre-commit: npm run check が通らなかったのでコミットを止めた。" >&2
+  echo "  直してからコミットし直すこと。整形だけなら npm run format で直る。" >&2
+  exit 1
+fi

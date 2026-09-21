@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm test",
     "package:win": "npm run build && node scripts/package-win.mjs",
-    "deploy:win": "npm run package:win && node scripts/deploy-win.mjs"
+    "deploy:win": "npm run package:win && node scripts/deploy-win.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
@@ -32,6 +33,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^44.4.3",
     "electron-vite": "^5.0.0",
+    "husky": "^9.1.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",

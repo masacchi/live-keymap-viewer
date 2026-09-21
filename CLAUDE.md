@@ -12,7 +12,7 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 
 ## コマンド
 
-- `npm run check` … 型チェック + Biome + テスト。**コミット前に必ず通す**
+- `npm run check` … 型チェック + Biome + テスト。**husky の pre-commit で自動実行**され、落ちるとコミットできない。`--no-verify` で逃げずに直す
 - `npm test` / `npm run lint` / `npm run format`
 - `npm run deploy:win` … Windows 版を作ってデスクトップに置く
 
