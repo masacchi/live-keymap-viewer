@@ -3,6 +3,12 @@ import { useMemo, type JSX } from 'react'
 import type { LayerEngine, LayerSnapshot } from '../engine/layerState'
 import { decodeKeycode } from '../keycodes/decode'
 import { labelForKeycode, type LabelContext, type LabelMode } from '../keycodes/labels'
+import { holdLayerOf } from '../keycodes/tapDance'
+import {
+  layoutEncoderStrip,
+  viewBoxFor,
+  type EncoderPlacement
+} from '../layout/encoderStrip'
 import { keyId, visibleKeys, type KeyboardGeometry } from '../layout/geometry'
 import { decodeLayoutOptions } from '../layout/layoutOptions'
 import type { KeyboardSnapshot } from '../hid/vial'
@@ -17,26 +23,12 @@ export interface KeyboardViewProps {
   /** アンロックのために押すべきキー。ロック中だけ渡す。 */
   unlockKeys?: Array<{ row: number; col: number }>
   /** ノブの割り当てを並べる位置。 */
-  encoderPlacement?: 'top' | 'bottom'
+  encoderPlacement?: EncoderPlacement
   unit?: number
 }
 
-/** ノブの割り当て文字の大きさ(px)。 */
+/** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
 const ENCODER_FONT = 13
-/** ノブの帯の高さ(1u 単位)。 */
-const ENCODER_STRIP = 0.8
-
-/**
- * SVG には文字幅を測る手立てが無いので見積もる。
- * 全角はほぼ 1em、それ以外は 0.58em として扱えば、中央揃えには十分。
- */
-function estimateTextWidth(text: string, fontSize: number): number {
-  let width = 0
-  for (const ch of text) {
-    width += /[\u3000-\u30ff\u3400-\u9fff\uff00-\uffef]/.test(ch) ? fontSize : fontSize * 0.58
-  }
-  return width
-}
 
 export function KeyboardView({
   geometry,
@@ -81,69 +73,36 @@ export function KeyboardView({
     [unlockKeys]
   )
 
-  /*
-   * ノブは KLE 上の座標では描かない。
-   *
-   * Cornix LP の定義はエンコーダーを図の右端にまとめて置いてあり、そのまま描くと
-   * キーボードの横幅が 1.3 倍ほどに間延びする。位置に意味は無い(回転は matrix に
-   * 出ないので押下表示もできない)ので、キーの上か下に横一列でまとめる。
-   */
   const strip = useMemo(() => {
-    const knobs = geometry.encoders
+    const items = geometry.encoders
       .filter((encoder) => encoder.direction === 0)
       .sort((a, b) => a.index - b.index)
-    if (knobs.length === 0) return null
-
-    const dotRadius = 0.16 * unit
-    const innerGap = 0.16 * unit
-    const itemGap = 0.5 * unit
-
-    const items = knobs.map((knob) => {
-      const assigned = snapshot.encoders[layers.displayLayer]?.[knob.index]
-      const ccw = assigned?.[0] !== undefined ? `↺ ${labelOf(assigned[0])}` : ''
-      const cw = assigned?.[1] !== undefined ? `↻ ${labelOf(assigned[1])}` : ''
-      const width =
-        dotRadius * 2 +
-        innerGap +
-        estimateTextWidth(ccw, ENCODER_FONT) +
-        innerGap * 2 +
-        estimateTextWidth(cw, ENCODER_FONT)
-      return { index: knob.index, ccw, cw, width }
+      .map((knob) => {
+        const assigned = snapshot.encoders[layers.displayLayer]?.[knob.index]
+        return {
+          index: knob.index,
+          ccw: assigned?.[0] !== undefined ? `↺ ${labelOf(assigned[0])}` : '',
+          cw: assigned?.[1] !== undefined ? `↻ ${labelOf(assigned[1])}` : ''
+        }
+      })
+    return layoutEncoderStrip({
+      items,
+      keyBounds: geometry.keyBounds,
+      placement: encoderPlacement,
+      unit,
+      fontSize: ENCODER_FONT
     })
+  }, [
+    geometry.encoders,
+    geometry.keyBounds,
+    snapshot.encoders,
+    layers.displayLayer,
+    labelOf,
+    encoderPlacement,
+    unit
+  ])
 
-    const total = items.reduce((sum, item) => sum + item.width, 0) + itemGap * (items.length - 1)
-    const centerX = ((geometry.keyBounds.minX + geometry.keyBounds.maxX) / 2) * unit
-    const y =
-      (encoderPlacement === 'top'
-        ? geometry.keyBounds.minY - ENCODER_STRIP / 2
-        : geometry.keyBounds.maxY + ENCODER_STRIP / 2) * unit
-
-    let cursor = centerX - total / 2
-    const placed = items.map((item) => {
-      const x = cursor
-      cursor += item.width + itemGap
-      return {
-        ...item,
-        dotX: x + dotRadius,
-        ccwX: x + dotRadius * 2 + innerGap,
-        cwX:
-          x + dotRadius * 2 + innerGap + estimateTextWidth(item.ccw, ENCODER_FONT) + innerGap * 2
-      }
-    })
-    return { items: placed, y, dotRadius, minX: centerX - total / 2, maxX: centerX + total / 2 }
-  }, [geometry.encoders, geometry.keyBounds, snapshot.encoders, layers.displayLayer, labelOf, encoderPlacement, unit])
-
-  const pad = 0.2
-  const minX = Math.min(geometry.keyBounds.minX, strip ? strip.minX / unit : Infinity)
-  const maxX = Math.max(geometry.keyBounds.maxX, strip ? strip.maxX / unit : -Infinity)
-  const minY = geometry.keyBounds.minY - (encoderPlacement === 'top' && strip ? ENCODER_STRIP : 0)
-  const maxY = geometry.keyBounds.maxY + (encoderPlacement === 'bottom' && strip ? ENCODER_STRIP : 0)
-  const viewBox = [
-    (minX - pad) * unit,
-    (minY - pad) * unit,
-    (maxX - minX + pad * 2) * unit,
-    (maxY - minY + pad * 2) * unit
-  ].join(' ')
+  const viewBox = viewBoxFor(geometry.keyBounds, strip, encoderPlacement, unit)
 
   return (
     <svg
@@ -170,7 +129,7 @@ export function KeyboardView({
         const resolved = engine.resolveKey(physical.row, physical.col, layers)
         const held = layers.held.get(id)
         const label = labelForKeycode(resolved.effective, labelMode, labelContext)
-        const holdLayer = holdLayerOf(resolved.effective, snapshot)
+        const holdLayer = holdLayerOf(resolved.effective, snapshot.tapDance)
 
         return (
           <KeyCap
@@ -189,20 +148,4 @@ export function KeyboardView({
       })}
     </svg>
   )
-}
-
-/** キーコードから「長押しで出るレイヤー」を取り出す(帯の表示用)。 */
-function holdLayerOf(
-  keycode: ReturnType<typeof decodeKeycode>,
-  snapshot: KeyboardSnapshot
-): number | null {
-  if (keycode.kind === 'layerTap') return keycode.layer
-  if (keycode.kind === 'layer' && keycode.op === 'MO') return keycode.layer
-  if (keycode.kind === 'tapDance') {
-    const entry = snapshot.tapDance[keycode.index]
-    if (!entry) return null
-    const hold = decodeKeycode(entry.onHold)
-    if (hold.kind === 'layer' && hold.op === 'MO') return hold.layer
-  }
-  return null
 }

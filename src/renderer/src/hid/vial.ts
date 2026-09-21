@@ -31,6 +31,7 @@ import {
   VIA_LAYOUT_OPTIONS,
   VIA_SWITCH_MATRIX_STATE
 } from './constants'
+import type { TapDanceEntry } from '../keycodes/tapDance'
 import { buildGeometry } from '../layout/geometry'
 import type { SendOptions, Transport } from './transport'
 import { decompressDefinition } from './xz'
@@ -44,14 +45,6 @@ export interface VialDefinition {
   layouts: { keymap: unknown[]; labels?: unknown[] }
   customKeycodes?: Array<{ name?: string; title?: string; shortName?: string }>
   [key: string]: unknown
-}
-
-export interface TapDanceEntry {
-  onTap: number
-  onHold: number
-  onDoubleTap: number
-  onTapHold: number
-  tappingTerm: number
 }
 
 export interface UnlockStatus {

@@ -9,7 +9,7 @@ import {
   MOCK_ROWS,
   MOCK_TAP_DANCE
 } from '@/mock/cornix.generated'
-import type { TapDanceEntry } from '@/hid/vial'
+import type { TapDanceEntry } from '@/keycodes/tapDance'
 
 function mockKeymap(): number[][][] {
   const keymap: number[][][] = []

@@ -9,8 +9,8 @@
  * - TG(n) / TO(n) / DF(n) は押した時点で反映する
  */
 import { decodeKeycode, type Keycode } from '../keycodes/decode'
+import { holdLayerOf, tappingTermOf, type TapDanceEntry } from '../keycodes/tapDance'
 import { keyId } from '../layout/geometry'
-import type { TapDanceEntry } from '../hid/vial'
 
 export const DEFAULT_TAPPING_TERM = 200
 
@@ -133,7 +133,7 @@ export class LayerEngine {
     const resolved = this.resolveRaw(row, col, active)
     const keycode = decodeKeycode(resolved.raw)
 
-    const holdLayer = this.holdLayerOf(keycode)
+    const holdLayer = holdLayerOf(keycode, this.config.tapDance)
     this.held.set(keyId(row, col), {
       row,
       col,
@@ -142,7 +142,7 @@ export class LayerEngine {
       holdLayer,
       heldSince: null,
       interrupted: false,
-      tappingTerm: this.tappingTermOf(keycode),
+      tappingTerm: tappingTermOf(keycode, this.config.tapDance, this.config.tappingTerm),
       holdActive: false
     })
 
@@ -169,27 +169,6 @@ export class LayerEngine {
       default:
         break
     }
-  }
-
-  /** このキーコードが長押しで出せるレイヤー。 */
-  private holdLayerOf(keycode: Keycode): number | null {
-    if (keycode.kind === 'layerTap') return keycode.layer
-    if (keycode.kind === 'layer' && keycode.op === 'MO') return keycode.layer
-    if (keycode.kind === 'tapDance') {
-      const entry = this.config.tapDance[keycode.index]
-      if (!entry) return null
-      const hold = decodeKeycode(entry.onHold)
-      if (hold.kind === 'layer' && hold.op === 'MO') return hold.layer
-    }
-    return null
-  }
-
-  private tappingTermOf(keycode: Keycode): number {
-    if (keycode.kind === 'tapDance') {
-      const entry = this.config.tapDance[keycode.index]
-      if (entry && entry.tappingTerm > 0) return entry.tappingTerm
-    }
-    return this.config.tappingTerm
   }
 
   /** MO は押した瞬間から有効。LT / TD は長押しが確定してから。 */
