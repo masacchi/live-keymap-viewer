@@ -57,7 +57,12 @@ export class HidPermissions {
         callback(device?.deviceId)
       }
 
-      if (candidates.length <= 1) {
+      // 同じキーボードが USB と Bluetooth の両方で見えていると、候補が 2 つになる。
+      // 名前も VID/PID も同じで人には見分けられないし、許可は VID/PID 単位なので
+      // どちらを選んでも両方が許可される。どちらが答えるかは renderer が確かめる
+      // (hid/deviceProbe.ts)。選ばせるのは、別々のキーボードが並んでいるときだけ。
+      const keyboards = new Set(candidates.map((d) => `${d.vendorId}:${d.productId}`))
+      if (keyboards.size <= 1) {
         choose(candidates[0])
         return
       }

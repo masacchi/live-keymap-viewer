@@ -127,7 +127,7 @@ export class WebHidTransport implements Transport {
       }
       timer = setTimeout(() => {
         this.pending = null
-        reject(new TransportError('デバイスが応答しない'))
+        reject(new TransportError(`デバイスが応答しない(コマンド ${describeCommand(payload)})`))
       }, timeoutMs)
       // report ID を持たないデバイスなので 0 で送る
       const report = new Uint8Array(MSG_LEN)
@@ -139,6 +139,13 @@ export class WebHidTransport implements Transport {
       })
     })
   }
+}
+
+/** エラー表示用に、リクエストの先頭(コマンドとサブコマンド)を 16 進で表す。 */
+export function describeCommand(payload: Uint8Array): string {
+  const head =
+    payload[0] === 0xfe || payload[0] === 0x02 ? payload.subarray(0, 2) : payload.subarray(0, 1)
+  return [...head].map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
 }
 
 /** Vial の raw HID インターフェースを持つデバイスかどうか。 */

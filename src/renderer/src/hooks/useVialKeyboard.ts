@@ -11,6 +11,7 @@
  * だけ。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { pickResponsiveDevice } from '../hid/deviceProbe'
 import { MockTransport } from '../hid/mockTransport'
 import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
 import { KeyboardSession, type SessionState, type SessionStatus } from '../session/keyboardSession'
@@ -40,6 +41,8 @@ const IDLE: VialKeyboardState = {
 export function useVialKeyboard() {
   const [state, setState] = useState<VialKeyboardState>(IDLE)
   const sessionRef = useRef<KeyboardSession | null>(null)
+  /** デバイス探しの世代。接続を連打したとき、古い探索の結果を使わないため。 */
+  const searchRef = useRef(0)
 
   /**
    * 新しい transport でセッションを作り直す。
@@ -58,23 +61,73 @@ export function useVialKeyboard() {
     await session.start()
   }, [])
 
+  /**
+   * 候補のうち、実際に答えるインターフェースに繋ぐ。
+   *
+   * USB と Bluetooth の両方で繋がっていると、同じキーボードの Vial インターフェースが
+   * 2 つ見え、出力先でない側は答えない(hid/deviceProbe.ts)。確かめる間は候補を開き閉じ
+   * するので、いまのセッションは先に閉じておく(開いたまま閉じられると壊れる)。
+   */
+  const connectToResponsive = useCallback(
+    async (candidates: HIDDevice[]) => {
+      if (candidates.length === 0) return
+      const search = ++searchRef.current
+
+      const previous = sessionRef.current
+      sessionRef.current = null
+      await previous?.dispose()
+      if (candidates.length > 1) {
+        setState({ ...IDLE, status: 'connecting', deviceLabel: '応答するインターフェースを確認中' })
+      }
+
+      const { device, results } = await pickResponsiveDevice(candidates)
+      if (search !== searchRef.current) return // もっと新しい接続の操作があった
+      if (!device) {
+        setState({
+          ...IDLE,
+          status: 'error',
+          error:
+            `キーボードが応答しない(${results.length} 個のインターフェースを試した)。` +
+            'Vial など別のアプリで使っていないか、USB / Bluetooth の出力先を確かめる'
+        })
+        return
+      }
+      await attach(new WebHidTransport(device))
+    },
+    [attach]
+  )
+
   /** デバイス選択ダイアログを出して繋ぐ。 */
   const connect = useCallback(async () => {
     if (!navigator.hid) {
       setState({ ...IDLE, status: 'error', error: 'WebHID が使えない' })
       return
     }
-    const devices = await navigator.hid.requestDevice({ filters: VIAL_HID_FILTERS })
-    const device = devices.find(isVialDevice) ?? devices[0]
-    if (device) await attach(new WebHidTransport(device))
-  }, [attach])
+    const picked = await navigator.hid.requestDevice({ filters: VIAL_HID_FILTERS })
+    const chosen = picked.find(isVialDevice) ?? picked[0]
+    if (!chosen) return
+
+    // 許可は VID/PID 単位なので、同じキーボードの別経路(USB と BT)も一緒に許可されている。
+    // 選ばれたものを先頭にして、同じ VID/PID の Vial インターフェースをすべて候補にする
+    const granted = await navigator.hid.getDevices()
+    const siblings = granted.filter(
+      (d) =>
+        d !== chosen &&
+        isVialDevice(d) &&
+        d.vendorId === chosen.vendorId &&
+        d.productId === chosen.productId
+    )
+    await connectToResponsive([chosen, ...siblings])
+  }, [connectToResponsive])
 
   /** 実機なしで画面を確かめる用。 */
   const connectMock = useCallback(async () => {
+    searchRef.current++ // 探索中なら、その結果は使わない
     await attach(new MockTransport({ unlocked: false }))
   }, [attach])
 
   const disconnect = useCallback(async () => {
+    searchRef.current++
     const session = sessionRef.current
     sessionRef.current = null
     setState(IDLE)
@@ -86,19 +139,18 @@ export function useVialKeyboard() {
     await sessionRef.current?.reload()
   }, [])
 
-  /** 起動時、前に許可したデバイスがあれば自動で繋ぐ。 */
+  /** 起動時、前に許可したデバイスがあれば、答えるものに自動で繋ぐ。 */
   useEffect(() => {
     let cancelled = false
     void (async () => {
       if (!navigator.hid) return
-      const devices = await navigator.hid.getDevices()
-      const device = devices.find(isVialDevice)
-      if (device && !cancelled) await attach(new WebHidTransport(device))
+      const devices = (await navigator.hid.getDevices()).filter(isVialDevice)
+      if (devices.length > 0 && !cancelled) await connectToResponsive(devices)
     })()
     return () => {
       cancelled = true
     }
-  }, [attach])
+  }, [connectToResponsive])
 
   /**
    * ウィンドウにフォーカスが戻ったら読み直す。

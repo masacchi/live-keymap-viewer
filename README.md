@@ -89,6 +89,9 @@ Windows が JIS として扱ったときに実際に入る文字を出す。
 | USB | ✅ 2026-09-20、Windows + Cornix LP で動作 |
 | Bluetooth | ⬜ 未確認 |
 
+USB と Bluetooth の両方で繋がっていても大丈夫。Windows には同じキーボードが 2 つ見えるが、
+実際に答える方(両方答えるなら速い USB)を自動で選ぶ。
+
 WSL 上で起動した場合は、USB でもキーボードは見えない(WSL2 に USB が無いため)。
 実機は Windows 側で使う。
 

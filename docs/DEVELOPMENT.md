@@ -102,6 +102,8 @@ tests/
   layerState                                             レイヤー判定(HANDOFF §6)
   vial                                                   プロトコル(モック相手)と応答の照合
   keyboardSession                                        接続のライフサイクル
+  webhidTransport                                        本物と同じ WebHidTransport 経路での読み込み、
+                                                         答えるインターフェースの選び方
   keyboardView.test.tsx                                  SVG の描画(react-dom/server で静的に)
   settings                                               設定の検証、画面外の復帰
   main/                                                  main プロセス(electron をモック)

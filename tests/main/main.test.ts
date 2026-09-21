@@ -324,7 +324,15 @@ describe('HidPermissions', () => {
     expect(callback).toHaveBeenCalledWith(undefined)
   })
 
-  it('複数あれば renderer に選ばせ、選ばれたものを返す', async () => {
+  it('同じキーボードが USB と Bluetooth の両方で見えていても、選ばせずに進む', async () => {
+    const { select } = await setup()
+    // 名前も VID/PID も同じ。どちらが答えるかは renderer が確かめる
+    const callback = select([vial('usb', 1), vial('bt', 1)])
+    expect(callback).toHaveBeenCalledWith('usb')
+    expect(fake.FakeWindow.all[0].sent).toHaveLength(0)
+  })
+
+  it('別々のキーボードが複数あれば renderer に選ばせ、選ばれたものを返す', async () => {
     const { select } = await setup()
     const callback = select([vial('a', 1), vial('b', 2)])
     expect(callback).not.toHaveBeenCalled()
