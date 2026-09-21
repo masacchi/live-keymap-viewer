@@ -9,6 +9,7 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 - 手順・よくある変更: docs/DEVELOPMENT.md
 - プロトコル: docs/PROTOCOL.md
 - 現状・制約・今後: docs/STATUS.md
+- **Bluetooth 対応の調査と実装計画: docs/BLUETOOTH.md**(BT の作業はまずこれを読む)
 
 ## コマンド
 
@@ -21,7 +22,9 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 - **Windows 側で動いているアプリを終了させない**(`taskkill` しない)。確認中の画面を落とすことになる。
   `deploy:win` は起動中なら止まるので、ユーザーに閉じてもらってから再実行する
 - **WSL からは実機が見えない**(USB が無い)。動作確認はモック、実機は Windows 側でユーザーが行う
-- プロトコルを触るときは vial-qmk / vial-gui のソースで確かめ、docs/PROTOCOL.md に書く。
+- **実機のファームは vial-qmk ではなく RMK v0.8.x**(`rmk-rs/rmk`)。プロトコルを触るときは
+  vial-qmk / vial-gui に加えて RMK のソース(タグ `rmk-v0.8.3`)でも確かめ、docs/PROTOCOL.md に書く。
+  両者で違うところ(アンロックのカウンタなど)は、どちらでも動くように作る。
   `MockTransport` はファームと同じバイト並びで答えること
 - `*.generated.ts` は手で直さない(`scripts/gen-*.py` で作り直す)
 - CSS のキーキャップは「基本 → 種類 → 状態」の順を崩さない(同じ詳細度なので後勝ち)

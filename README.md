@@ -76,7 +76,7 @@ Windows が JIS として扱ったときに実際に入る文字を出す。
 ## できないこと
 
 - **ノブを回したときの表示。** 押し込みは光るが、回転は Vial / VIA のプロトコルで取れない
-- **Bluetooth は未確認**(USB は確認済み)
+- **Bluetooth はまだ使えない想定**(USB は確認済み)。BT の遅さへの対応が要る → [docs/BLUETOOTH.md](docs/BLUETOOTH.md)
 - Combo / Key Override / One Shot / TT の厳密な再現
 - 対応は Vial protocol 6 / VIA protocol 9 のみ
 
@@ -87,7 +87,7 @@ Windows が JIS として扱ったときに実際に入る文字を出す。
 | 接続 | 状態 |
 |---|---|
 | USB | ✅ 2026-09-20、Windows + Cornix LP で動作 |
-| Bluetooth | ⬜ 未確認 |
+| Bluetooth | ⬜ 未確認。USB が出力先のあいだ BT 側は応答しない(ファームの仕様)。BT を出力先にした状態は未確認で、アプリ側にも対応が要る([docs/BLUETOOTH.md](docs/BLUETOOTH.md)) |
 
 USB と Bluetooth の両方で繋がっていても大丈夫。Windows には同じキーボードが 2 つ見えるが、
 実際に答える方(両方答えるなら速い USB)を自動で選ぶ。
@@ -108,6 +108,7 @@ npm run check    # 型チェック + lint + テスト(コミット時に husky �
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | コマンド、WSL の注意、テスト、配布、よくある変更のやり方 |
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | Vial / VIA のプロトコル(一次ソースで確かめた結果) |
 | [docs/STATUS.md](docs/STATUS.md) | 受け入れ基準の状況、制約、今後の候補 |
+| [docs/BLUETOOTH.md](docs/BLUETOOTH.md) | Bluetooth 対応の調査結果と実装計画 |
 | [HANDOFF.md](HANDOFF.md) | 当初の引き継ぎ仕様 |
 
 ## ライセンスについて

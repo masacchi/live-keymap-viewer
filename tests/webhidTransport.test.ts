@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 import { pickResponsiveDevice } from '@/hid/deviceProbe'
 import { MockTransport } from '@/hid/mockTransport'
 import { WebHidTransport } from '@/hid/transport'
-import { loadKeyboard } from '@/hid/vial'
+import { getMatrixState, loadKeyboard } from '@/hid/vial'
 import { KeyboardSession, type SessionState } from '@/session/keyboardSession'
 
 /** sendReport を受けると、ファーム模擬の応答を inputreport として返す偽デバイス。 */
@@ -190,4 +190,32 @@ describe('時間切れのメッセージ', () => {
       transport.send(new Uint8Array([0x01]), { timeoutMs: 10, retries: 1 })
     ).rejects.toThrow('(コマンド 0x01)')
   })
+})
+
+/**
+ * docs/BLUETOOTH.md §3 の再現。RMK の BLE はスレーブレイテンシ 30 なので、往復が
+ * 最悪 240ms ほどかかる。今は matrix の時間切れ(200ms)で再送し、遅れて届いた応答が
+ * 次の回の応答として受け取られて、押下が 1 回ずれる。
+ *
+ * TODO(BLUETOOTH.md P2): 往復に合わせた時間切れと、取り残された応答の破棄を実装したら
+ * `it.skip` を `it` に戻す。これが通れば P2 は完了。
+ */
+describe('BLE 並みの遅さ(docs/BLUETOOTH.md §3)', () => {
+  it.skip('BLE 並みの往復でも、押したキーを正しい回に読む', async () => {
+    const device = new FirmwareBackedDevice(true)
+    device.latencyMs = 250
+    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    await transport.open()
+
+    // 3 回目の直前だけキーを押しておく。正しければ 3 回目だけが true
+    const seen: boolean[] = []
+    for (let i = 0; i < 4; i++) {
+      if (i === 2) device.firmware.press(0, 1)
+      else device.firmware.release(0, 1)
+      const matrix = await getMatrixState(transport, 8, 7)
+      seen.push(matrix[0][1])
+    }
+    expect(seen).toEqual([false, false, true, false])
+    await transport.close()
+  }, 20000)
 })

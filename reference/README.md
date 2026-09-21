@@ -18,3 +18,13 @@ Vial の定義はファームに XZ 圧縮で埋め込まれている(`vial_gene
 これで得た JSON を整形したものがこのファイル。`matrix`、`layouts.keymap`(KLE)、
 `customKeycodes` が入っていて、`USER00` = `BT0` であることの裏付けにもなっている
 (docs/PROTOCOL.md §4)。
+
+## ファームは RMK
+
+同じ uf2 に埋め込まれたパニック時のソースパス(`/Users/haobogu/Projects/keyboard/fix/cornix_panic/rmk/src/...`)
+と依存の版(`trouble-host 0.5.1` / `embassy-nrf 0.8.0`)から、ファームは vial-qmk ではなく
+**RMK v0.8.1〜v0.8.3** で作られていると分かる(2026-09-21)。詳しくは docs/BLUETOOTH.md §2.1。
+
+```bash
+strings -n 6 cornix-left.uf2 | grep -E 'rmk/src|trouble-host|embassy-nrf'
+```
