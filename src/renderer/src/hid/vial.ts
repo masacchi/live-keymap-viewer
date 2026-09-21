@@ -6,6 +6,7 @@
  * data[0] 以降という非対称に注意。
  */
 
+import { decodeKeycode } from '../keycodes/decode'
 import type { TapDanceEntry } from '../keycodes/tapDance'
 import { buildGeometry } from '../layout/geometry'
 import {
@@ -73,7 +74,8 @@ export interface KeyboardSnapshot {
   cols: number
   /** [layer][row][col] の生キーコード。 */
   keymap: number[][][]
-  tapDance: TapDanceEntry[]
+  /** 枠の数だけ並ぶ。読んでいない枠は undefined(tapDanceToRead)。 */
+  tapDance: Array<TapDanceEntry | undefined>
   /** [layer][encoder][direction] の生キーコード。 */
   encoders: number[][][]
   layoutOptions: number
@@ -295,6 +297,46 @@ export async function getTapDance(transport: Transport, index: number): Promise<
   }
 }
 
+/**
+ * キーマップに無くても読んでおく Tap Dance の枠の数(先頭から)。
+ * 表示に要るのは使っている枠だけだが、絞りすぎないよう少し余裕を持たせている。
+ */
+export const TAP_DANCE_ALWAYS_READ = 5
+
+/**
+ * 読む Tap Dance の番号(昇順)。キーマップとノブで使っている枠と、先頭の TAP_DANCE_ALWAYS_READ 個。
+ *
+ * Vial は Tap Dance の枠を 32 個ほど持つが、実際に使うのは数個。1 枠 1 往復なので、
+ * 全部読むと読み込みの 1/4 を占める(Bluetooth では 1 往復 約 0.5 秒)。
+ */
+export function tapDanceToRead(
+  count: number,
+  keymap: number[][][],
+  encoders: number[][][]
+): number[] {
+  const indices = new Set<number>()
+  for (let i = 0; i < Math.min(count, TAP_DANCE_ALWAYS_READ); i++) indices.add(i)
+  for (const raw of [...keymap.flat(2), ...encoders.flat(2)]) {
+    const keycode = decodeKeycode(raw)
+    if (keycode.kind === 'tapDance' && keycode.index < count) indices.add(keycode.index)
+  }
+  return [...indices].sort((a, b) => a - b)
+}
+
+/** 要る枠だけ読み、枠の数ぶんの配列にして返す(読まない枠は undefined)。 */
+async function readTapDance(
+  transport: Transport,
+  count: number,
+  keymap: number[][][],
+  encoders: number[][][]
+): Promise<Array<TapDanceEntry | undefined>> {
+  const entries = new Array<TapDanceEntry | undefined>(count).fill(undefined)
+  for (const index of tapDanceToRead(count, keymap, encoders)) {
+    entries[index] = await getTapDance(transport, index)
+  }
+  return entries
+}
+
 export async function getUnlockStatus(transport: Transport): Promise<UnlockStatus> {
   const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_UNLOCK_STATUS], LONG)
   const keys: Array<{ row: number; col: number }> = []
@@ -401,13 +443,11 @@ export async function loadKeyboard(transport: Transport): Promise<KeyboardSnapsh
 
   const keymap = await getKeymap(transport, layers, rows, cols)
 
-  const tapDance: TapDanceEntry[] = []
-  for (let i = 0; i < dynamic.tapDance; i++) {
-    tapDance.push(await getTapDance(transport, i))
-  }
-
+  // ノブにも TD を割り当てられるので、どの Tap Dance を読むかはノブまで読んでから決める
   const encoderCount = countEncoders(definition)
   const encoders = encoderCount > 0 ? await getEncoders(transport, layers, encoderCount) : []
+
+  const tapDance = await readTapDance(transport, dynamic.tapDance, keymap, encoders)
 
   const layoutOptions = definition.layouts.labels ? await getLayoutOptions(transport) : 0
 
@@ -447,13 +487,10 @@ export async function reloadKeymap(
 
   const keymap = await getKeymap(transport, layers, previous.rows, previous.cols)
 
-  const tapDance: TapDanceEntry[] = []
-  for (let i = 0; i < dynamic.tapDance; i++) {
-    tapDance.push(await getTapDance(transport, i))
-  }
-
   const encoderCount = countEncoders(previous.definition)
   const encoders = encoderCount > 0 ? await getEncoders(transport, layers, encoderCount) : []
+
+  const tapDance = await readTapDance(transport, dynamic.tapDance, keymap, encoders)
 
   const layoutOptions = previous.definition.layouts.labels ? await getLayoutOptions(transport) : 0
 

@@ -167,8 +167,8 @@ export const NAMED: Readonly<Record<string, Named>> = {
 export interface LabelContext {
   /** 定義 JSON の customKeycodes(USER00… の表示名)。 */
   customKeycodes?: ReadonlyArray<{ name?: string; title?: string; shortName?: string }>
-  /** Tap Dance の設定。TD(n) をタップ側の文字で出すのに使う。 */
-  tapDance?: ReadonlyArray<{ onTap: number; onHold: number }>
+  /** Tap Dance の設定。TD(n) をタップ側の文字で出すのに使う。読んでいない枠は undefined。 */
+  tapDance?: ReadonlyArray<{ onTap: number; onHold: number } | undefined>
 }
 
 function printableTable(mode: LabelMode): Readonly<Record<string, Printable>> {

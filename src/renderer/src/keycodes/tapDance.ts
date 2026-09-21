@@ -26,7 +26,7 @@ export interface TapDanceEntry {
  */
 export function holdLayerOf(
   keycode: Keycode,
-  tapDance: ReadonlyArray<Pick<TapDanceEntry, 'onHold'>>
+  tapDance: ReadonlyArray<Pick<TapDanceEntry, 'onHold'> | undefined>
 ): number | null {
   if (keycode.kind === 'layerTap') return keycode.layer
   if (keycode.kind === 'layer' && keycode.op === 'MO') return keycode.layer
@@ -42,7 +42,7 @@ export function holdLayerOf(
 /** このキーコードの tapping term(ms)。Tap Dance はエントリごとの値を優先する。 */
 export function tappingTermOf(
   keycode: Keycode,
-  tapDance: ReadonlyArray<Pick<TapDanceEntry, 'tappingTerm'>>,
+  tapDance: ReadonlyArray<Pick<TapDanceEntry, 'tappingTerm'> | undefined>,
   fallback: number
 ): number {
   if (keycode.kind === 'tapDance') {

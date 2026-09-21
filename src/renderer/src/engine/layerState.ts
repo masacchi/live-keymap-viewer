@@ -20,7 +20,8 @@ export interface LayerEngineConfig {
   cols: number
   /** [layer][row][col] の生キーコード。 */
   keymap: number[][][]
-  tapDance: TapDanceEntry[]
+  /** 読んでいない枠は undefined(hid/vial.ts の tapDanceToRead)。 */
+  tapDance: ReadonlyArray<TapDanceEntry | undefined>
   /** LT の既定 tapping term。QMK の TAPPING_TERM 相当。 */
   tappingTerm?: number
 }

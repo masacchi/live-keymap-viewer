@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import {
+  CMD_VIA_VIAL_PREFIX,
+  CMD_VIAL_DYNAMIC_ENTRY_OP,
+  DYNAMIC_VIAL_TAP_DANCE_GET
+} from '@/hid/constants'
 import { MockTransport } from '@/hid/mockTransport'
 import { RequestQueue, WebHidTransport } from '@/hid/transport'
 import {
@@ -14,6 +19,7 @@ import {
   nextUnlockAction,
   ProtocolError,
   reloadKeymap,
+  tapDanceToRead,
   unlockPoll,
   unlockStart
 } from '@/hid/vial'
@@ -98,6 +104,52 @@ describe('プロトコルの読み出し', () => {
     })
     expect(snapshot.tapDance).toHaveLength(MOCK_TAP_DANCE.length)
     expect(snapshot.uid).toBe('16882930253541522617')
+  })
+})
+
+describe('Tap Dance は要る枠だけ読む', () => {
+  const tapDanceReads = (transport: MockTransport): number[] =>
+    transport.requests
+      .filter(
+        (r) =>
+          r[0] === CMD_VIA_VIAL_PREFIX &&
+          r[1] === CMD_VIAL_DYNAMIC_ENTRY_OP &&
+          r[2] === DYNAMIC_VIAL_TAP_DANCE_GET
+      )
+      .map((r) => r[3])
+
+  it('キーマップとノブで使っている枠と、先頭の 5 個だけ読む', async () => {
+    const transport = await openMock()
+    const snapshot = await loadKeyboard(transport)
+    // Cornix のキーマップが使っているのは TD(3) だけで、先頭 5 個に含まれる
+    expect(tapDanceReads(transport)).toEqual([0, 1, 2, 3, 4])
+    expect(snapshot.tapDance).toHaveLength(MOCK_TAP_DANCE.length) // 枠の数は保つ
+    expect(snapshot.tapDance[3]?.onHold).toBe(0x5224) // 長押しで MO(4)
+    expect(snapshot.tapDance[5]).toBeUndefined()
+  })
+
+  it('先頭 5 個より後ろでも、キーマップで使っていれば読む', async () => {
+    const transport = await openMock()
+    transport.setKeycode(1, 0, 1, 0x5700 + 20) // L1 に TD(20)
+    const snapshot = await loadKeyboard(transport)
+    expect(tapDanceReads(transport)).toEqual([0, 1, 2, 3, 4, 20])
+    expect(snapshot.tapDance[20]).toBeDefined()
+  })
+
+  it('読み直しでは、新しく使われた枠も読む', async () => {
+    const transport = await openMock()
+    const before = await loadKeyboard(transport)
+    transport.setKeycode(0, 0, 1, 0x5700 + 20)
+    const after = await reloadKeymap(transport, before)
+    expect(before.tapDance[20]).toBeUndefined()
+    expect(after.tapDance[20]).toBeDefined()
+  })
+
+  it('ノブに割り当てた TD も数え、枠の数を超える番号は無視する', () => {
+    const keymap = [[[0x5700 + 9, 0x5700 + 40]]]
+    const encoders = [[[0x5700 + 12, 0x0004]]]
+    expect(tapDanceToRead(32, keymap, encoders)).toEqual([0, 1, 2, 3, 4, 9, 12])
+    expect(tapDanceToRead(3, [[[0x0004]]], [])).toEqual([0, 1, 2])
   })
 })
 
