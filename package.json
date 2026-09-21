@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm test",
-    "package:win": "npm run build && node scripts/package-win.mjs"
+    "package:win": "npm run build && node scripts/package-win.mjs",
+    "deploy:win": "npm run package:win && node scripts/deploy-win.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
