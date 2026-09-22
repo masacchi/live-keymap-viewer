@@ -98,7 +98,10 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | `session/` | `keyboardSession.ts` | 1 接続ぶん: 読み込み → アンロック → ポーリング → 読み直し |
 | | `keyboardConnection.ts` | 接続を持ち続ける: デバイスの選び方、セッションの差し替え、切れたら繋ぎ直す |
 | `hooks/` | `useVialKeyboard.ts` | 接続の状態を React に渡す。フォーカス復帰で読み直す |
-| `components/` | `KeyboardView.tsx` ほか | SVG の描画、ツールバー、オーバーレイ操作、アンロック案内 |
+| `components/` | `KeyboardView.tsx` / `KeyCap.tsx` | SVG の描画。プレビュー・Shift の強調・レイヤー名の色帯 |
+| | `LayerStrip.tsx` | レイヤーの一覧。押すとプレビュー、ダブルクリックで名前 |
+| | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |
+| | `LoadingPanel.tsx` / `UnlockPanel.tsx` | 読み込みの進み具合 / アンロックの案内 |
 | `mock/` | `cornix.generated.ts` | モックのデータ(.vil と実機の定義から生成) |
 
 ## 4. キーを押してから画面が変わるまで
@@ -173,6 +176,11 @@ stateDiagram-v2
 | **オーバーレイの操作パネルの上だけクリック透過を切る** | `setIgnoreMouseEvents(true, { forward: true })` なら透過中でも mousemove は届く。ポインタが `data-interactive` の上に来たときだけ透過を解く |
 | **Windows 版は公式 zip を展開して `out/` を置くだけ** | electron-builder などは exe の情報書き換えに rcedit を使い、Linux からだと wine が要る。このアプリはネイティブモジュールが無いので不要 |
 | **ビルドは Vite を直接使う(electron-vite を使わない)** | electron-vite の安定版(5.0.0)が Vite 8 に対応していなかった。任せていたのは「main / preload / renderer を別々にビルドする」「dev で Electron を起動・再起動する」だけなので、Vite の設定 3 つと `scripts/dev.mjs`(Vite の公開 API だけを使う)で足りる |
+| **Shift 中は、Shift で入る文字を主文字にする** | エンジンがモディファイアも追う(`LayerSnapshot.mods`)。単独の Shift は押しているあいだ、MT / Tap Dance の Shift は長押しが確定してから(LT と同じ規則)。時間だけで確定したときも画面が変わるよう、通知の指紋に mods を入れている |
+| **プレビューは、キーを押したら実際の表示に戻す** | 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違う。縁を破線にして実際の状態ではないと示す |
+| **レイヤー名は settings.json に、キーボードの UID ごとに持つ** | Vial にレイヤー名は無い。ほかの設定と同じく手で直せる場所に置き、読むときも IPC で受け取るときも UID・番号・長さを確かめる。1u のキーの色帯に「長押し→名前」は収まらないので「→名前」に縮め、それも入らなければ番号に戻す |
+| **オーバーレイはベースレイヤーのあいだ薄くする** | 常に最前面なので、ふだんの入力のあいだも画面を覆っていた。濃く戻すのはすぐ、薄くするのは 300ms 待ってから(レイヤーキーの短い押下でちらつかせない) |
+| **ツールバーは常に 1 行** | 折り返すと図に使える高さが減る。幅が足りなければ状態の文字や補足を隠し、高さが足りなければレイヤーの一覧を隠す |
 | **lint とフォーマットは Biome、コミット時の検査は husky** | どちらも依存が小さく設定が 1 か所で済む(ESLint + Prettier は 6 パッケージ・設定 2 ファイルになる)。husky は誰でも見れば分かる標準的な置き場所 |
 | **設定は項目ごとに検証して読む**(`sanitizeSettings`) | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す |
 
