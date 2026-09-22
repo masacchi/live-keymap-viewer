@@ -88,6 +88,14 @@ export class LayerEngine {
     this.config = { tappingTerm: DEFAULT_TAPPING_TERM, ...config }
   }
 
+  /**
+   * 長押しと見なすまでの時間(LT の既定)を変える。設定から変えたとき。
+   * これから押すキーに効く(押しているキーは押した時点の時間のまま)。
+   */
+  setTappingTerm(ms: number): void {
+    this.config.tappingTerm = ms
+  }
+
   /** すべて離した状態に戻す。再接続や切り替えのとき。 */
   reset(): void {
     this.defaultLayer = 0

@@ -252,6 +252,15 @@ describe('UnlockPanel', () => {
 })
 
 describe('SettingsPanel', () => {
+  const panelSettings = {
+    encoderPlacement: 'top',
+    tappingTerm: 250,
+    grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
+    overlayOpacity: 0.6,
+    overlayAutoFade: false,
+    overlayFadedOpacity: 0.2,
+    overlayBlur: false
+  } as const
   const panel = (props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) =>
     renderToStaticMarkup(
       <SettingsPanel
@@ -261,13 +270,7 @@ describe('SettingsPanel', () => {
         ]}
         names={['', '', '記号']}
         onRename={noop}
-        settings={{
-          encoderPlacement: 'top',
-          overlayOpacity: 0.6,
-          overlayAutoFade: false,
-          overlayFadedOpacity: 0.2,
-          overlayBlur: false
-        }}
+        settings={{ ...panelSettings, grantedDevices: [...panelSettings.grantedDevices] }}
         onChange={noop}
         blurSupported={false}
         {...props}
@@ -292,6 +295,20 @@ describe('SettingsPanel', () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*>図の上</)
     expect(html).toContain('value="60"')
     expect(html).not.toMatch(/type="checkbox"[^>]*checked/)
+  })
+
+  it('長押しの判定時間を ms で出す', () => {
+    const html = panel()
+    expect(html).toMatch(/type="range" min="100" max="500" step="10"[^>]*value="250"/)
+    expect(html).toContain('>250 ms<')
+  })
+
+  it('許可したキーボードを並べ、保存できるときだけ「忘れる」を出す', () => {
+    expect(panel()).toContain('Cornix LP')
+    expect(panel()).toContain('e118:0001')
+    expect(panel()).not.toContain('>忘れる<')
+    expect(panel({ onForgetDevice: noop })).toContain('>忘れる<')
+    expect(panel({ settings: { ...panelSettings, grantedDevices: [] } })).toContain('まだ無い')
   })
 
   it('後ろのぼかしは、使えない OS では押せなくしてそう書く', () => {

@@ -17,7 +17,10 @@ export type { UnlockState } from '../session/keyboardSession'
 /** 実機の定義はキャッシュする(モックには使わない)。 */
 const definitionCache = new LocalStorageDefinitionCache()
 
-export function useVialKeyboard() {
+/**
+ * @param tappingTerm 長押しと見なすまでの時間(設定)。変わったら動いている接続にもすぐ効かせる
+ */
+export function useVialKeyboard(tappingTerm?: number) {
   const [state, setState] = useState(IDLE)
   const connectionRef = useRef<KeyboardConnection | null>(null)
 
@@ -34,6 +37,10 @@ export function useVialKeyboard() {
       void connection.dispose()
     }
   }, [])
+
+  useEffect(() => {
+    if (tappingTerm !== undefined) connectionRef.current?.setTappingTerm(tappingTerm)
+  }, [tappingTerm])
 
   /**
    * ウィンドウにフォーカスが戻ったら読み直す。

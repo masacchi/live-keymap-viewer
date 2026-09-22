@@ -92,6 +92,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * スクロールバーは暗い細いものにする。既定の明るい灰色は、暗い画面の上で浮いて見えた
+ * (設定パネルや記号の一覧が中だけ流れるので目に入る)。
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
 /* SVG の text は body から継承するが、明示しておく */
 svg text {
   font-family: var(--font-sans);

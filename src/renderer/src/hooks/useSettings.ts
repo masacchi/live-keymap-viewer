@@ -17,6 +17,8 @@ export interface SettingsHandle {
   update: (patch: SettingsPatch) => void
   /** キーボード(UID)のレイヤーに名前を付ける。空で消す。 */
   setLayerName: (uid: string, layer: number, name: string) => void
+  /** 一度許可したキーボードを忘れる(次の起動で自動では繋がなくなる)。 */
+  forgetDevice: (vendorId: number, productId: number) => void
   /** 保存できるか(preload がある = Electron の中)。ブラウザで開いたときは保存しない。 */
   canSave: boolean
 }
@@ -50,5 +52,11 @@ export function useSettings(): SettingsHandle {
     })
   }, [])
 
-  return { settings, update, setLayerName, canSave: window.api !== undefined }
+  const forgetDevice = useCallback((vendorId: number, productId: number) => {
+    void window.api?.forgetDevice(vendorId, productId).then((grantedDevices) => {
+      setSettings((current) => ({ ...current, grantedDevices }))
+    })
+  }, [])
+
+  return { settings, update, setLayerName, forgetDevice, canSave: window.api !== undefined }
 }

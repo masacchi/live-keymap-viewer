@@ -321,6 +321,24 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     })
   })
 
+  it('許可したキーボードは VID / PID を確かめてから忘れる', async () => {
+    writeFileSync(
+      settingsFile(),
+      JSON.stringify({
+        grantedDevices: [
+          { vendorId: 0xe118, productId: 1, name: 'Cornix' },
+          { vendorId: 0x1234, productId: 5 }
+        ]
+      })
+    )
+    const { settings } = await setup()
+    expect(await invoke('settings:forget-device', '0xe118', 1)).toHaveLength(2) // 変えない
+    expect(await invoke('settings:forget-device', 0xe118, 1)).toEqual([
+      { vendorId: 0x1234, productId: 5 }
+    ])
+    expect(settings.loadSettings().grantedDevices).toEqual([{ vendorId: 0x1234, productId: 5 }])
+  })
+
   it('レイヤー名は UID とレイヤー番号を確かめてから保存する', async () => {
     const { settings } = await setup()
     const uid = '16882930253541522617'

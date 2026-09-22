@@ -29,6 +29,7 @@ describe('sanitizeSettings', () => {
       overlayFadedOpacity: 0.35,
       overlayBlur: true,
       encoderPlacement: 'top',
+      tappingTerm: 250,
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
       layerNames: { '16882930253541522617': ['基本', '', '記号'] }
     }
@@ -89,6 +90,16 @@ describe('オーバーレイの薄さとぼかし', () => {
     expect(sanitizeSettings({}).overlayBlur).toBe(false)
     expect(sanitizeSettings({ overlayBlur: 'yes' }).overlayBlur).toBe(false)
     expect(sanitizeSettings({ overlayBlur: true }).overlayBlur).toBe(true)
+  })
+})
+
+describe('長押しの判定時間', () => {
+  it('100〜500ms に丸め、数値でなければ QMK の既定の 200ms', () => {
+    expect(sanitizeSettings({}).tappingTerm).toBe(200)
+    expect(sanitizeSettings({ tappingTerm: 20 }).tappingTerm).toBe(100)
+    expect(sanitizeSettings({ tappingTerm: 9999 }).tappingTerm).toBe(500)
+    expect(sanitizeSettings({ tappingTerm: 233.4 }).tappingTerm).toBe(233)
+    expect(sanitizeSettings({ tappingTerm: '300' }).tappingTerm).toBe(200)
   })
 })
 

@@ -78,6 +78,8 @@ export interface SessionOptions {
   sleep?: (ms: number) => Promise<void>
   /** キーボード定義のキャッシュ。無ければ繋ぐたびに読む。 */
   definitionCache?: DefinitionCache
+  /** 長押しと見なすまでの時間(ms、LT の既定)。無ければエンジンの既定(200ms)。 */
+  tappingTerm?: number
 }
 
 export interface ReloadOptions {
@@ -124,6 +126,7 @@ export class KeyboardSession {
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
+  private tappingTerm: number | undefined
 
   constructor(
     private readonly transport: Transport,
@@ -134,6 +137,7 @@ export class KeyboardSession {
     this.now = options.now ?? (() => performance.now())
     this.sleep = options.sleep ?? defaultSleep
     this.definitionCache = options.definitionCache
+    this.tappingTerm = options.tappingTerm
     this.current = {
       status: 'connecting',
       error: null,
@@ -270,6 +274,12 @@ export class KeyboardSession {
     return !this.disposed && gen === this.generation
   }
 
+  /** 長押しと見なすまでの時間を変える。動いているエンジンにもすぐ効かせる(これから押すキーから)。 */
+  setTappingTerm(ms: number): void {
+    this.tappingTerm = ms
+    this.current.engine?.setTappingTerm(ms)
+  }
+
   private update(patch: Partial<SessionState>): void {
     if (this.disposed) return
     this.current = { ...this.current, ...patch }
@@ -295,7 +305,8 @@ export class KeyboardSession {
       rows: snapshot.rows,
       cols: snapshot.cols,
       keymap: snapshot.keymap,
-      tapDance: snapshot.tapDance
+      tapDance: snapshot.tapDance,
+      tappingTerm: this.tappingTerm
     })
     if (previous) engine.inheritFrom(previous)
     const geometry =

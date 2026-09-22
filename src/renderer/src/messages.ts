@@ -156,7 +156,18 @@ export const messages = {
     blur: '後ろの画面をぼかす',
     blurHint: 'すりガラスのように(Windows 11)。強さは OS が決める。薄くしているあいだは外す',
     blurUnsupported: 'Windows 11 でだけ使える',
-    overlayPanelToo: 'オーバーレイの左上のパネルからも変えられる'
+    overlayPanelToo: 'オーバーレイの左上のパネルからも変えられる',
+    keys: 'キーの判定',
+    tappingTerm: '長押しまで',
+    tappingTermValue: (ms: number) => `${ms} ms`,
+    tappingTermHint:
+      'この時間押し続けたら長押し(LT のレイヤー)と見なす。キーボードの設定(tapping term / hold timeout)に合わせる。Tap Dance はキーボードに設定された時間を使う',
+    devices: '許可したキーボード',
+    devicesHint: '起動したときに自動で繋ぐ。忘れると、次からは「キーボードに接続」で選び直す',
+    noDevices: 'まだ無い。一度接続すると、次からは自動で繋ぐ',
+    deviceId: (vendorId: number, productId: number) =>
+      `${vendorId.toString(16).padStart(4, '0')}:${productId.toString(16).padStart(4, '0')}`,
+    forget: '忘れる'
   },
 
   overlay: {

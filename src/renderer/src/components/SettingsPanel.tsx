@@ -3,7 +3,9 @@
  *
  * - レイヤー名 … 以前はツールバーのレイヤーをダブルクリックするしかなく、気づけなかった
  * - ノブの割り当ての位置 … 図の上 / 下
+ * - 長押しの判定時間 … キーボードの設定と合わせる(ずれると表示だけ早く / 遅く切り替わる)
  * - オーバーレイの濃さと自動フェード … 以前はオーバーレイに入ってからでないと変えられなかった
+ * - 許可したキーボード … 以前は settings.json を手で直すしかなかった
  *
  * 表記(JIS / US)はよく切り替えるので、ここではなくツールバーに置いたまま。
  */
@@ -14,13 +16,15 @@ import {
   OVERLAY_OPACITY_MIN,
   type OverlaySettings,
   type Settings,
-  type SettingsPatch
+  type SettingsPatch,
+  TAPPING_TERM_MAX,
+  TAPPING_TERM_MIN
 } from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
 import { Button } from './ui/Button'
-import { PercentSlider } from './ui/PercentSlider'
+import { PercentSlider, Slider } from './ui/Slider'
 
 export interface SettingsLayer {
   layer: number
@@ -35,8 +39,10 @@ export interface SettingsPanelProps {
   /** 名前を付けた(空なら消した)とき。渡さなければ名前の欄は出さない。 */
   onRename?: (layer: number, name: string) => void
   /** いまの設定(このパネルで変える項目)。 */
-  settings: Pick<Settings, 'encoderPlacement'> & OverlaySettings
+  settings: Pick<Settings, 'encoderPlacement' | 'tappingTerm' | 'grantedDevices'> & OverlaySettings
   onChange: (patch: SettingsPatch) => void
+  /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
+  onForgetDevice?: (vendorId: number, productId: number) => void
   /** 後ろのぼかしが使えるか(Windows のときだけ)。 */
   blurSupported: boolean
 }
@@ -56,10 +62,12 @@ export function SettingsPanel({
   onRename,
   settings,
   onChange,
+  onForgetDevice,
   blurSupported
 }: SettingsPanelProps): JSX.Element {
   return (
-    <div className="w-80 divide-y divide-line-soft">
+    // 項目が増えて、既定のウィンドウの高さには収まらない。はみ出す分はパネルの中だけで流す
+    <div className="max-h-[calc(100vh-4.5rem)] w-80 divide-y divide-line-soft overflow-y-auto">
       <Section title={messages.settings.layerNames}>
         {onRename && layers.length > 0 ? (
           <>
@@ -125,6 +133,23 @@ export function SettingsPanel({
         </div>
       </Section>
 
+      <Section title={messages.settings.keys}>
+        <Slider
+          label={messages.settings.tappingTerm}
+          value={settings.tappingTerm}
+          min={TAPPING_TERM_MIN}
+          max={TAPPING_TERM_MAX}
+          step={10}
+          format={messages.settings.tappingTermValue}
+          onChange={(tappingTerm) => onChange({ tappingTerm })}
+          className="gap-2 text-xs text-ink"
+          labelClassName="w-20"
+          trackClassName="flex-1"
+          valueClassName="w-14"
+        />
+        <p className="text-2xs text-muted">{messages.settings.tappingTermHint}</p>
+      </Section>
+
       <Section title={messages.settings.overlay}>
         <PercentSlider
           label={messages.settings.opacity}
@@ -178,6 +203,37 @@ export function SettingsPanel({
           </span>
         </label>
         <p className="text-2xs text-muted">{messages.settings.overlayPanelToo}</p>
+      </Section>
+
+      <Section title={messages.settings.devices}>
+        {settings.grantedDevices.length > 0 ? (
+          <>
+            <ul className="space-y-1">
+              {settings.grantedDevices.map(({ vendorId, productId, name }) => (
+                <li key={`${vendorId}:${productId}`} className="flex items-center gap-2 text-xs">
+                  <span className="min-w-0 flex-1 truncate text-ink">
+                    {name || messages.devicePicker.unnamed}
+                  </span>
+                  <span className="shrink-0 font-mono text-2xs text-muted">
+                    {messages.settings.deviceId(vendorId, productId)}
+                  </span>
+                  {onForgetDevice && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onForgetDevice(vendorId, productId)}
+                    >
+                      {messages.settings.forget}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-2xs text-muted">{messages.settings.devicesHint}</p>
+          </>
+        ) : (
+          <p className="text-2xs text-muted">{messages.settings.noDevices}</p>
+        )}
       </Section>
     </div>
   )

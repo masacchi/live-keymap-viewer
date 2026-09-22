@@ -99,6 +99,20 @@ describe('Layer-Tap', () => {
     expect(board.release(SPACE).tick().displayLayer).toBe(0)
   })
 
+  it('判定時間を変えると、これから押すキーから効く(押しているキーは押した時点の時間のまま)', () => {
+    board.press(SPACE)
+    board.tick(0)
+    board.engine.setTappingTerm(400)
+    expect(board.tick(250).displayLayer).toBe(2) // 押したときは 200ms だった
+    board.release(SPACE)
+    board.tick()
+
+    board.press(SPACE)
+    board.tick(0)
+    expect(board.tick(250).displayLayer).toBe(0) // 400ms にはまだ届かない
+    expect(board.tick(200).displayLayer).toBe(2)
+  })
+
   it('tapping term 前でも、他のキーが押されたらレイヤーが上がる', () => {
     board.press(SPACE)
     board.tick(0)

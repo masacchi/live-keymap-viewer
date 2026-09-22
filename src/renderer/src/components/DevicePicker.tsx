@@ -25,9 +25,7 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
               >
                 <span className="font-medium">{device.name || messages.devicePicker.unnamed}</span>
                 <span className="ml-2 text-muted">
-                  {`${device.vendorId.toString(16).padStart(4, '0')}:${device.productId
-                    .toString(16)
-                    .padStart(4, '0')}`}
+                  {messages.settings.deviceId(device.vendorId, device.productId)}
                 </span>
               </button>
             </li>

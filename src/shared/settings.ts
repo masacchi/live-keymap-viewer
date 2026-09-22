@@ -43,6 +43,12 @@ export interface Settings {
   overlayBlur: boolean
   /** ノブの割り当ての置き場所。ノブが左上にあるキーボードなら上の方が見比べやすい。 */
   encoderPlacement: EncoderPlacement
+  /**
+   * 長押しと見なすまでの時間(ms)。LT のレイヤーが出るのを表示するのに使う(アプリの推定)。
+   * キーボードのファームの設定(tapping term / hold timeout)と合わせる。ずれると、表示だけ
+   * 早く / 遅くレイヤーが切り替わる。Tap Dance はキーボードに設定された時間を使う。
+   */
+  tappingTerm: number
   /** 一度許可した HID デバイス。次回から自動で繋ぐ。 */
   grantedDevices: GrantedDevice[]
   /**
@@ -61,6 +67,7 @@ export interface Settings {
  */
 export const RENDERER_SETTINGS_KEYS = [
   'labelMode',
+  'tappingTerm',
   'overlayOpacity',
   'overlayAutoFade',
   'overlayFadedOpacity',
@@ -98,6 +105,9 @@ export const OVERLAY_OPACITY_MIN = 0.2
  * 薄くするのは図だけで、操作パネルは残るので戻せる。
  */
 export const OVERLAY_FADED_OPACITY_MAX = 0.8
+/** 長押しの判定時間の範囲(ms)。QMK の TAPPING_TERM としてふつうに使われる幅。 */
+export const TAPPING_TERM_MIN = 100
+export const TAPPING_TERM_MAX = 500
 /** レイヤー名の長さの上限(文字数)。ツールバーやキーの色帯に収まるように。 */
 export const LAYER_NAME_MAX_LENGTH = 12
 /** 名前を持てるレイヤーの数。Vial の上限(32)に合わせる。 */
@@ -115,6 +125,8 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayFadedOpacity: 0.2,
   overlayBlur: false,
   encoderPlacement: 'bottom',
+  // QMK の TAPPING_TERM の既定値(engine/layerState.ts の DEFAULT_TAPPING_TERM と同じ)
+  tappingTerm: 200,
   grantedDevices: [],
   layerNames: {}
 }
@@ -135,6 +147,20 @@ export function clampOpacity(value: unknown): number {
 export function clampFadedOpacity(value: unknown): number {
   if (!isFiniteNumber(value)) return DEFAULT_SETTINGS.overlayFadedOpacity
   return Math.min(OVERLAY_FADED_OPACITY_MAX, Math.max(0, value))
+}
+
+export function clampTappingTerm(value: unknown): number {
+  if (!isFiniteNumber(value)) return DEFAULT_SETTINGS.tappingTerm
+  return Math.round(Math.min(TAPPING_TERM_MAX, Math.max(TAPPING_TERM_MIN, value)))
+}
+
+/** 許可したデバイスから 1 つ(VID / PID が同じもの)を外した並びを返す。 */
+export function withoutDevice(
+  devices: readonly GrantedDevice[],
+  vendorId: number,
+  productId: number
+): GrantedDevice[] {
+  return devices.filter((d) => d.vendorId !== vendorId || d.productId !== productId)
 }
 
 /** 数値として壊れていないか、最小サイズを満たすか。ダメなら null。 */
@@ -226,6 +252,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     overlayFadedOpacity: clampFadedOpacity(value.overlayFadedOpacity),
     overlayBlur: value.overlayBlur === true,
     encoderPlacement: value.encoderPlacement === 'top' ? 'top' : 'bottom',
+    tappingTerm: clampTappingTerm(value.tappingTerm),
     grantedDevices: sanitizeDevices(value.grantedDevices),
     layerNames: sanitizeLayerNames(value.layerNames)
   }

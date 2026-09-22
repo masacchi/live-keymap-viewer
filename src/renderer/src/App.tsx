@@ -39,8 +39,8 @@ type WindowMode = 'normal' | 'overlay'
 const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
 
 export default function App(): JSX.Element {
-  const keyboard = useVialKeyboard()
-  const { settings, update: updateSettings, setLayerName, canSave } = useSettings()
+  const { settings, update: updateSettings, setLayerName, forgetDevice, canSave } = useSettings()
+  const keyboard = useVialKeyboard(settings.tappingTerm)
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
 
@@ -170,6 +170,7 @@ export default function App(): JSX.Element {
               onRename={canSave && uid ? onRename : undefined}
               settings={settings}
               onChange={updateSettings}
+              onForgetDevice={canSave ? forgetDevice : undefined}
               blurSupported={BLUR_SUPPORTED}
             />
           }

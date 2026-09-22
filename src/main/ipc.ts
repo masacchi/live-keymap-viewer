@@ -7,11 +7,13 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
 import {
+  type GrantedDevice,
   isKeyboardUid,
   MAX_LAYERS,
   pickRendererPatch,
   type Settings,
-  withLayerName
+  withLayerName,
+  withoutDevice
 } from '../shared/settings'
 import type { HidPermissions } from './hid'
 import { loadSettings, saveSettings } from './settings'
@@ -47,6 +49,17 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
       )
       saveSettings({ layerNames })
       return layerNames[uid] ?? []
+    }
+  )
+
+  ipcMain.handle(
+    IPC.settingsForgetDevice,
+    (_event, vendorId: unknown, productId: unknown): GrantedDevice[] => {
+      const current = loadSettings().grantedDevices
+      if (!Number.isInteger(vendorId) || !Number.isInteger(productId)) return current
+      return saveSettings({
+        grantedDevices: withoutDevice(current, vendorId as number, productId as number)
+      }).grantedDevices
     }
   )
 

@@ -93,6 +93,8 @@ export class KeyboardConnection {
   private current: ConnectionState = IDLE
   private readonly listeners = new Set<ConnectionListener>()
   private session: KeyboardSession | null = null
+  /** 長押しと見なすまでの時間(設定から)。まだ受け取っていなければエンジンの既定。 */
+  private tappingTerm: number | undefined = undefined
   /** デバイス探しの世代。新しい操作があったら、古い探索の結果は使わない。 */
   private search = 0
   /** 切れたら繋ぎ直すか。「切断」やモックで false、実機への接続操作で true に戻る。 */
@@ -267,6 +269,12 @@ export class KeyboardConnection {
     await this.attach(open(device), true)
   }
 
+  /** 長押しと見なすまでの時間(設定)。いまのセッションにも、これから作るセッションにも効かせる。 */
+  setTappingTerm(ms: number): void {
+    this.tappingTerm = ms
+    this.session?.setTappingTerm(ms)
+  }
+
   /**
    * 新しい transport でセッションを作り直す。
    *
@@ -278,7 +286,8 @@ export class KeyboardConnection {
     const previous = this.session
     const session = new KeyboardSession(transport, {
       ...this.options.sessionOptions,
-      definitionCache: real ? this.options.definitionCache : undefined
+      definitionCache: real ? this.options.definitionCache : undefined,
+      tappingTerm: this.tappingTerm
     })
     this.session = session
 

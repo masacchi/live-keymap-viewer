@@ -7,6 +7,8 @@ const api: RendererApi = {
   updateSettings: (patch: SettingsPatch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   setLayerName: (uid: string, layer: number, name: string) =>
     ipcRenderer.invoke(IPC.settingsSetLayerName, uid, layer, name),
+  forgetDevice: (vendorId: number, productId: number) =>
+    ipcRenderer.invoke(IPC.settingsForgetDevice, vendorId, productId),
 
   getMode: () => ipcRenderer.invoke(IPC.windowGetMode),
   toggleMode: () => ipcRenderer.invoke(IPC.windowToggleMode),

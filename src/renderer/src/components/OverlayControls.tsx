@@ -21,7 +21,7 @@ import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
 import { Button } from './ui/Button'
-import { PercentSlider } from './ui/PercentSlider'
+import { PercentSlider } from './ui/Slider'
 
 export interface OverlayControlsProps {
   displayLayer: number

@@ -1,6 +1,6 @@
 /** main / preload / renderer で共有する型。electron には依存しない。 */
 
-import type { Settings, SettingsPatch, WindowMode } from './settings'
+import type { GrantedDevice, Settings, SettingsPatch, WindowMode } from './settings'
 
 export type {
   Bounds,
@@ -20,6 +20,7 @@ export const IPC = {
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsSetLayerName: 'settings:set-layer-name',
+  settingsForgetDevice: 'settings:forget-device',
   windowGetMode: 'window:get-mode',
   windowToggleMode: 'window:toggle-mode',
   windowSetOverlayBlurActive: 'window:set-overlay-blur-active',
@@ -52,6 +53,11 @@ export interface RendererApi {
    * 長すぎる名前は切って保存し、そのキーボードの名前の並びを返す。
    */
   setLayerName(uid: string, layer: number, name: string): Promise<string[]>
+  /**
+   * 一度許可したキーボードを忘れる(次の起動で自動では繋がなくなる)。VID / PID で指定する。
+   * 残った並びを返す。いま繋いでいる接続はそのまま。
+   */
+  forgetDevice(vendorId: number, productId: number): Promise<GrantedDevice[]>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

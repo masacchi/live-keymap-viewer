@@ -12,7 +12,8 @@ const settings = {
   overlayFadedOpacity: 0.2,
   overlayBlur: false,
   encoderPlacement: 'bottom',
-  grantedDevices: [],
+  tappingTerm: 200,
+  grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
   layerNames: {}
 }
 const noop = () => undefined
@@ -26,6 +27,12 @@ window.api = {
     list[layer] = name
     settings.layerNames[uid] = list
     return list
+  },
+  forgetDevice: async (vendorId, productId) => {
+    settings.grantedDevices = settings.grantedDevices.filter(
+      (d) => d.vendorId !== vendorId || d.productId !== productId
+    )
+    return settings.grantedDevices
   },
   getMode: async () => mode,
   toggleMode: async () => mode,
