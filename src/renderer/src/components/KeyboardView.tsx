@@ -143,20 +143,25 @@ export function KeyboardView({
         const id = keyId(physical.row, physical.col)
         const resolved = engine.resolveKey(physical.row, physical.col, view)
         const held = layers.held.get(id)
-        const label = labelForKeycode(resolved.effective, labelMode, labelContext)
-        const holdLayer = holdLayerOf(resolved.effective, snapshot.tapDance)
+        // 押しているキーは、押した瞬間に確定したキーコードで描く(QMK と同じく、離すまで変わらない)。
+        // 表示中のレイヤーで引き直すと、TD で L4 に入ったとき L4 のその位置(TD ではない)を引いてしまい、
+        // 長押しレイヤーが分からず「Lnull 長押し中」になっていた
+        const keycode = held?.keycode ?? resolved.effective
+        const label = labelForKeycode(keycode, labelMode, labelContext)
+        const holdLayer = held ? held.holdLayer : holdLayerOf(keycode, snapshot.tapDance)
 
         return (
           <KeyCap
             key={id}
             physical={physical}
             label={label}
-            keycode={resolved.effective}
+            keycode={keycode}
             holdLayer={holdLayer}
             holdLayerName={holdLayer !== null ? layerNames[holdLayer] : undefined}
             pressed={held !== undefined}
             holding={held?.holdActive === true}
-            transparent={resolved.transparent}
+            // 押しているキーは押した瞬間の値を出しているので、透過をたどった体(薄い表示)にしない
+            transparent={held ? false : resolved.transparent}
             unlockHint={unlockSet.has(id)}
             shifted={shifted}
             unit={unit}

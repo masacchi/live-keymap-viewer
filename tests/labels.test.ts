@@ -75,6 +75,9 @@ describe('JIS ラベル', () => {
     expect(labelAt(4, 1, 0)).toMatchObject({ main: 'BT0', category: 'user' })
     // USER06 の shortName は "Switch\nOutput"
     expect(labelAt(4, 0, 0).main).toBe('Switch Output')
+    // title は長い説明なので、キーに書く補足ではなくツールチップ用に持つ
+    expect(labelAt(4, 0, 0).description).toBe('Switch default output mode between USB/BLE')
+    expect(labelAt(4, 0, 0).sub).toBeUndefined()
   })
 
   it('透過キーは ▽ を返す(たどる先を決めるのは LayerEngine の仕事)', () => {

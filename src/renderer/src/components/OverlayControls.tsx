@@ -6,7 +6,9 @@
  * mousemove だけは renderer に届くので、ポインタがこのパネルの上に来た瞬間だけ
  * 透過を切る。パネルから外れたら戻す。ドラッグ中は判定を止める。
  *
- * パネル内の要素には `data-interactive` を付ける。判定はその有無で行う。
+ * 透過を切りたい要素には `data-interactive` を付ける。判定はその有無で行う。
+ * このパネルのほか、未接続の画面の接続ボタンやデバイスの選択にも付いている
+ * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 

@@ -10,7 +10,11 @@ export interface DevicePickerProps {
 export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Element {
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/60">
-      <div className="w-96 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
+      {/* オーバーレイから接続したときも押せるように、透過を切る(OverlayControls) */}
+      <div
+        data-interactive
+        className="w-96 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4"
+      >
         <p className="text-sm font-semibold">接続するキーボードを選ぶ</p>
         <ul className="mt-3 space-y-1.5">
           {devices.map((device) => (

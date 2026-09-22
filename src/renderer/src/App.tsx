@@ -183,6 +183,8 @@ export default function App(): JSX.Element {
             ) : (
               <button
                 type="button"
+                // オーバーレイはクリックが透過するので、付けないと押せない(OverlayControls)
+                data-interactive
                 onClick={() => void keyboard.connect()}
                 className="shrink-0 rounded-md bg-[var(--surface)] px-3 py-1 font-medium text-[var(--ink)] hover:bg-[var(--line-soft)]"
               >
@@ -270,7 +272,8 @@ function EmptyState({
       <p className="text-sm text-[var(--muted)]">
         Vial のキーボードに接続すると、キーマップと押しているキーがここに出る。
       </p>
-      <div className="flex gap-2">
+      {/* オーバーレイはクリックが透過するので、ボタンの並びだけ透過を切る(OverlayControls) */}
+      <div data-interactive className="flex gap-2">
         <button
           type="button"
           onClick={onConnect}

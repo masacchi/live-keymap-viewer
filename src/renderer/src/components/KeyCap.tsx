@@ -63,6 +63,84 @@ function mainFontSize(text: string): number {
   return 10
 }
 
+/** キーの幅から引く、文字の左右の余白(合計)。 */
+const TEXT_PADDING = 8
+/** 収まらないときに縮めてよい下限(px)。これより小さいと読めない。 */
+const MIN_FONT = 8
+/** 補足行の文字の大きさ(px)。styles.css の .sub と揃える。 */
+const SUB_FONT = 9
+/** 2 行に割ったときの字の大きさの上限。2 行ぶんの高さに収めるため。 */
+const TWO_LINE_FONT = 12
+
+/** 空白のうち、2 つに割ったとき長い方が一番短くなる位置で割る。空白が無ければ null。 */
+function splitInTwo(text: string): [string, string] | null {
+  const words = text.split(' ').filter(Boolean)
+  if (words.length < 2) return null
+  let best: [string, string] | null = null
+  for (let i = 1; i < words.length; i++) {
+    const pair: [string, string] = [words.slice(0, i).join(' '), words.slice(i).join(' ')]
+    const longest = (p: [string, string]) => Math.max(textWidth(p[0], 1), textWidth(p[1], 1))
+    if (best === null || longest(pair) < longest(best)) best = pair
+  }
+  return best
+}
+
+interface FittedText {
+  lines: string[]
+  fontSize: number
+  /** 下限まで縮めても収まらなかったら false(呼び出し側で別の文言に替えるため)。 */
+  fits: boolean
+}
+
+/**
+ * 主文字をキーの幅に収める。1 行で入らなければ空白で 2 行に割り、それでも入らなければ
+ * 字を小さくする。カスタムキーの名前("Switch Output" など)がキーの外にはみ出していた。
+ */
+function fitMain(text: string, width: number, maxFont = Number.POSITIVE_INFINITY): FittedText {
+  const room = width - TEXT_PADDING
+  const preferred = Math.min(maxFont, mainFontSize(text))
+  if (textWidth(text, preferred) <= room) return { lines: [text], fontSize: preferred, fits: true }
+
+  const lines = splitInTwo(text) ?? [text]
+  const widest = (size: number) => Math.max(...lines.map((line) => textWidth(line, size)))
+  let fontSize = lines.length === 2 ? Math.min(preferred, TWO_LINE_FONT) : preferred
+  while (fontSize > MIN_FONT && widest(fontSize) > room) fontSize--
+  return { lines, fontSize, fits: widest(fontSize) <= room }
+}
+
+/** 補足行の文字の大きさ。幅に収まらなければ下限まで縮める。 */
+function subFontSize(text: string, width: number): number {
+  const room = width - TEXT_PADDING
+  let size = SUB_FONT
+  while (size > MIN_FONT - 1 && textWidth(text, size) > room) size--
+  return size
+}
+
+/**
+ * 長押し中のキーの補足。キーの名前も添えたいが、1u には「Space 長押し中」が収まらない
+ * (はみ出していた)。入らなければ「長押し中」だけにする。キーの名前はツールチップにある。
+ */
+function holdingSub(keyName: string, width: number): string {
+  const full = `${keyName} 長押し中`.trim()
+  return textWidth(full, SUB_FONT) <= width - TEXT_PADDING ? full : '長押し中'
+}
+
+/** 複数行の文字を、中心の y に揃えて縦に並べる。1 行なら tspan を使わない。 */
+function Lines({ lines, x, fontSize }: { lines: string[]; x: number; fontSize: number }) {
+  if (lines.length === 1) return <>{lines[0]}</>
+  const lineHeight = fontSize * 1.15
+  return (
+    <>
+      {lines.map((line, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 行の並びは変わらない
+        <tspan key={i} x={x} dy={i === 0 ? (-lineHeight * (lines.length - 1)) / 2 : lineHeight}>
+          {line}
+        </tspan>
+      ))}
+    </>
+  )
+}
+
 export function KeyCap({
   physical,
   label,
@@ -131,7 +209,16 @@ export function KeyCap({
   // Shift 側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
   // 左上に小さく出していたときは見落としやすかった。
   const shiftY = y + 13
-  const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 : 0)
+  const fitted = fitMain(mainText, width)
+  // 2 行に割ったときは、補足行を 2 行目の下まで下げる
+  const extraLines = (fitted.lines.length - 1) * fitted.fontSize * 1.15
+  const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 + extraLines / 2 : 0)
+  const subY = mainY + 15 + extraLines / 2
+
+  // 長押し中の表示。レイヤー名が収まらなければ番号に戻す(色でどのレイヤーかは分かる)
+  const namedTitle = holdLayerName ? fitMain(holdLayerName, width, 13) : null
+  const holdTitle =
+    holdLayer === null ? null : namedTitle?.fits ? namedTitle : fitMain(`L${holdLayer}`, width, 13)
 
   return (
     <g
@@ -142,25 +229,20 @@ export function KeyCap({
     >
       <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
 
-      {holding ? (
+      {holding && holdTitle ? (
         <>
-          <text
-            className="main"
-            x={cx}
-            y={cy - 9}
-            fontSize={holdLayerName ? Math.min(13, mainFontSize(holdLayerName)) : 13}
-          >
-            {holdLayerName || `L${holdLayer}`}
+          <text className="main" x={cx} y={cy - 9} fontSize={holdTitle.fontSize}>
+            <Lines lines={holdTitle.lines} x={cx} fontSize={holdTitle.fontSize} />
           </text>
           <text className="sub" x={cx} y={cy + 8}>
-            {`${label.main} 長押し中`}
+            {holdingSub(label.main, width)}
           </text>
         </>
       ) : (
         <>
           {mainText !== '' && (
-            <text className="main" x={cx} y={mainY} fontSize={mainFontSize(mainText)}>
-              {mainText}
+            <text className="main" x={cx} y={mainY} fontSize={fitted.fontSize}>
+              <Lines lines={fitted.lines} x={cx} fontSize={fitted.fontSize} />
             </text>
           )}
           {hasShift && (
@@ -168,8 +250,14 @@ export function KeyCap({
               {shiftText}
             </text>
           )}
-          {hasSub && (
-            <text className="sub" x={cx} y={mainY + 15}>
+          {hasSub && label.sub && (
+            // .sub の font-size は CSS にあるので、属性ではなく style で上書きする(属性は CSS に負ける)
+            <text
+              className="sub"
+              x={cx}
+              y={subY}
+              style={{ fontSize: subFontSize(label.sub, width) }}
+            >
               {label.sub}
             </text>
           )}
@@ -201,6 +289,7 @@ function describe(keycode: Keycode, label: KeyLabel): string {
   const parts = [label.main || '(なし)']
   if (label.shift) parts.push(`Shift: ${label.shift}`)
   if (label.sub) parts.push(label.sub)
+  if (label.description) parts.push(label.description)
   parts.push(`raw 0x${keycode.raw.toString(16).padStart(4, '0')}`)
   return parts.join(' / ')
 }

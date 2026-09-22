@@ -37,6 +37,11 @@ export interface KeyLabel {
   shift?: string
   /** 小さく添える補足。 */
   sub?: string
+  /**
+   * ツールチップにだけ出す説明。カスタムキーの title("Switch default output mode between
+   * USB/BLE" など)は長く、キーの中に書くとはみ出すので、補足とは分けて持つ。
+   */
+  description?: string
   category: LabelCategory
 }
 
@@ -278,7 +283,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
       if (custom) {
         // shortName は "Switch\nOutput" のように改行入りで来ることがある
         const short = (custom.shortName ?? custom.name ?? '').replace(/\n/g, ' ')
-        return { main: short || `USER${kc.index}`, sub: custom.title, category: 'user' }
+        return { main: short || `USER${kc.index}`, description: custom.title, category: 'user' }
       }
       return { main: `USER${String(kc.index).padStart(2, '0')}`, category: 'user' }
     }

@@ -118,12 +118,46 @@ describe('KeyboardView', () => {
     expect(layers.displayLayer).toBe(2)
 
     const html = render(engine, layers)
-    expect(html).toContain('Space 長押し中')
+    // 1u には「Space 長押し中」が収まらないので「長押し中」だけにする(キーの名前はツールチップ)
+    expect(html).toContain('>長押し中<')
+    expect(html).toContain('<title>Space / raw 0x422c</title>')
     expect(html).toContain('>L2<')
     // L2 の (0,1) は LSFT(KC_1) → JIS では "!"
     expect(html).toContain('>!<')
     // L2 で透過のキーは薄く出す
     expect(html).toContain('key-trns')
+  })
+
+  it('押しているキーは、表示中のレイヤーではなく押した瞬間のキーコードで描く', () => {
+    // 右下の TD(3) は長押しで L4。L4 のその位置は透過ではないので、表示中のレイヤーで
+    // 引き直すと TD が見えなくなり、以前は「Lnull 長押し中」と出ていた
+    const engine = newEngine()
+    const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    matrix[7][0] = true
+    engine.update(matrix, 0)
+    const layers = engine.update(matrix, 300)
+    expect(layers.displayLayer).toBe(4)
+
+    const html = render(engine, layers)
+    expect(html).not.toContain('Lnull')
+    expect(html).toContain('>L4<')
+    expect(html).toContain('--hold:var(--layer-4)')
+  })
+
+  it('長いカスタムキーの名前は 2 行に割り、説明はツールチップだけに出す', () => {
+    const engine = newEngine()
+    const html = render(
+      engine,
+      engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0),
+      'jis',
+      [],
+      4
+    )
+    // L4 の (0,0) は USER06 = SWITCH(shortName "Switch\nOutput")
+    expect(html).toMatch(/<tspan[^>]*>Switch<\/tspan><tspan[^>]*>Output<\/tspan>/)
+    // 説明(title)はキーの中に書かない。はみ出していた
+    expect(html).not.toMatch(/<text[^>]*>Switch default output mode/)
+    expect(html).toContain('Switch default output mode between USB/BLE')
   })
 
   it('レイヤーを出しているキーは、そのレイヤーの色で塗る', () => {
