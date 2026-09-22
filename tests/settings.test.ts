@@ -26,6 +26,8 @@ describe('sanitizeSettings', () => {
       overlayBounds: { x: 30, y: 40, width: 900, height: 500 },
       overlayOpacity: 0.5,
       overlayAutoFade: false,
+      overlayFadedOpacity: 0.35,
+      overlayBlur: true,
       encoderPlacement: 'top',
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
       layerNames: { '16882930253541522617': ['基本', '', '記号'] }
@@ -72,6 +74,21 @@ describe('オーバーレイの自動フェード', () => {
     expect(sanitizeSettings({}).overlayAutoFade).toBe(true)
     expect(sanitizeSettings({ overlayAutoFade: 'no' }).overlayAutoFade).toBe(true)
     expect(sanitizeSettings({ overlayAutoFade: false }).overlayAutoFade).toBe(false)
+  })
+})
+
+describe('オーバーレイの薄さとぼかし', () => {
+  it('薄くしたときの濃さは 0〜0.8 に丸め、数値でなければ既定の 0.2', () => {
+    expect(sanitizeSettings({}).overlayFadedOpacity).toBe(0.2)
+    expect(sanitizeSettings({ overlayFadedOpacity: -1 }).overlayFadedOpacity).toBe(0)
+    expect(sanitizeSettings({ overlayFadedOpacity: 5 }).overlayFadedOpacity).toBe(0.8)
+    expect(sanitizeSettings({ overlayFadedOpacity: 'x' }).overlayFadedOpacity).toBe(0.2)
+  })
+
+  it('ぼかしは既定で切っておき、true と書いてあるときだけ入れる', () => {
+    expect(sanitizeSettings({}).overlayBlur).toBe(false)
+    expect(sanitizeSettings({ overlayBlur: 'yes' }).overlayBlur).toBe(false)
+    expect(sanitizeSettings({ overlayBlur: true }).overlayBlur).toBe(true)
   })
 })
 

@@ -24,6 +24,9 @@ export const IPC = {
   windowToggleMode: 'window:toggle-mode',
   windowSetOverlayOpacity: 'window:set-overlay-opacity',
   settingsSetOverlayAutoFade: 'settings:set-overlay-auto-fade',
+  settingsSetOverlayFadedOpacity: 'settings:set-overlay-faded-opacity',
+  windowSetOverlayBlur: 'window:set-overlay-blur',
+  windowSetOverlayBlurActive: 'window:set-overlay-blur-active',
   windowSetIgnoreMouse: 'window:set-ignore-mouse',
   windowMoveBy: 'window:move-by',
   windowResizeBy: 'window:resize-by',
@@ -57,6 +60,15 @@ export interface RendererApi {
   setOverlayOpacity(value: number): Promise<number>
   /** オーバーレイで、ベースレイヤーのあいだ図を薄くするか。保存した値を返す。 */
   setOverlayAutoFade(on: boolean): Promise<boolean>
+  /** 薄くしたときに残す濃さ。範囲外は丸めて保存し、実際に使った値を返す。 */
+  setOverlayFadedOpacity(value: number): Promise<number>
+  /** オーバーレイの後ろの画面をぼかすか(Windows 11 のアクリル)。保存した値を返す。 */
+  setOverlayBlur(on: boolean): Promise<boolean>
+  /**
+   * いま図を濃く出しているか。薄くしているあいだは、ぼかしを外して後ろの画面を読めるようにする。
+   * 薄くするかどうかは renderer が決めている(キーの押下を見ている)ので、renderer から伝える。
+   */
+  setOverlayBlurActive(active: boolean): void
 
   /**
    * オーバーレイのクリック透過を切り替える。

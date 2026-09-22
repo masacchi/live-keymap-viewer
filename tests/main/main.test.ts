@@ -74,6 +74,11 @@ const fake = vi.hoisted(() => {
     setOpacity(value: number): void {
       this.opacity = value
     }
+    /** setBackgroundMaterial で最後に渡されたもの。呼ばれていなければ null。 */
+    material: string | null = null
+    setBackgroundMaterial(material: string): void {
+      this.material = material
+    }
     shown = false
     show(): void {
       this.shown = true
@@ -230,6 +235,40 @@ describe('WindowManager', () => {
     expect(settings.loadSettings().overlayOpacity).toBe(0.5)
   })
 
+  describe('後ろの画面のぼかし', () => {
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    const onPlatform = (value: string) => Object.defineProperty(process, 'platform', { value })
+    afterEach(() => Object.defineProperty(process, 'platform', platform))
+
+    it('Windows のオーバーレイでは、入れればアクリルにし、薄くしているあいだは外す', async () => {
+      onPlatform('win32')
+      writeFileSync(settingsFile(), JSON.stringify({ mode: 'overlay', overlayBlur: true }))
+      const { windows, settings } = await loadMain()
+      windows.open()
+      const win = fake.FakeWindow.all[0]
+      expect(win.material).toBe('acrylic') // 保存した設定で開く
+
+      windows.setOverlayBlurActive(false)
+      expect(win.material).toBe('none')
+      windows.setOverlayBlurActive(true)
+      expect(win.material).toBe('acrylic')
+
+      windows.setOverlayBlur(false)
+      expect(win.material).toBe('none')
+      expect(settings.loadSettings().overlayBlur).toBe(false)
+    })
+
+    it('Windows 以外では何もしない(保存はする)', async () => {
+      onPlatform('linux')
+      writeFileSync(settingsFile(), JSON.stringify({ mode: 'overlay' }))
+      const { windows, settings } = await loadMain()
+      windows.open()
+      windows.setOverlayBlur(true)
+      expect(fake.FakeWindow.all[0].material).toBeNull()
+      expect(settings.loadSettings().overlayBlur).toBe(true)
+    })
+  })
+
   it('リサイズは最小サイズを下回らない', async () => {
     const { windows } = await loadMain()
     windows.open()
@@ -278,6 +317,16 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     expect(await invoke('settings:set-layer-name', uid, 99, 'x')).toEqual(['', '', '記号'])
     expect(await invoke('settings:set-layer-name', uid, 2, { evil: true })).toEqual([])
     expect(settings.loadSettings().layerNames).toEqual({})
+  })
+
+  it('薄くしたときの濃さは 0〜0.8 に丸め、ぼかしは真偽値だけを受け付ける', async () => {
+    const { settings } = await setup()
+    expect(await invoke('settings:set-overlay-faded-opacity', 0.9)).toBe(0.8)
+    expect(await invoke('settings:set-overlay-faded-opacity', 0.35)).toBe(0.35)
+    expect(settings.loadSettings().overlayFadedOpacity).toBe(0.35)
+    expect(await invoke('window:set-overlay-blur', 'yes')).toBe(false) // 変えない
+    expect(await invoke('window:set-overlay-blur', true)).toBe(true)
+    expect(settings.loadSettings().overlayBlur).toBe(true)
   })
 
   it('不透明度は範囲に丸め、数値でなければ既定値', async () => {

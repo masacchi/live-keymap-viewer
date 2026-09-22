@@ -7,6 +7,7 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
 import {
+  clampFadedOpacity,
   type EncoderPlacement,
   isKeyboardUid,
   type LabelMode,
@@ -66,6 +67,20 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
     if (typeof value !== 'boolean') return loadSettings().overlayAutoFade
     saveSettings({ overlayAutoFade: value })
     return value
+  })
+
+  ipcMain.handle(IPC.settingsSetOverlayFadedOpacity, (_event, value: unknown): number => {
+    const overlayFadedOpacity = clampFadedOpacity(value)
+    saveSettings({ overlayFadedOpacity })
+    return overlayFadedOpacity
+  })
+
+  ipcMain.handle(IPC.windowSetOverlayBlur, (_event, value: unknown): boolean =>
+    typeof value === 'boolean' ? windows.setOverlayBlur(value) : loadSettings().overlayBlur
+  )
+
+  ipcMain.on(IPC.windowSetOverlayBlurActive, (_event, active: unknown) => {
+    windows.setOverlayBlurActive(active !== false)
   })
 
   ipcMain.handle(IPC.windowSetOverlayOpacity, (_event, value: unknown) =>

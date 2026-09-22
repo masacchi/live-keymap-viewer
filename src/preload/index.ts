@@ -20,6 +20,11 @@ const api: RendererApi = {
   toggleMode: () => ipcRenderer.invoke(IPC.windowToggleMode),
   setOverlayOpacity: (value: number) => ipcRenderer.invoke(IPC.windowSetOverlayOpacity, value),
   setOverlayAutoFade: (on: boolean) => ipcRenderer.invoke(IPC.settingsSetOverlayAutoFade, on),
+  setOverlayFadedOpacity: (value: number) =>
+    ipcRenderer.invoke(IPC.settingsSetOverlayFadedOpacity, value),
+  setOverlayBlur: (on: boolean) => ipcRenderer.invoke(IPC.windowSetOverlayBlur, on),
+  setOverlayBlurActive: (active: boolean) =>
+    ipcRenderer.send(IPC.windowSetOverlayBlurActive, active),
 
   setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send(IPC.windowSetIgnoreMouse, ignore),
   // ドラッグ中に毎フレーム飛ぶので invoke ではなく send

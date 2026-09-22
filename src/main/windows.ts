@@ -20,10 +20,29 @@ import { loadSettings, saveSettings } from './settings'
 /** 移動・リサイズの保存をまとめる間隔。つまみの操作は毎フレーム飛んでくる。 */
 const BOUNDS_SAVE_DELAY_MS = 400
 
+/**
+ * オーバーレイの後ろの画面をすりガラスにする(Windows 11 22H2 以降のアクリル)。
+ *
+ * CSS の backdrop-filter では、透明なウィンドウの後ろ(ほかのアプリ)はぼかせない ―
+ * Chromium が重ねられるのは自分の中身だけなので、OS に描いてもらう。ぼかしの強さは OS が
+ * 決めるので、アプリでは入り切りしかできない。ほかの OS では何もしない。古い Windows では
+ * 効かないだけのはずだが、念のため失敗しても落とさない。
+ */
+function setBackdrop(win: BrowserWindow, on: boolean): void {
+  if (process.platform !== 'win32') return
+  try {
+    win.setBackgroundMaterial(on ? 'acrylic' : 'none')
+  } catch (error) {
+    console.warn('背景のぼかしを切り替えられなかった', error)
+  }
+}
+
 export class WindowManager {
   private window: BrowserWindow | null = null
   private currentMode: WindowMode = 'normal'
   private boundsSaveTimer: ReturnType<typeof setTimeout> | null = null
+  /** renderer が図を濃く出しているか(薄くしているあいだは後ろをぼかさない)。 */
+  private blurActive = true
 
   get mode(): WindowMode {
     return this.currentMode
@@ -81,6 +100,26 @@ export class WindowManager {
     saveSettings({ overlayOpacity: opacity })
     if (this.currentMode === 'overlay') this.current?.setOpacity(opacity)
     return opacity
+  }
+
+  /** 後ろの画面のぼかしを入れる / 切る。保存して、オーバーレイならすぐ反映する。 */
+  setOverlayBlur(on: boolean): boolean {
+    saveSettings({ overlayBlur: on })
+    this.applyBlur()
+    return on
+  }
+
+  /** renderer から: いま図を濃く出しているか。薄くしているあいだはぼかしを外す。 */
+  setOverlayBlurActive(active: boolean): void {
+    if (active === this.blurActive) return
+    this.blurActive = active
+    this.applyBlur()
+  }
+
+  private applyBlur(): void {
+    if (this.currentMode !== 'overlay') return
+    const win = this.current
+    if (win) setBackdrop(win, loadSettings().overlayBlur && this.blurActive)
   }
 
   /** オーバーレイのクリック透過を切り替える(操作パネルの上だけ切る)。 */
@@ -155,6 +194,9 @@ export class WindowManager {
       win.setAlwaysOnTop(true, 'screen-saver')
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
       win.setOpacity(settings.overlayOpacity)
+      // 作り直したウィンドウの renderer は、読み込むまで図を濃く出している(薄くするのは接続後)
+      this.blurActive = true
+      setBackdrop(win, settings.overlayBlur)
     }
 
     win.on('ready-to-show', () => win.show())

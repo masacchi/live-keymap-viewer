@@ -34,6 +34,13 @@ export interface Settings {
   overlayOpacity: number
   /** オーバーレイで、ベースレイヤーのあいだは図を薄くするか(ふだんの入力の邪魔にならないように)。 */
   overlayAutoFade: boolean
+  /** 薄くしたときに残す濃さ(0〜OVERLAY_FADED_OPACITY_MAX)。全体の濃さ(overlayOpacity)に掛かる。 */
+  overlayFadedOpacity: number
+  /**
+   * オーバーレイの後ろの画面をすりガラスのようにぼかすか(Windows 11 のアクリル)。
+   * ぼかしの強さは OS が決めるので、入り切りだけ。薄くしているあいだは外す。
+   */
+  overlayBlur: boolean
   /** ノブの割り当ての置き場所。ノブが左上にあるキーボードなら上の方が見比べやすい。 */
   encoderPlacement: EncoderPlacement
   /** 一度許可した HID デバイス。次回から自動で繋ぐ。 */
@@ -49,6 +56,11 @@ export const MIN_WINDOW_WIDTH = 420
 export const MIN_WINDOW_HEIGHT = 240
 /** これより薄くすると、操作パネルごと見えなくなって戻せなくなる。 */
 export const OVERLAY_OPACITY_MIN = 0.2
+/**
+ * 薄くしたときの濃さの上限。これより濃いと薄くした意味が無い。下限は 0(消える)でよい ―
+ * 薄くするのは図だけで、操作パネルは残るので戻せる。
+ */
+export const OVERLAY_FADED_OPACITY_MAX = 0.8
 /** レイヤー名の長さの上限(文字数)。ツールバーやキーの色帯に収まるように。 */
 export const LAYER_NAME_MAX_LENGTH = 12
 /** 名前を持てるレイヤーの数。Vial の上限(32)に合わせる。 */
@@ -63,6 +75,8 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayBounds: DEFAULT_BOUNDS,
   overlayOpacity: 0.82,
   overlayAutoFade: true,
+  overlayFadedOpacity: 0.2,
+  overlayBlur: false,
   encoderPlacement: 'bottom',
   grantedDevices: [],
   layerNames: {}
@@ -79,6 +93,11 @@ function isFiniteNumber(value: unknown): value is number {
 export function clampOpacity(value: unknown): number {
   if (!isFiniteNumber(value)) return DEFAULT_SETTINGS.overlayOpacity
   return Math.min(1, Math.max(OVERLAY_OPACITY_MIN, value))
+}
+
+export function clampFadedOpacity(value: unknown): number {
+  if (!isFiniteNumber(value)) return DEFAULT_SETTINGS.overlayFadedOpacity
+  return Math.min(OVERLAY_FADED_OPACITY_MAX, Math.max(0, value))
 }
 
 /** 数値として壊れていないか、最小サイズを満たすか。ダメなら null。 */
@@ -167,6 +186,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     overlayBounds: sanitizeBounds(value.overlayBounds) ?? DEFAULT_SETTINGS.overlayBounds,
     overlayOpacity: clampOpacity(value.overlayOpacity),
     overlayAutoFade: value.overlayAutoFade !== false,
+    overlayFadedOpacity: clampFadedOpacity(value.overlayFadedOpacity),
+    overlayBlur: value.overlayBlur === true,
     encoderPlacement: value.encoderPlacement === 'top' ? 'top' : 'bottom',
     grantedDevices: sanitizeDevices(value.grantedDevices),
     layerNames: sanitizeLayerNames(value.layerNames)
