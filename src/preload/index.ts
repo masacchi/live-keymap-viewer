@@ -1,12 +1,20 @@
 /** renderer に渡す最小限の IPC。HID そのものは renderer の WebHID で扱う。 */
 import { contextBridge, ipcRenderer } from 'electron'
-import { type HidCandidate, IPC, type LabelMode, type RendererApi } from '../shared/ipc'
+import {
+  type EncoderPlacement,
+  type HidCandidate,
+  IPC,
+  type LabelMode,
+  type RendererApi
+} from '../shared/ipc'
 
 const api: RendererApi = {
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   setLabelMode: (mode: LabelMode) => ipcRenderer.invoke(IPC.settingsSetLabelMode, mode),
   setLayerName: (uid: string, layer: number, name: string) =>
     ipcRenderer.invoke(IPC.settingsSetLayerName, uid, layer, name),
+  setEncoderPlacement: (placement: EncoderPlacement) =>
+    ipcRenderer.invoke(IPC.settingsSetEncoderPlacement, placement),
 
   getMode: () => ipcRenderer.invoke(IPC.windowGetMode),
   toggleMode: () => ipcRenderer.invoke(IPC.windowToggleMode),

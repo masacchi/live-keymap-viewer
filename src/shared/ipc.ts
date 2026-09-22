@@ -1,8 +1,15 @@
 /** main / preload / renderer で共有する型。electron には依存しない。 */
 
-import type { LabelMode, Settings, WindowMode } from './settings'
+import type { EncoderPlacement, LabelMode, Settings, WindowMode } from './settings'
 
-export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from './settings'
+export type {
+  Bounds,
+  EncoderPlacement,
+  GrantedDevice,
+  LabelMode,
+  Settings,
+  WindowMode
+} from './settings'
 
 /**
  * IPC のチャネル名。main / preload の両方がここを参照する。
@@ -12,6 +19,7 @@ export const IPC = {
   settingsGet: 'settings:get',
   settingsSetLabelMode: 'settings:set-label-mode',
   settingsSetLayerName: 'settings:set-layer-name',
+  settingsSetEncoderPlacement: 'settings:set-encoder-placement',
   windowGetMode: 'window:get-mode',
   windowToggleMode: 'window:toggle-mode',
   windowSetOverlayOpacity: 'window:set-overlay-opacity',
@@ -40,6 +48,8 @@ export interface RendererApi {
    * 長すぎる名前は切って保存し、そのキーボードの名前の並びを返す。
    */
   setLayerName(uid: string, layer: number, name: string): Promise<string[]>
+  /** ノブの割り当ての置き場所。保存した値を返す。 */
+  setEncoderPlacement(placement: EncoderPlacement): Promise<EncoderPlacement>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

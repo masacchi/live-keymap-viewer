@@ -260,6 +260,14 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     expect(settings.loadSettings().overlayAutoFade).toBe(false)
   })
 
+  it('ノブの置き場所は top / bottom 以外を受け付けない', async () => {
+    const { settings } = await setup()
+    expect(await invoke('settings:set-encoder-placement', 'top')).toBe('top')
+    expect(settings.loadSettings().encoderPlacement).toBe('top')
+    expect(await invoke('settings:set-encoder-placement', 'left')).toBe('bottom')
+    expect(settings.loadSettings().encoderPlacement).toBe('bottom')
+  })
+
   it('レイヤー名は UID とレイヤー番号を確かめてから保存する', async () => {
     const { settings } = await setup()
     const uid = '16882930253541522617'

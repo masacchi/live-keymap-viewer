@@ -6,7 +6,13 @@
  */
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
-import { isKeyboardUid, type LabelMode, MAX_LAYERS, withLayerName } from '../shared/settings'
+import {
+  type EncoderPlacement,
+  isKeyboardUid,
+  type LabelMode,
+  MAX_LAYERS,
+  withLayerName
+} from '../shared/settings'
 import type { HidPermissions } from './hid'
 import { loadSettings, saveSettings } from './settings'
 import type { WindowManager } from './windows'
@@ -42,6 +48,12 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
       return layerNames[uid] ?? []
     }
   )
+
+  ipcMain.handle(IPC.settingsSetEncoderPlacement, (_event, value: unknown): EncoderPlacement => {
+    const encoderPlacement: EncoderPlacement = value === 'top' ? 'top' : 'bottom'
+    saveSettings({ encoderPlacement })
+    return encoderPlacement
+  })
 
   ipcMain.handle(IPC.windowGetMode, () => windows.mode)
 

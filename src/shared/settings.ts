@@ -8,6 +8,8 @@
 
 export type WindowMode = 'normal' | 'overlay'
 export type LabelMode = 'jis' | 'us'
+/** ノブの割り当てを、キーの図の上と下のどちらに並べるか。 */
+export type EncoderPlacement = 'top' | 'bottom'
 
 export interface Bounds {
   x: number
@@ -32,6 +34,8 @@ export interface Settings {
   overlayOpacity: number
   /** オーバーレイで、ベースレイヤーのあいだは図を薄くするか(ふだんの入力の邪魔にならないように)。 */
   overlayAutoFade: boolean
+  /** ノブの割り当ての置き場所。ノブが左上にあるキーボードなら上の方が見比べやすい。 */
+  encoderPlacement: EncoderPlacement
   /** 一度許可した HID デバイス。次回から自動で繋ぐ。 */
   grantedDevices: GrantedDevice[]
   /**
@@ -59,6 +63,7 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayBounds: DEFAULT_BOUNDS,
   overlayOpacity: 0.82,
   overlayAutoFade: true,
+  encoderPlacement: 'bottom',
   grantedDevices: [],
   layerNames: {}
 }
@@ -162,6 +167,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     overlayBounds: sanitizeBounds(value.overlayBounds) ?? DEFAULT_SETTINGS.overlayBounds,
     overlayOpacity: clampOpacity(value.overlayOpacity),
     overlayAutoFade: value.overlayAutoFade !== false,
+    encoderPlacement: value.encoderPlacement === 'top' ? 'top' : 'bottom',
     grantedDevices: sanitizeDevices(value.grantedDevices),
     layerNames: sanitizeLayerNames(value.layerNames)
   }

@@ -26,6 +26,7 @@ describe('sanitizeSettings', () => {
       overlayBounds: { x: 30, y: 40, width: 900, height: 500 },
       overlayOpacity: 0.5,
       overlayAutoFade: false,
+      encoderPlacement: 'top',
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
       layerNames: { '16882930253541522617': ['基本', '', '記号'] }
     }
@@ -71,6 +72,14 @@ describe('オーバーレイの自動フェード', () => {
     expect(sanitizeSettings({}).overlayAutoFade).toBe(true)
     expect(sanitizeSettings({ overlayAutoFade: 'no' }).overlayAutoFade).toBe(true)
     expect(sanitizeSettings({ overlayAutoFade: false }).overlayAutoFade).toBe(false)
+  })
+})
+
+describe('ノブの置き場所', () => {
+  it('既定は下。top と書いてあるときだけ上にする', () => {
+    expect(sanitizeSettings({}).encoderPlacement).toBe('bottom')
+    expect(sanitizeSettings({ encoderPlacement: 'left' }).encoderPlacement).toBe('bottom')
+    expect(sanitizeSettings({ encoderPlacement: 'top' }).encoderPlacement).toBe('top')
   })
 })
 
