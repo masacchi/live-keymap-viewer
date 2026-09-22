@@ -4,7 +4,7 @@
  * レイヤー判定(engine)と描画(KeyboardView の色帯)の両方が同じ規則を使うので、
  * ここに 1 つだけ置く。HID 層には依存しない。
  */
-import { decodeKeycode, type Keycode } from './decode'
+import { decodeKeycode, type Keycode, MOD_RIGHT, modifierBitsOf } from './decode'
 
 /** Vial の Tap Dance エントリ 1 個(`vial.h` の vial_tap_dance_entry_t)。 */
 export interface TapDanceEntry {
@@ -37,6 +37,24 @@ export function holdLayerOf(
     if (hold.kind === 'layer' && hold.op === 'MO') return hold.layer
   }
   return null
+}
+
+/**
+ * このキーコードを長押ししたときに効くモディファイア(MOD_* ビット、左右は区別しない)。無ければ 0。
+ *
+ *   - `MT(mod, kc)`(`LSFT_T(KC_A)` など)
+ *   - on_hold が単独のモディファイアキーの Tap Dance
+ */
+export function holdModsOf(
+  keycode: Keycode,
+  tapDance: ReadonlyArray<Pick<TapDanceEntry, 'onHold'> | undefined>
+): number {
+  if (keycode.kind === 'modTap') return keycode.mods & ~MOD_RIGHT
+  if (keycode.kind === 'tapDance') {
+    const entry = tapDance[keycode.index]
+    if (entry) return modifierBitsOf(decodeKeycode(entry.onHold))
+  }
+  return 0
 }
 
 /** このキーコードの tapping term(ms)。Tap Dance はエントリごとの値を優先する。 */

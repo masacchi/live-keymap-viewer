@@ -11,9 +11,11 @@ import type { UnlockState } from '../session/keyboardSession'
 
 export interface UnlockPanelProps {
   unlock: UnlockState
+  /** モックのとき。キーはクリックで押したままにできる。 */
+  mock?: boolean
 }
 
-export function UnlockPanel({ unlock }: UnlockPanelProps): JSX.Element {
+export function UnlockPanel({ unlock, mock = false }: UnlockPanelProps): JSX.Element {
   const progress = unlock.max > 0 ? (unlock.max - unlock.counter) / unlock.max : 0
 
   return (
@@ -22,6 +24,7 @@ export function UnlockPanel({ unlock }: UnlockPanelProps): JSX.Element {
       <p className="mt-1 text-xs text-[var(--muted)]">
         押しているキーを読むには Vial のアンロックが要る。離すとやり直しになる。
         解除したままにしたくなければ、使い終わったらキーボードを挿し直す。
+        {mock && ' (モックでは、キーをクリックすると押したままになる。もう一度で離す)'}
       </p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--line-soft)]">
         <div

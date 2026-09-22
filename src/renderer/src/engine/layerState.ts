@@ -8,8 +8,8 @@
  *   「tapping term を超えた」か「押している間に別のキーが押された」で有効になる
  * - TG(n) / TO(n) / DF(n) は押した時点で反映する
  */
-import { decodeKeycode, type Keycode } from '../keycodes/decode'
-import { holdLayerOf, type TapDanceEntry, tappingTermOf } from '../keycodes/tapDance'
+import { decodeKeycode, type Keycode, modifierBitsOf } from '../keycodes/decode'
+import { holdLayerOf, holdModsOf, type TapDanceEntry, tappingTermOf } from '../keycodes/tapDance'
 import { keyId } from '../layout/geometry'
 
 export const DEFAULT_TAPPING_TERM = 200
@@ -35,6 +35,8 @@ export interface HeldKey {
   pressedAt: number
   /** このキーが長押しで出せるレイヤー。出せないなら null。 */
   holdLayer: number | null
+  /** このキーを長押ししたときに効くモディファイア(MT / Tap Dance)。無ければ 0。 */
+  holdMods: number
   /** 長押し扱いが確定したときの時刻。まだなら null。 */
   heldSince: number | null
   /** 押している間に他のキーが押されたか。 */
@@ -54,6 +56,12 @@ export interface LayerSnapshot {
   defaultLayer: number
   /** TG で固定されているレイヤー。 */
   toggledLayers: number[]
+  /**
+   * いま効いているモディファイア(MOD_* ビット、左右は区別しない)。
+   * 単独のモディファイアキーは押しているあいだ、MT / Tap Dance は長押しが確定してから。
+   * Shift で入る文字を目立たせるのに使う。
+   */
+  mods: number
   /** いま押されている物理キー。キーは `row,col`。 */
   held: Map<string, HeldKey>
 }
@@ -129,7 +137,7 @@ export class LayerEngine {
 
     // 3. 経過時間による長押し確定
     for (const key of this.held.values()) {
-      if (key.holdLayer === null || key.heldSince !== null) continue
+      if (!canHold(key) || key.heldSince !== null) continue
       if (key.interrupted || now - key.pressedAt >= key.tappingTerm) {
         key.heldSince = now
       }
@@ -142,7 +150,7 @@ export class LayerEngine {
     // 先に、いま押されている長押しキーを「割り込まれた」ことにする。
     // これでこのキーは上のレイヤーで解決される(hold-on-other-key-press 相当)。
     for (const key of this.held.values()) {
-      if (key.holdLayer !== null) {
+      if (canHold(key)) {
         key.interrupted = true
         if (key.heldSince === null) key.heldSince = now
       }
@@ -159,6 +167,7 @@ export class LayerEngine {
       keycode,
       pressedAt: now,
       holdLayer,
+      holdMods: holdModsOf(keycode, this.config.tapDance),
       heldSince: null,
       interrupted: false,
       tappingTerm: tappingTermOf(keycode, this.config.tapDance, this.config.tappingTerm),
@@ -225,14 +234,18 @@ export class LayerEngine {
     const active = this.computeActiveLayers()
     const activeLayers = [...active].sort((a, b) => a - b)
     const held = new Map<string, HeldKey>()
+    let mods = 0
     for (const [id, key] of this.held) {
       held.set(id, { ...key, holdActive: this.isHoldActive(key) })
+      mods |= modifierBitsOf(key.keycode)
+      if (key.heldSince !== null) mods |= key.holdMods
     }
     return {
       activeLayers,
       displayLayer: activeLayers[activeLayers.length - 1] ?? 0,
       defaultLayer: this.defaultLayer,
       toggledLayers: [...this.toggled].sort((a, b) => a - b),
+      mods,
       held
     }
   }
@@ -257,6 +270,11 @@ export class LayerEngine {
       transparent: true
     }
   }
+}
+
+/** 長押しで何かが効くキーか(レイヤーでもモディファイアでも)。長押しの確定を追う対象。 */
+function canHold(key: HeldKey): boolean {
+  return key.holdLayer !== null || key.holdMods !== 0
 }
 
 /** matrix の 2 次元配列を作るユーティリティ。 */

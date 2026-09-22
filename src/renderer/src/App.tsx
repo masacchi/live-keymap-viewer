@@ -115,7 +115,7 @@ export default function App(): JSX.Element {
         )}
 
         {keyboard.unlock && keyboard.status === 'unlocking' && (
-          <UnlockPanel unlock={keyboard.unlock} />
+          <UnlockPanel unlock={keyboard.unlock} mock={keyboard.mock} />
         )}
 
         {ready ? (
@@ -141,6 +141,7 @@ export default function App(): JSX.Element {
               layers={layers}
               labelMode={labelMode}
               unlockKeys={keyboard.unlock?.keys ?? []}
+              onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
             />
           </div>
         ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (

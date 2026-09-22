@@ -2,7 +2,7 @@
 import { type JSX, useMemo } from 'react'
 import type { LayerEngine, LayerSnapshot } from '../engine/layerState'
 import type { KeyboardSnapshot } from '../hid/vial'
-import { decodeKeycode } from '../keycodes/decode'
+import { decodeKeycode, MOD_SHIFT } from '../keycodes/decode'
 import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
 import { holdLayerOf } from '../keycodes/tapDance'
 import { type EncoderPlacement, layoutEncoderStrip, viewBoxFor } from '../layout/encoderStrip'
@@ -21,6 +21,8 @@ export interface KeyboardViewProps {
   /** ノブの割り当てを並べる位置。 */
   encoderPlacement?: EncoderPlacement
   unit?: number
+  /** キーをクリックしたとき。モックでキーを押す/離すのに使う(実機では渡さない)。 */
+  onKeyClick?: (row: number, col: number) => void
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
@@ -34,8 +36,12 @@ export function KeyboardView({
   labelMode,
   unlockKeys = [],
   encoderPlacement = 'bottom',
-  unit = 58
+  unit = 58,
+  onKeyClick
 }: KeyboardViewProps): JSX.Element {
+  // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
+  const shifted = (layers.mods & MOD_SHIFT) !== 0
+
   const labelContext = useMemo<LabelContext>(
     () => ({
       customKeycodes: snapshot.definition.customKeycodes,
@@ -135,7 +141,9 @@ export function KeyboardView({
             holding={held?.holdActive === true}
             transparent={resolved.transparent}
             unlockHint={unlockSet.has(id)}
+            shifted={shifted}
             unit={unit}
+            onClick={onKeyClick && (() => onKeyClick(physical.row, physical.col))}
           />
         )
       })}

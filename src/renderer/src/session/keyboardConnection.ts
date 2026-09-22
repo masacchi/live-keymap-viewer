@@ -46,6 +46,8 @@ export type ConnectionState = Omit<SessionState, 'status' | 'deviceLabel'> & {
   deviceLabel: string | null
   /** 動いていた接続が切れて、繋ぎ直そうとしているあいだ true。 */
   reconnecting: boolean
+  /** モックに繋いでいる。キーをクリックで押せる(toggleMockKey)。 */
+  mock: boolean
 }
 
 export const IDLE: ConnectionState = {
@@ -59,7 +61,8 @@ export const IDLE: ConnectionState = {
   unlock: null,
   reloading: false,
   loading: null,
-  reconnecting: false
+  reconnecting: false,
+  mock: false
 }
 
 /** navigator.hid のうち、ここで使うところ。 */
@@ -95,6 +98,8 @@ export class KeyboardConnection {
   private autoReconnect = true
   /** 動いていた接続が切れて、繋ぎ直そうとしている。 */
   private reconnecting = false
+  /** モックに繋いでいるときの、そのモック。 */
+  private mock: MockTransport | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private started = false
   private disposed = false
@@ -166,7 +171,21 @@ export class KeyboardConnection {
     this.autoReconnect = false
     this.stopReconnecting()
     this.search++ // 探索中なら、その結果は使わない
-    await this.attach(this.options.createMock?.() ?? new MockTransport({ unlocked: false }), false)
+    const transport = this.options.createMock?.() ?? new MockTransport({ unlocked: false })
+    this.mock = transport instanceof MockTransport ? transport : null
+    await this.attach(transport, false)
+  }
+
+  /**
+   * モックのキーを押す/離す(押すたびに切り替わる)。モックでなければ何もしない。
+   * マウスでは 1 つしか押さえられないので、押したままにできるようにしてある
+   * (アンロックは 2 つ同時に押し続ける必要がある)。
+   */
+  toggleMockKey(row: number, col: number): void {
+    const mock = this.mock
+    if (!mock) return
+    if (mock.isPressed(row, col)) mock.release(row, col)
+    else mock.press(row, col)
   }
 
   async disconnect(): Promise<void> {
@@ -175,6 +194,7 @@ export class KeyboardConnection {
     this.search++
     const session = this.session
     this.session = null
+    this.mock = null
     this.publish(IDLE)
     await session?.dispose()
   }
@@ -255,6 +275,7 @@ export class KeyboardConnection {
    * 「最後に作ったセッション」だけが生き残り、それ以前のものは必ず破棄される。
    */
   private async attach(transport: Transport, real: boolean): Promise<void> {
+    if (real) this.mock = null
     const previous = this.session
     const session = new KeyboardSession(transport, {
       ...this.options.sessionOptions,
@@ -301,9 +322,9 @@ export class KeyboardConnection {
     this.cancelRetry()
   }
 
-  private publish(state: Omit<ConnectionState, 'reconnecting'>): void {
+  private publish(state: Omit<ConnectionState, 'reconnecting' | 'mock'>): void {
     if (this.disposed) return
-    this.current = { ...state, reconnecting: this.reconnecting }
+    this.current = { ...state, reconnecting: this.reconnecting, mock: this.mock !== null }
     for (const listener of this.listeners) listener(this.current)
   }
 }

@@ -155,6 +155,26 @@ describe('KeyboardView', () => {
     expect(Number(shift![2])).toBeLessThan(Number(main![2])) // Shift 側が上
   })
 
+  it('Shift を押しているあいだは、Shift で入る文字を主文字にして目立たせる', () => {
+    const engine = newEngine()
+    const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    matrix[2][0] = true // KC_LSHIFT
+    const html = render(engine, engine.update(matrix, 0))
+    expect(html).toContain('key-shifted')
+    // KC_MINUS: "=" が主文字に、"-" が上の小さい方に入れ替わる
+    expect(html).toMatch(/<text class="main"[^>]*>=<\/text>/)
+    expect(html).toMatch(/<text class="shift"[^>]*>-<\/text>/)
+    // Shift で変わらないキー(英字)はそのまま
+    expect(html).toMatch(/<g class="key"[^>]*>(?:(?!<\/g>).)*>Q</)
+  })
+
+  it('Shift を押していなければ入れ替えない', () => {
+    const engine = newEngine()
+    const html = render(engine, engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0))
+    expect(html).not.toContain('key-shifted')
+    expect(html).toMatch(/<text class="main"[^>]*>-<\/text>/)
+  })
+
   it('ノブの割り当てを、そのレイヤーの内容で出す', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)

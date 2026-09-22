@@ -92,12 +92,16 @@ export type SessionListener = (state: SessionState) => void
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
-/** 押下と表示レイヤーだけを見た指紋。これが同じなら画面は変わらない。 */
+/**
+ * 押下・表示レイヤー・モディファイアだけを見た指紋。これが同じなら画面は変わらない。
+ * モディファイアも入れるのは、MT(Shift) が時間だけで長押し確定したときに、押下の並びは
+ * 変わらないまま Shift の強調だけが変わるため。
+ */
 export function signatureOf(layers: LayerSnapshot): string {
   const held: string[] = []
   for (const [id, key] of layers.held) held.push(`${id}:${key.holdActive ? 1 : 0}`)
   held.sort()
-  return `${layers.displayLayer}|${layers.activeLayers.join(',')}|${held.join(' ')}`
+  return `${layers.displayLayer}|${layers.activeLayers.join(',')}|${layers.mods}|${held.join(' ')}`
 }
 
 function describeError(error: unknown): string {

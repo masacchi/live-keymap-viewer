@@ -164,3 +164,12 @@ export function formatKeycode(kc: Keycode): string {
 export function hasShift(mods: number): boolean {
   return (mods & MOD_SHIFT) !== 0
 }
+
+/**
+ * 単独のモディファイアキー(KC_LCTL〜KC_RGUI、0xE0〜0xE7)なら、その MOD_* ビット。違えば 0。
+ * 左右は区別しない(MOD_RIGHT は立てない)。
+ */
+export function modifierBitsOf(keycode: Keycode): number {
+  if (keycode.kind !== 'basic' || keycode.raw < 0xe0 || keycode.raw > 0xe7) return 0
+  return 1 << ((keycode.raw - 0xe0) & 3) // Ctrl, Shift, Alt, GUI の順に並んでいる
+}

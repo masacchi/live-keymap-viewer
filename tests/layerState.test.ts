@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { emptyMatrix, LayerEngine } from '@/engine/layerState'
-import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
+import { decodeKeycode, formatKeycode, MOD_CTRL, MOD_SHIFT } from '@/keycodes/decode'
 import { labelForKeycode } from '@/keycodes/labels'
 import type { TapDanceEntry } from '@/keycodes/tapDance'
 import {
@@ -352,6 +352,49 @@ describe('Tap Dance の長押し', () => {
     const matrix = [[true]]
     engine.update(matrix, 0)
     expect(engine.update(matrix, 500).displayLayer).toBe(0)
+  })
+})
+
+describe('モディファイア', () => {
+  const LSFT = 0x00e1
+  const RCTL = 0x00e4
+  const LSFT_T_A = 0x2204 // MT(MOD_LSFT, KC_A)
+  const TD0 = 0x5700
+
+  function engineWith(keys: number[], tapDance: TapDanceEntry[] = []): LayerEngine {
+    return new LayerEngine({ layers: 1, rows: 1, cols: keys.length, keymap: [[keys]], tapDance })
+  }
+
+  it('単独のモディファイアキーは、押しているあいだ効く(左右は区別しない)', () => {
+    const engine = engineWith([LSFT, RCTL])
+    expect(engine.update([[true, false]], 0).mods).toBe(MOD_SHIFT)
+    expect(engine.update([[true, true]], 10).mods).toBe(MOD_SHIFT | MOD_CTRL)
+    expect(engine.update([[false, false]], 20).mods).toBe(0)
+  })
+
+  it('MT(Shift) は長押しが確定してから効く', () => {
+    const engine = engineWith([LSFT_T_A, 0x0004])
+    expect(engine.update([[true, false]], 0).mods).toBe(0) // まだタップかもしれない
+    expect(engine.update([[true, false]], 250).mods).toBe(MOD_SHIFT) // tapping term を超えた
+  })
+
+  it('MT(Shift) を押しているあいだに別のキーを押したら、その時点で効く', () => {
+    const engine = engineWith([LSFT_T_A, 0x0004])
+    engine.update([[true, false]], 0)
+    expect(engine.update([[true, true]], 30).mods).toBe(MOD_SHIFT)
+  })
+
+  it('長押しが Shift の Tap Dance も数える', () => {
+    const shiftOnHold = {
+      onTap: 0x0004,
+      onHold: LSFT,
+      onDoubleTap: 0,
+      onTapHold: 0,
+      tappingTerm: 0
+    }
+    const engine = engineWith([TD0], [shiftOnHold])
+    engine.update([[true]], 0)
+    expect(engine.update([[true]], 250).mods).toBe(MOD_SHIFT)
   })
 })
 

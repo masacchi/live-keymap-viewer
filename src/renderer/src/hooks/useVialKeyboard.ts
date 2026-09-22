@@ -67,5 +67,10 @@ export function useVialKeyboard() {
     await connectionRef.current?.reload({ full: true })
   }, [])
 
-  return { ...state, connect, connectMock, disconnect, reload }
+  /** モックのキーを押す/離す。モックでなければ何もしない。 */
+  const toggleMockKey = useCallback((row: number, col: number) => {
+    connectionRef.current?.toggleMockKey(row, col)
+  }, [])
+
+  return { ...state, connect, connectMock, disconnect, reload, toggleMockKey }
 }

@@ -22,7 +22,10 @@ export interface KeyCapProps {
   transparent: boolean
   /** アンロックのために押すべきキーか。 */
   unlockHint: boolean
+  /** Shift が効いているか。Shift で入る文字が変わるキーは、そちらを主にして目立たせる。 */
+  shifted?: boolean
   unit: number
+  onClick?: () => void
 }
 
 const GAP = 0.08
@@ -46,7 +49,9 @@ export function KeyCap({
   holding,
   transparent,
   unlockHint,
-  unit
+  shifted = false,
+  unit,
+  onClick
 }: KeyCapProps): JSX.Element {
   const x = (physical.x + GAP / 2) * unit
   const y = (physical.y + GAP / 2) * unit
@@ -64,6 +69,26 @@ export function KeyCap({
   // 「いまどのキーのせいでこのレイヤーなのか」が一目で分かるように。
   if (holding) classes.push('key-holding')
   if (unlockHint) classes.push('key-unlock')
+  // Shift 中は、Shift で入る文字を主文字の位置に大きく出し、ふだんの文字を上に退かせる
+  const swapShift = shifted && Boolean(label.shift)
+  if (swapShift) classes.push('key-shifted')
+  if (onClick) classes.push('key-clickable')
+  const mainText = swapShift ? (label.shift ?? '') : label.main
+  const shiftText = swapShift ? label.main : label.shift
+
+  // クリックできるとき(モック)だけボタンとして振る舞う。キーボードでも Enter / Space で押せる
+  const interactive = onClick
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (event: React.KeyboardEvent) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          onClick()
+        }
+      }
+    : {}
 
   const holdColor = holdLayer !== null ? `var(--layer-${holdLayer % 10})` : undefined
 
@@ -74,7 +99,7 @@ export function KeyCap({
 
   const showBand = holdLayer !== null && !transparent
   const hasSub = Boolean(label.sub) && !showBand
-  const hasShift = Boolean(label.shift)
+  const hasShift = Boolean(shiftText)
 
   // 色帯を除いた、文字を置ける範囲の真ん中
   const contentBottom = y + height - (showBand ? BAND_HEIGHT : 0)
@@ -89,6 +114,7 @@ export function KeyCap({
       className={classes.join(' ')}
       transform={rotate}
       style={{ '--hold': holdColor } as React.CSSProperties}
+      {...interactive}
     >
       <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
 
@@ -103,14 +129,14 @@ export function KeyCap({
         </>
       ) : (
         <>
-          {label.main !== '' && (
-            <text className="main" x={cx} y={mainY} fontSize={mainFontSize(label.main)}>
-              {label.main}
+          {mainText !== '' && (
+            <text className="main" x={cx} y={mainY} fontSize={mainFontSize(mainText)}>
+              {mainText}
             </text>
           )}
           {hasShift && (
             <text className="shift" x={cx} y={shiftY}>
-              {label.shift}
+              {shiftText}
             </text>
           )}
           {hasSub && (

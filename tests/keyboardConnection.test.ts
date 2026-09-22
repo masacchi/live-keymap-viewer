@@ -235,6 +235,31 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     await connection.dispose()
   })
 
+  it('モックはキーをクリックで押す/離すを切り替えられる', async () => {
+    const { connection } = setup({ createMock: () => new MockTransport({ unlocked: true }) })
+    connection.start()
+    await connection.connectMock()
+    const ready = await waitFor(connection, (s) => s.status === 'ready')
+    expect(ready.mock).toBe(true)
+
+    connection.toggleMockKey(0, 1) // Q を押したままにする
+    await waitFor(connection, (s) => s.layers?.held.has('0,1') === true)
+    connection.toggleMockKey(0, 1) // もう一度で離す
+    await waitFor(connection, (s) => s.layers?.held.size === 0)
+    await connection.dispose()
+  })
+
+  it('実機ではクリックしても何も起きない', async () => {
+    const { hid, connection, opened } = setup()
+    hid.devices = [fakeDevice()]
+    connection.start()
+    const ready = await waitFor(connection, (s) => s.status === 'ready')
+    expect(ready.mock).toBe(false)
+    connection.toggleMockKey(0, 1)
+    expect(opened[0].isPressed(0, 1)).toBe(false)
+    await connection.dispose()
+  })
+
   it('破棄したあとは、挿されても何もしない', async () => {
     const { hid, connection, opened } = setup()
     connection.start()

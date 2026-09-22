@@ -149,6 +149,11 @@ body.overlay .app-shell {
 
 /* --- 状態 --- */
 
+/* モックのキー。クリックで押す/離すを切り替えられる */
+.key-clickable {
+  cursor: pointer;
+}
+
 /* 透過(KC_TRNS)。下のレイヤーの値を薄く出す */
 .key-trns .cap {
   fill: var(--surface-2);
@@ -158,6 +163,26 @@ body.overlay .app-shell {
 .key-trns .shift,
 .key-trns .sub {
   opacity: 0.45;
+}
+
+/*
+ * Shift を押しているあいだ、Shift で入る文字が変わるキー。KeyCap が Shift 側の文字を
+ * 主文字の位置に入れ替えているので、ここではキーごと明るくして浮かせる。
+ * 押下より前に置く(押している記号キーは押下の配色を優先する)。
+ */
+.key-shifted .cap {
+  fill: color-mix(in srgb, var(--ink) 16%, var(--surface));
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.key-shifted .main {
+  fill: #ffffff;
+  font-weight: 800;
+}
+
+.key-shifted .shift {
+  opacity: 0.5;
 }
 
 .key-pressed .cap {
