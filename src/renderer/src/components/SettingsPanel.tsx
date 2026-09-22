@@ -9,9 +9,11 @@
  */
 import type { JSX, ReactNode } from 'react'
 import type { EncoderPlacement } from '../../../shared/settings'
-import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
+import { LAYER_NAME_MAX_LENGTH, OVERLAY_FADED_OPACITY_MAX } from '../../../shared/settings'
+import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
+import { PercentSlider } from './ui/PercentSlider'
 
 export interface SettingsLayer {
   layer: number
@@ -31,6 +33,12 @@ export interface SettingsPanelProps {
   onOverlayOpacity: (value: number) => void
   overlayAutoFade: boolean
   onOverlayAutoFade: (on: boolean) => void
+  overlayFadedOpacity: number
+  onOverlayFadedOpacity: (value: number) => void
+  overlayBlur: boolean
+  onOverlayBlur: (on: boolean) => void
+  /** 後ろのぼかしが使えるか(Windows のときだけ)。 */
+  blurSupported: boolean
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
@@ -51,7 +59,12 @@ export function SettingsPanel({
   overlayOpacity,
   onOverlayOpacity,
   overlayAutoFade,
-  onOverlayAutoFade
+  onOverlayAutoFade,
+  overlayFadedOpacity,
+  onOverlayFadedOpacity,
+  overlayBlur,
+  onOverlayBlur,
+  blurSupported
 }: SettingsPanelProps): JSX.Element {
   return (
     <div className="w-80 divide-y divide-line-soft">
@@ -123,19 +136,16 @@ export function SettingsPanel({
       </Section>
 
       <Section title="オーバーレイ">
-        <label className="flex items-center gap-2 text-xs text-ink">
-          <span className="w-20 shrink-0">濃さ</span>
-          <input
-            type="range"
-            min={20}
-            max={100}
-            step={5}
-            value={Math.round(overlayOpacity * 100)}
-            onChange={(event) => onOverlayOpacity(Number(event.target.value) / 100)}
-            className="h-1 min-w-0 flex-1 accent-ink"
-          />
-          <span className="w-9 text-right tabular-nums">{Math.round(overlayOpacity * 100)}%</span>
-        </label>
+        <PercentSlider
+          label="濃さ"
+          value={overlayOpacity}
+          min={0.2}
+          max={1}
+          onChange={onOverlayOpacity}
+          className="gap-2 text-xs text-ink"
+          labelClassName="w-20"
+          trackClassName="flex-1"
+        />
         <label className="flex items-start gap-2 text-xs text-ink">
           <input
             type="checkbox"
@@ -147,6 +157,37 @@ export function SettingsPanel({
             L0 のあいだは薄くする
             <span className="block text-2xs text-muted">
               ほかのレイヤーに入るか Shift を押すと濃く戻る
+            </span>
+          </span>
+        </label>
+        <PercentSlider
+          label="薄くしたとき"
+          title="薄くしたときに残す濃さ。0% で消える(左上のパネルは残る)"
+          value={overlayFadedOpacity}
+          min={0}
+          max={OVERLAY_FADED_OPACITY_MAX}
+          onChange={onOverlayFadedOpacity}
+          disabled={!overlayAutoFade}
+          className="gap-2 pl-5 text-xs text-ink"
+          labelClassName="w-15"
+          trackClassName="flex-1"
+        />
+        <label
+          className={cn('flex items-start gap-2 text-xs text-ink', !blurSupported && 'opacity-50')}
+        >
+          <input
+            type="checkbox"
+            checked={overlayBlur}
+            disabled={!blurSupported}
+            onChange={(event) => onOverlayBlur(event.target.checked)}
+            className="mt-0.5 accent-ink"
+          />
+          <span>
+            後ろの画面をぼかす
+            <span className="block text-2xs text-muted">
+              {blurSupported
+                ? 'すりガラスのように(Windows 11)。強さは OS が決める。薄くしているあいだは外す'
+                : 'Windows 11 でだけ使える'}
             </span>
           </span>
         </label>

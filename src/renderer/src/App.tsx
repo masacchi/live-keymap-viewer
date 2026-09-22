@@ -4,7 +4,7 @@ import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
 import { describeTrigger, LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
-import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
+import { OverlayControls, overlayFaded } from './components/OverlayControls'
 import { PreviewNotice } from './components/PreviewNotice'
 import { SettingsPanel } from './components/SettingsPanel'
 import { RouteChips, routeSteps, SymbolFinder } from './components/SymbolFinder'
@@ -21,12 +21,26 @@ import { layerColor } from './lib/theme'
 
 type WindowMode = 'normal' | 'overlay'
 
+/**
+ * オーバーレイを薄くし始めるまでの待ち(ms)。レイヤーキーの短い押下で薄い / 濃いを
+ * 行き来してちらつかせないため。
+ */
+const FADE_DELAY_MS = 300
+
+/**
+ * 後ろの画面のぼかし(Windows 11 のアクリル)が使えるか。main は Windows でしか効かせないので、
+ * ほかでは欄を出さない / 押せなくする。Windows 10 でも欄は出るが、効かないだけ。
+ */
+const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
+
 export default function App(): JSX.Element {
   const keyboard = useVialKeyboard()
   const [labelMode, setLabelMode] = useState<LabelMode>('jis')
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [overlayOpacity, setOverlayOpacity] = useState(0.82)
   const [overlayAutoFade, setOverlayAutoFade] = useState(true)
+  const [overlayFadedOpacity, setOverlayFadedOpacity] = useState(0.2)
+  const [overlayBlur, setOverlayBlur] = useState(false)
   const [encoderPlacement, setEncoderPlacement] = useState<EncoderPlacement>('bottom')
   /** キーボードの UID ごとのレイヤー名(設定の layerNames)。 */
   const [layerNames, setLayerNames] = useState<Record<string, string[]>>({})
@@ -39,6 +53,8 @@ export default function App(): JSX.Element {
       setWindowMode(settings.mode)
       setOverlayOpacity(settings.overlayOpacity)
       setOverlayAutoFade(settings.overlayAutoFade)
+      setOverlayFadedOpacity(settings.overlayFadedOpacity)
+      setOverlayBlur(settings.overlayBlur)
       setEncoderPlacement(settings.encoderPlacement)
       setLayerNames(settings.layerNames)
     })
@@ -73,6 +89,16 @@ export default function App(): JSX.Element {
   const onOverlayAutoFade = useCallback((on: boolean) => {
     setOverlayAutoFade(on)
     void window.api?.setOverlayAutoFade(on)
+  }, [])
+
+  const onOverlayFadedOpacity = useCallback((value: number) => {
+    setOverlayFadedOpacity(value)
+    void window.api?.setOverlayFadedOpacity(value)
+  }, [])
+
+  const onOverlayBlur = useCallback((on: boolean) => {
+    setOverlayBlur(on)
+    void window.api?.setOverlayBlur(on)
   }, [])
 
   const onEncoderPlacement = useCallback((placement: EncoderPlacement) => {
@@ -218,6 +244,18 @@ export default function App(): JSX.Element {
     [keyboard.unlock?.keys, snapshot, labelMode, labelContext]
   )
 
+  // 後ろのぼかし(OS が描く)も、図を薄くしているあいだは外す。図が薄くなり始めるのは 300ms 後
+  // (下の transition)なので、外すのも同じだけ待つ。濃く戻すときはすぐ
+  useEffect(() => {
+    if (!overlay) return
+    if (!faded) {
+      window.api?.setOverlayBlurActive(true)
+      return
+    }
+    const timer = setTimeout(() => window.api?.setOverlayBlurActive(false), FADE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [overlay, faded])
+
   const uid = snapshot?.uid ?? null
   const names = (uid && layerNames[uid]) || []
   const onRename = useCallback(
@@ -242,6 +280,11 @@ export default function App(): JSX.Element {
           onOpacity={onOverlayOpacity}
           autoFade={overlayAutoFade}
           onAutoFade={onOverlayAutoFade}
+          fadedOpacity={overlayFadedOpacity}
+          onFadedOpacity={onOverlayFadedOpacity}
+          blur={overlayBlur}
+          onBlur={onOverlayBlur}
+          blurSupported={BLUR_SUPPORTED}
           onExit={onToggleWindowMode}
         />
       )}
@@ -286,6 +329,11 @@ export default function App(): JSX.Element {
               onOverlayOpacity={onOverlayOpacity}
               overlayAutoFade={overlayAutoFade}
               onOverlayAutoFade={onOverlayAutoFade}
+              overlayFadedOpacity={overlayFadedOpacity}
+              onOverlayFadedOpacity={onOverlayFadedOpacity}
+              overlayBlur={overlayBlur}
+              onOverlayBlur={onOverlayBlur}
+              blurSupported={BLUR_SUPPORTED}
             />
           }
           symbols={
@@ -323,8 +371,8 @@ export default function App(): JSX.Element {
         style={
           overlay
             ? {
-                opacity: faded ? OVERLAY_FADED_OPACITY : 1,
-                transition: faded ? 'opacity 400ms ease 300ms' : 'opacity 80ms ease'
+                opacity: faded ? overlayFadedOpacity : 1,
+                transition: faded ? `opacity 400ms ease ${FADE_DELAY_MS}ms` : 'opacity 80ms ease'
               }
             : undefined
         }

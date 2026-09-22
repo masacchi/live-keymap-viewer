@@ -58,6 +58,9 @@
   古いままなら「キーマップを読み直す」を押す(こちらは定義もキャッシュを使わずに読み直す)。
 - **TG / DF の状態は、アプリが押下から推測している。** アプリを起動する前や、切れていたあいだに
   押したものは分からない。
+- **オーバーレイの後ろのぼかし(アクリル)は Windows で未確認。** WSL からは見えない。
+  透明・枠なしのウィンドウに `setBackgroundMaterial('acrylic')` を掛けている。Windows 11 22H2 より前は効かない。
+  もし効かなければ、ウィンドウを作るときの `backgroundMaterial` 指定や `transparent` との組み合わせを疑う
 - **最小化中の取りこぼし対策(`backgroundThrottling: false`)は Windows で未確認。** WSLg では
   ウィンドウを最小化できず確かめられなかった。最小化 → TG を押す → 戻す、で表示が合っていれば良い。
 - 対応は Vial protocol 6 / VIA protocol 9 のみ。

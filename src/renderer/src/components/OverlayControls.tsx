@@ -11,12 +11,11 @@
  * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { OVERLAY_FADED_OPACITY_MAX } from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
-
-/** 薄くしたときの濃さ(ウィンドウの不透明度に掛かる)。どこにあるかは分かる程度に残す。 */
-export const OVERLAY_FADED_OPACITY = 0.2
+import { PercentSlider } from './ui/PercentSlider'
 
 /**
  * オーバーレイの図を薄くするか。ベースレイヤーで、Shift も押しておらず、案内(アンロックや
@@ -47,6 +46,14 @@ export interface OverlayControlsProps {
   /** ベースレイヤーのあいだ図を薄くするか。 */
   autoFade: boolean
   onAutoFade: (on: boolean) => void
+  /** 薄くしたときに残す濃さ(0〜OVERLAY_FADED_OPACITY_MAX)。 */
+  fadedOpacity: number
+  onFadedOpacity: (value: number) => void
+  /** 後ろの画面をぼかすか(Windows 11 のアクリル)。 */
+  blur: boolean
+  onBlur: (on: boolean) => void
+  /** ぼかしが使えるか(Windows のときだけ)。使えなければ欄を出さない。 */
+  blurSupported: boolean
   onExit: () => void
 }
 
@@ -57,6 +64,11 @@ export function OverlayControls({
   onOpacity,
   autoFade,
   onAutoFade,
+  fadedOpacity,
+  onFadedOpacity,
+  blur,
+  onBlur,
+  blurSupported,
   onExit
 }: OverlayControlsProps): JSX.Element {
   /** ドラッグ中は前回のポインタ位置(画面座標)。していなければ null。 */
@@ -150,35 +162,53 @@ export function OverlayControls({
         </span>
 
         {/* 畳んでいるあいだは隠すだけ(外すと、広げた瞬間にパネルの幅が決まらずポインタが外れる) */}
-        <div className={cn('flex items-center gap-2', !expanded && 'hidden')}>
-          <label className="flex items-center gap-1.5 text-2xs text-muted">
-            濃さ
-            <input
-              type="range"
-              min={20}
-              max={100}
-              step={5}
-              value={Math.round(opacity * 100)}
-              onChange={(event) => onOpacity(Number(event.target.value) / 100)}
-              className="h-1 w-24 accent-ink"
-            />
-            <span className="w-8 tabular-nums text-right text-ink">
-              {Math.round(opacity * 100)}%
-            </span>
-          </label>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-x-3 gap-y-1.5 text-2xs text-muted',
+            !expanded && 'hidden'
+          )}
+        >
+          <PercentSlider label="濃さ" value={opacity} min={0.2} max={1} onChange={onOpacity} />
 
-          <label
-            className="flex items-center gap-1 text-2xs text-muted"
-            title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
-          >
-            <input
-              type="checkbox"
-              checked={autoFade}
-              onChange={(event) => onAutoFade(event.target.checked)}
-              className="accent-ink"
+          <span className="flex items-center gap-1.5">
+            <label
+              className="flex items-center gap-1"
+              title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
+            >
+              <input
+                type="checkbox"
+                checked={autoFade}
+                onChange={(event) => onAutoFade(event.target.checked)}
+                className="accent-ink"
+              />
+              L0 で薄く
+            </label>
+            <PercentSlider
+              label="残す"
+              title="薄くしたときに残す濃さ。0% で消える(このパネルは残る)"
+              value={fadedOpacity}
+              min={0}
+              max={OVERLAY_FADED_OPACITY_MAX}
+              onChange={onFadedOpacity}
+              disabled={!autoFade}
+              trackClassName="w-16"
             />
-            L0 で薄く
-          </label>
+          </span>
+
+          {blurSupported && (
+            <label
+              className="flex items-center gap-1"
+              title="後ろの画面をすりガラスのようにぼかす(Windows 11)。薄くしているあいだは外す"
+            >
+              <input
+                type="checkbox"
+                checked={blur}
+                onChange={(event) => onBlur(event.target.checked)}
+                className="accent-ink"
+              />
+              後ろをぼかす
+            </label>
+          )}
 
           {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
           <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
