@@ -66,8 +66,8 @@ describe('LayerStrip: 名前', () => {
         onRename={() => undefined}
       />
     )
-    expect(html).toContain('L0<span class="ml-1 font-medium">基本</span>')
-    expect(html).toContain('L2<span class="ml-1 font-medium">記号</span>')
+    expect(html).toContain('L0<span class="ml-1 font-medium max-md:hidden">基本</span>')
+    expect(html).toContain('L2<span class="ml-1 font-medium max-md:hidden">記号</span>')
     expect(html).toContain('ダブルクリックで名前を付ける')
   })
 })

@@ -52,7 +52,7 @@ function Button({
       type="button"
       onClick={onClick}
       className={[
-        'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+        'whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors md:px-3',
         active
           ? 'bg-[var(--layer-2)] text-neutral-900'
           : 'bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--line-soft)]'
@@ -77,21 +77,28 @@ export function Toolbar({
   onLabelMode,
   onToggleWindowMode
 }: ToolbarProps): JSX.Element {
-  // 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)
+  // 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
+  // 狭いウィンドウでも 1 行に収める。折り返すと図に使える高さが減るので、
+  // 幅が足りなければ状態の文字や補足を隠す(状態は丸の色と、丸に重ねた説明で分かる)
+  const statusText = [STATUS_TEXT[status], deviceLabel].filter(Boolean).join(' ')
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-[var(--line-soft)] px-4 py-2.5">
-      <div className="flex items-center gap-2">
-        <span className={`inline-block size-2 rounded-full ${STATUS_COLOR[status]}`} />
-        <span className="text-xs text-[var(--muted)]">{STATUS_TEXT[status]}</span>
+    <header className="flex items-center gap-2 border-b border-[var(--line-soft)] px-2 py-2 md:gap-3 md:px-4 md:py-2.5">
+      <div className="flex min-w-0 items-center gap-2" title={statusText}>
+        <span className={`inline-block size-2 shrink-0 rounded-full ${STATUS_COLOR[status]}`} />
+        <span className="shrink-0 text-xs text-[var(--muted)] max-md:hidden">
+          {STATUS_TEXT[status]}
+        </span>
         {deviceLabel && (
-          <span className="text-xs font-medium text-[var(--ink)]">{deviceLabel}</span>
+          <span className="truncate text-xs font-medium text-[var(--ink)] max-md:hidden">
+            {deviceLabel}
+          </span>
         )}
       </div>
 
       {displayLayer !== null && (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span
-            className="rounded-md px-3 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors"
+            className="truncate rounded-md px-2 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors md:px-3"
             style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
           >
             L{displayLayer}
@@ -107,7 +114,7 @@ export function Toolbar({
         </div>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2">
         <div className="flex overflow-hidden rounded-md border border-[var(--line-soft)]">
           <Button onClick={() => onLabelMode('jis')} active={labelMode === 'jis'}>
             JIS
@@ -119,12 +126,21 @@ export function Toolbar({
 
         <Button onClick={onToggleWindowMode}>
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
-          <span className="ml-1.5 text-[10px] text-[var(--muted)]">Ctrl+Alt+K</span>
+          <span className="ml-1.5 text-[10px] text-[var(--muted)] max-lg:hidden">Ctrl+Alt+K</span>
         </Button>
 
         {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない)ので出さない */}
         {status === 'ready' && (
-          <Button onClick={onReload}>{reloading ? '読み込み中…' : 'キーマップ再読み込み'}</Button>
+          <Button onClick={onReload}>
+            {reloading ? (
+              '読み込み中…'
+            ) : (
+              <>
+                <span className="max-md:hidden">キーマップ再読み込み</span>
+                <span className="md:hidden">再読込</span>
+              </>
+            )}
+          </Button>
         )}
 
         {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}

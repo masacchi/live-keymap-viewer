@@ -40,7 +40,8 @@ export function LayerStrip({
   const [editing, setEditing] = useState<number | null>(null)
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    // 低いウィンドウでは隠す。図に使える高さの方が大事で、プレビューや名前付けは広げてから使えば足りる
+    <div className="flex flex-wrap items-center gap-1.5 [@media(max-height:420px)]:hidden">
       {Array.from({ length: count }, (_, layer) => {
         const color = `var(--layer-${layer % 10})`
         const filled = active.has(layer)
@@ -84,13 +85,13 @@ export function LayerStrip({
             }}
           >
             L{layer}
-            {names[layer] && <span className="ml-1 font-medium">{names[layer]}</span>}
+            {names[layer] && <span className="ml-1 font-medium max-md:hidden">{names[layer]}</span>}
           </button>
         )
       })}
       {preview !== null && (
         <span className="ml-1 flex items-center gap-2 text-xs text-[var(--muted)]">
-          L{preview} をプレビュー中(キーを押すか Esc で戻る)
+          <span className="max-md:hidden">L{preview} をプレビュー中(キーを押すか Esc で戻る)</span>
           <button
             type="button"
             onClick={() => onPreview(null)}

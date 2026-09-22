@@ -163,7 +163,7 @@ export default function App(): JSX.Element {
         className={
           overlay
             ? 'flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
-            : 'flex min-h-0 flex-1 flex-col gap-3 p-4'
+            : 'flex min-h-0 flex-1 flex-col gap-2 p-2 md:gap-3 md:p-4'
         }
         // 濃く戻すのはすぐ、薄くするのは少し待ってからゆっくり(レイヤーキーの短い押下でちらつかせない)
         style={
