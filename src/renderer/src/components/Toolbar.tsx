@@ -7,7 +7,8 @@ export interface ToolbarProps {
   deviceLabel: string | null
   /** 表示しているレイヤー。キーボードを読み込むまでは null(出さない)。 */
   displayLayer: number | null
-  activeLayers: number[]
+  /** Shift が効いているか(図では Shift で入る文字を目立たせている)。 */
+  shift: boolean
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
@@ -64,7 +65,7 @@ export function Toolbar({
   status,
   deviceLabel,
   displayLayer,
-  activeLayers,
+  shift,
   labelMode,
   windowMode,
   reloading,
@@ -92,18 +93,9 @@ export function Toolbar({
           >
             L{displayLayer}
           </span>
-          {activeLayers.length > 1 && (
-            <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
-              重なり
-              {activeLayers.map((n) => (
-                <span
-                  key={n}
-                  className="rounded px-1 font-semibold text-neutral-900"
-                  style={{ backgroundColor: `var(--layer-${n % 10})` }}
-                >
-                  L{n}
-                </span>
-              ))}
+          {shift && (
+            <span className="rounded bg-[var(--ink)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-neutral-900">
+              Shift
             </span>
           )}
         </div>

@@ -1,12 +1,14 @@
-import { type JSX, useCallback, useEffect, useState } from 'react'
+import { type JSX, useCallback, useEffect, useRef, useState } from 'react'
 import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
+import { LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
 import { OverlayControls } from './components/OverlayControls'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
+import { MOD_SHIFT } from './keycodes/decode'
 import type { LabelMode } from './keycodes/labels'
 
 type WindowMode = 'normal' | 'overlay'
@@ -63,6 +65,34 @@ export default function App(): JSX.Element {
 
   const overlay = windowMode === 'overlay'
 
+  /**
+   * プレビュー中のレイヤー(LayerStrip で選ぶ)。キーを押したら実際の表示に戻す ―
+   * 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違うので。
+   */
+  const [preview, setPreview] = useState<number | null>(null)
+  const heldRef = useRef<ReadonlySet<string>>(new Set())
+  useEffect(() => {
+    const held = new Set(layers?.held.keys() ?? [])
+    const pressedNew = [...held].some((id) => !heldRef.current.has(id))
+    heldRef.current = held
+    if (pressedNew) setPreview(null)
+  }, [layers])
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setPreview(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+  // キーボードが替わったり、レイヤーの数が減ったりしたら、その番号は意味を失う
+  const layerCount = snapshot?.layers ?? 0
+  useEffect(() => {
+    setPreview((current) => (current !== null && current < layerCount ? current : null))
+  }, [layerCount])
+
+  const previewLayer = overlay ? null : preview
+  const shownLayer = previewLayer ?? layers?.displayLayer ?? 0
+
   return (
     <div className="app-shell relative flex h-full flex-col overflow-hidden">
       {overlay && (
@@ -79,7 +109,7 @@ export default function App(): JSX.Element {
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
           displayLayer={ready ? layers.displayLayer : null}
-          activeLayers={layers?.activeLayers ?? [0]}
+          shift={((layers?.mods ?? 0) & MOD_SHIFT) !== 0}
           labelMode={labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}
@@ -119,31 +149,49 @@ export default function App(): JSX.Element {
         )}
 
         {ready ? (
-          /*
-           * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、
-           * 背景にも薄く同じ色を敷く。視線がキーの上にあっても気づけるように。
-           */
-          <div
-            className="min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
-            style={
-              layers.displayLayer === 0
-                ? { borderColor: 'transparent', backgroundColor: 'transparent' }
-                : {
-                    borderColor: `var(--layer-${layers.displayLayer % 10})`,
-                    backgroundColor: `color-mix(in srgb, var(--layer-${layers.displayLayer % 10}) 14%, transparent)`
-                  }
-            }
-          >
-            <KeyboardView
-              geometry={geometry}
-              snapshot={snapshot}
-              engine={engine}
-              layers={layers}
-              labelMode={labelMode}
-              unlockKeys={keyboard.unlock?.keys ?? []}
-              onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
-            />
-          </div>
+          <>
+            {!overlay && (
+              <LayerStrip
+                count={snapshot.layers}
+                activeLayers={layers.activeLayers}
+                shownLayer={shownLayer}
+                preview={previewLayer}
+                onPreview={setPreview}
+              />
+            )}
+            {/*
+             * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、
+             * 背景にも薄く同じ色を敷く。視線がキーの上にあっても気づけるように。
+             * プレビュー中は縁を破線にして、実際の状態ではないことを示す。
+             */}
+            <div
+              className="min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
+              style={
+                shownLayer === 0
+                  ? {
+                      borderColor: previewLayer === null ? 'transparent' : 'var(--layer-0)',
+                      borderStyle: previewLayer === null ? 'solid' : 'dashed',
+                      backgroundColor: 'transparent'
+                    }
+                  : {
+                      borderColor: `var(--layer-${shownLayer % 10})`,
+                      borderStyle: previewLayer === null ? 'solid' : 'dashed',
+                      backgroundColor: `color-mix(in srgb, var(--layer-${shownLayer % 10}) 14%, transparent)`
+                    }
+              }
+            >
+              <KeyboardView
+                geometry={geometry}
+                snapshot={snapshot}
+                engine={engine}
+                layers={layers}
+                labelMode={labelMode}
+                unlockKeys={keyboard.unlock?.keys ?? []}
+                onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
+                previewLayer={previewLayer}
+              />
+            </div>
+          </>
         ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (
           <LoadingPanel deviceLabel={keyboard.deviceLabel} progress={keyboard.loading} />
         ) : (

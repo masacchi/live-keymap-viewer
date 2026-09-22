@@ -1,6 +1,7 @@
 /** ツールバーや案内など、キーボード図以外の部品を静的に描いて確かめる。 */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
 
 describe('LoadingPanel', () => {
@@ -20,5 +21,33 @@ describe('LoadingPanel', () => {
     )
     expect(html).toContain('接続中')
     expect(html).toContain('応答するインターフェースを確認中')
+  })
+})
+
+describe('LayerStrip', () => {
+  const strip = (preview: number | null) =>
+    renderToStaticMarkup(
+      <LayerStrip
+        count={10}
+        activeLayers={[0, 2]}
+        shownLayer={preview ?? 2}
+        preview={preview}
+        onPreview={() => undefined}
+      />
+    )
+
+  it('レイヤーの数だけ並べ、有効なレイヤーはその色で塗る', () => {
+    const html = strip(null)
+    expect(html.match(/<button/g)).toHaveLength(10)
+    expect(html).toContain('background-color:var(--layer-2)')
+    expect(html).toContain('background-color:var(--layer-0)')
+    expect(html).not.toContain('background-color:var(--layer-1)')
+    expect(html).not.toContain('プレビュー中')
+  })
+
+  it('プレビュー中は、そう書いて戻るボタンを出す', () => {
+    const html = strip(5)
+    expect(html).toContain('L5 をプレビュー中')
+    expect(html).toContain('>戻る<')
   })
 })

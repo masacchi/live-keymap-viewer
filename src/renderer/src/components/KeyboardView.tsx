@@ -23,6 +23,11 @@ export interface KeyboardViewProps {
   unit?: number
   /** キーをクリックしたとき。モックでキーを押す/離すのに使う(実機では渡さない)。 */
   onKeyClick?: (row: number, col: number) => void
+  /**
+   * 実際の状態とは別に、このレイヤーを図に出す(プレビュー)。透過のキーは既定レイヤーの
+   * 値をたどる。押しているキーの表示は実際の状態のまま。
+   */
+  previewLayer?: number | null
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
@@ -37,10 +42,18 @@ export function KeyboardView({
   unlockKeys = [],
   encoderPlacement = 'bottom',
   unit = 58,
-  onKeyClick
+  onKeyClick,
+  previewLayer = null
 }: KeyboardViewProps): JSX.Element {
   // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
+
+  // 図に出すレイヤーの解決に使う状態。プレビュー中は、そのレイヤーと既定レイヤーだけが有効な体にする
+  const view = useMemo<LayerSnapshot>(() => {
+    if (previewLayer === null) return layers
+    const active = [...new Set([layers.defaultLayer, previewLayer])].sort((a, b) => a - b)
+    return { ...layers, displayLayer: previewLayer, activeLayers: active }
+  }, [layers, previewLayer])
 
   const labelContext = useMemo<LabelContext>(
     () => ({
@@ -77,7 +90,7 @@ export function KeyboardView({
       .filter((encoder) => encoder.direction === 0)
       .sort((a, b) => a.index - b.index)
       .map((knob) => {
-        const assigned = snapshot.encoders[layers.displayLayer]?.[knob.index]
+        const assigned = snapshot.encoders[view.displayLayer]?.[knob.index]
         return {
           index: knob.index,
           ccw: assigned?.[0] !== undefined ? `↺ ${labelOf(assigned[0])}` : '',
@@ -95,7 +108,7 @@ export function KeyboardView({
     geometry.encoders,
     geometry.keyBounds,
     snapshot.encoders,
-    layers.displayLayer,
+    view.displayLayer,
     labelOf,
     encoderPlacement,
     unit
@@ -108,7 +121,7 @@ export function KeyboardView({
       viewBox={viewBox}
       className="w-full h-full"
       role="img"
-      aria-label={`レイヤー ${layers.displayLayer} のキーマップ`}
+      aria-label={`レイヤー ${view.displayLayer} のキーマップ`}
     >
       {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
       {strip?.items.map((item) => (
@@ -125,7 +138,7 @@ export function KeyboardView({
 
       {keys.map((physical) => {
         const id = keyId(physical.row, physical.col)
-        const resolved = engine.resolveKey(physical.row, physical.col, layers)
+        const resolved = engine.resolveKey(physical.row, physical.col, view)
         const held = layers.held.get(id)
         const label = labelForKeycode(resolved.effective, labelMode, labelContext)
         const holdLayer = holdLayerOf(resolved.effective, snapshot.tapDance)

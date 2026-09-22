@@ -37,7 +37,8 @@ function render(
   engine: LayerEngine,
   layers: LayerSnapshot,
   mode: 'jis' | 'us' = 'jis',
-  unlockKeys: Array<{ row: number; col: number }> = []
+  unlockKeys: Array<{ row: number; col: number }> = [],
+  previewLayer: number | null = null
 ): string {
   return renderToStaticMarkup(
     <KeyboardView
@@ -47,6 +48,7 @@ function render(
       layers={layers}
       labelMode={mode}
       unlockKeys={unlockKeys}
+      previewLayer={previewLayer}
     />
   )
 }
@@ -173,6 +175,23 @@ describe('KeyboardView', () => {
     const html = render(engine, engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0))
     expect(html).not.toContain('key-shifted')
     expect(html).toMatch(/<text class="main"[^>]*>-<\/text>/)
+  })
+
+  it('プレビューでは、実際の状態と関係なく指定のレイヤーを出す', () => {
+    const engine = newEngine()
+    const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    matrix[0][0] = true // Tab を押している
+    const layers = engine.update(matrix, 0)
+    expect(layers.displayLayer).toBe(0)
+
+    const html = render(engine, layers, 'jis', [], 1)
+    expect(html).toContain('レイヤー 1 のキーマップ')
+    // L1 の (0,1) は KC_1
+    expect(html).toMatch(/<text class="main"[^>]*>1<\/text>/)
+    // 透過のキーはベースの値をたどる(L1 の (1,0) は透過 → L0 の Ctrl)
+    expect(html).toContain('key-trns')
+    // 押しているキーの表示は実際の状態のまま
+    expect(html).toContain('key-pressed')
   })
 
   it('ノブの割り当てを、そのレイヤーの内容で出す', () => {
