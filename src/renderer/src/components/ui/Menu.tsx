@@ -6,18 +6,9 @@
  *
  * 外を押すか Esc で閉じる。項目を選んでも閉じる。
  */
-import {
-  createContext,
-  type JSX,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState
-} from 'react'
+import { createContext, type JSX, type ReactNode, useContext } from 'react'
 import { cn } from '../../lib/cn'
+import { Popover } from './Popover'
 
 const CloseContext = createContext<() => void>(() => undefined)
 
@@ -31,57 +22,24 @@ export interface MenuProps {
 }
 
 export function Menu({ label, title, children, className }: MenuProps): JSX.Element {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const id = useId()
-  const close = useCallback(() => setOpen(false), [])
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (event: PointerEvent): void => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
   return (
-    <div ref={root} className={cn('relative min-w-0', className)}>
-      <button
-        type="button"
-        title={title}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen((on) => !on)}
-        className={cn(
-          'flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-xs transition-colors',
-          'outline-none hover:bg-line-soft focus-visible:ring-2 focus-visible:ring-ink/60',
-          open && 'bg-line-soft'
-        )}
-      >
-        {label}
-        <span aria-hidden className="shrink-0 text-2xs text-muted">
-          ▾
-        </span>
-      </button>
-      {open && (
-        <div
-          id={id}
-          role="menu"
-          className="absolute left-0 top-full z-30 mt-1 min-w-48 rounded-lg border border-line bg-surface p-1 shadow-lg shadow-black/40"
-        >
-          <CloseContext.Provider value={close}>{children}</CloseContext.Provider>
-        </div>
-      )}
-    </div>
+    <Popover
+      role="menu"
+      title={title}
+      className={className}
+      buttonClassName="flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-xs transition-colors hover:bg-line-soft"
+      panelClassName="min-w-48"
+      label={
+        <>
+          {label}
+          <span aria-hidden className="shrink-0 text-2xs text-muted">
+            ▾
+          </span>
+        </>
+      }
+    >
+      {(close) => <CloseContext.Provider value={close}>{children}</CloseContext.Provider>}
+    </Popover>
   )
 }
 

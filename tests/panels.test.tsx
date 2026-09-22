@@ -6,6 +6,7 @@ import { LoadingPanel } from '@/components/LoadingPanel'
 import { ModifierBadges } from '@/components/ModifierBadges'
 import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
 import { PreviewNotice } from '@/components/PreviewNotice'
+import { SettingsPanel } from '@/components/SettingsPanel'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
 import type { LayerSummary, LayerTrigger } from '@/engine/layerSummary'
@@ -220,5 +221,46 @@ describe('UnlockPanel', () => {
   it('名前が分からなければ図を指す', () => {
     const html = renderToStaticMarkup(<UnlockPanel unlock={unlock} />)
     expect(html).toContain('図で白い破線が回っているキー')
+  })
+})
+
+describe('SettingsPanel', () => {
+  const panel = (props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) =>
+    renderToStaticMarkup(
+      <SettingsPanel
+        layers={[
+          { layer: 0, how: null },
+          { layer: 2, how: 'Space 長押し' }
+        ]}
+        names={['', '', '記号']}
+        onRename={noop}
+        encoderPlacement="top"
+        onEncoderPlacement={noop}
+        overlayOpacity={0.6}
+        onOverlayOpacity={noop}
+        overlayAutoFade={false}
+        onOverlayAutoFade={noop}
+        {...props}
+      />
+    )
+
+  it('中身のあるレイヤーに名前の欄を出し、行き方を薄く添える', () => {
+    const html = panel()
+    expect(html).toContain('aria-label="L0 の名前"')
+    expect(html).toContain('aria-label="L2 の名前"')
+    expect(html).toMatch(/placeholder="Space 長押し"[^>]*value="記号"/)
+  })
+
+  it('繋いでいなければ名前の欄の代わりに案内を出す', () => {
+    const html = panel({ layers: [], onRename: undefined })
+    expect(html).not.toContain('の名前"')
+    expect(html).toContain('キーボードに繋ぐと付けられる')
+  })
+
+  it('ノブの位置とオーバーレイの設定は、いまの値を選んだ状態で出す', () => {
+    const html = panel()
+    expect(html).toMatch(/aria-pressed="true"[^>]*>図の上</)
+    expect(html).toContain('value="60"')
+    expect(html).not.toMatch(/type="checkbox"[^>]*checked/)
   })
 })

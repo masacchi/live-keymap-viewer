@@ -101,7 +101,8 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | `hooks/` | `useVialKeyboard.ts` | 接続の状態を React に渡す。フォーカス復帰で読み直す |
 | `components/` | `KeyboardView.tsx` / `KeyCap.tsx` | SVG の描画。プレビュー・Shift の強調・レイヤー名の色帯 |
 | | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方つき、空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
-| | `ui/` | 共通の部品(`Button` / `Menu`)。ボタンはすべて `Button` を使う |
+| | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・ノブの位置・オーバーレイ) / Ctrl・Shift・Alt・Win の印 |
+| | `ui/` | 共通の部品(`Button` / `Popover` / `Menu` / アイコン)。ボタンはすべて `Button` を使う |
 | | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |
 | | `LoadingPanel.tsx` / `UnlockPanel.tsx` | 読み込みの進み具合 / アンロックの案内 |
 | `lib/` | `cn.ts` / `theme.ts` | Tailwind のクラスの組み立て(clsx + tailwind-merge)、JS から使う色トークン |

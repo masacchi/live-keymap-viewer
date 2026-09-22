@@ -1,14 +1,14 @@
 /**
  * 通常ウィンドウのツールバー。常に 1 行。
  *
- *   [● Cornix LP ▾] [L0] [L1 BS 長押し] [L2 Space 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [オーバーレイへ]
+ *   [● Cornix LP ▾] [L0] [L1 BS 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [オーバーレイへ] [設定]
  *
  * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
  * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
  *   大きな「L0」の札があり、下の段の一覧と同じことを 2 回言っていた。一覧をここに入れて 1 段減らし、
  *   そのぶん図を大きくする
  *   の横に、いま効いているモディファイア
- * - 右: 表記の切り替えとオーバーレイ
+ * - 右: 表記の切り替え・オーバーレイ・設定
  *
  * 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
  * 幅が足りなければ状態の文字やレイヤーの補足を隠す(状態は丸の色と、ボタンの説明で分かる)。
@@ -18,14 +18,18 @@ import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
 import { ModifierBadges } from './ModifierBadges'
-import { Button } from './ui/Button'
+import { Button, buttonVariants } from './ui/Button'
+import { SlidersIcon } from './ui/icons'
 import { Menu, MenuItem } from './ui/Menu'
+import { Popover } from './ui/Popover'
 
 export interface ToolbarProps {
   status: ConnectionStatus
   deviceLabel: string | null
   /** レイヤーの一覧。キーボードを読み込むまでは渡さない。 */
   layers?: ReactNode
+  /** 設定パネルの中身(右端の「設定」から開く)。 */
+  settings: ReactNode
   /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
   mods: number | null
   labelMode: LabelMode
@@ -59,6 +63,7 @@ export function Toolbar({
   status,
   deviceLabel,
   layers,
+  settings,
   mods,
   labelMode,
   windowMode,
@@ -122,6 +127,21 @@ export function Toolbar({
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
           <span className="text-2xs text-muted max-lg:hidden">Ctrl+Alt+K</span>
         </Button>
+
+        <Popover
+          role="dialog"
+          align="end"
+          title="設定"
+          buttonClassName={buttonVariants()}
+          label={
+            <>
+              <SlidersIcon />
+              <span className="max-md:hidden">設定</span>
+            </>
+          }
+        >
+          {settings}
+        </Popover>
       </div>
     </header>
   )

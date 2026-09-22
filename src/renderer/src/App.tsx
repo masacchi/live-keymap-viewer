@@ -1,11 +1,12 @@
 import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { HidCandidate } from '../../shared/ipc'
+import type { EncoderPlacement, HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
-import { LayerStrip } from './components/LayerStrip'
+import { describeTrigger, LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
 import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
 import { PreviewNotice } from './components/PreviewNotice'
+import { SettingsPanel } from './components/SettingsPanel'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { Button } from './components/ui/Button'
@@ -24,6 +25,7 @@ export default function App(): JSX.Element {
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [overlayOpacity, setOverlayOpacity] = useState(0.82)
   const [overlayAutoFade, setOverlayAutoFade] = useState(true)
+  const [encoderPlacement, setEncoderPlacement] = useState<EncoderPlacement>('bottom')
   /** キーボードの UID ごとのレイヤー名(設定の layerNames)。 */
   const [layerNames, setLayerNames] = useState<Record<string, string[]>>({})
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
@@ -35,6 +37,7 @@ export default function App(): JSX.Element {
       setWindowMode(settings.mode)
       setOverlayOpacity(settings.overlayOpacity)
       setOverlayAutoFade(settings.overlayAutoFade)
+      setEncoderPlacement(settings.encoderPlacement)
       setLayerNames(settings.layerNames)
     })
   }, [])
@@ -68,6 +71,11 @@ export default function App(): JSX.Element {
   const onOverlayAutoFade = useCallback((on: boolean) => {
     setOverlayAutoFade(on)
     void window.api?.setOverlayAutoFade(on)
+  }, [])
+
+  const onEncoderPlacement = useCallback((placement: EncoderPlacement) => {
+    setEncoderPlacement(placement)
+    void window.api?.setEncoderPlacement(placement)
   }, [])
 
   const onChooseDevice = useCallback((deviceId: string | null) => {
@@ -205,6 +213,26 @@ export default function App(): JSX.Element {
               />
             )
           }
+          settings={
+            <SettingsPanel
+              layers={summaries
+                .filter((s) => !s.blank)
+                .map((s) => ({
+                  layer: s.layer,
+                  how: s.triggers[0]
+                    ? describeTrigger(s.triggers[0], labelMode, labelContext)
+                    : null
+                }))}
+              names={names}
+              onRename={window.api && uid ? onRename : undefined}
+              encoderPlacement={encoderPlacement}
+              onEncoderPlacement={onEncoderPlacement}
+              overlayOpacity={overlayOpacity}
+              onOverlayOpacity={onOverlayOpacity}
+              overlayAutoFade={overlayAutoFade}
+              onOverlayAutoFade={onOverlayAutoFade}
+            />
+          }
           mods={ready && keyboard.status !== 'unlocking' ? layers.mods : null}
           labelMode={labelMode}
           windowMode={windowMode}
@@ -297,6 +325,7 @@ export default function App(): JSX.Element {
                 previewLayer={previewLayer}
                 layerNames={names}
                 highlightKeys={triggerKeys}
+                encoderPlacement={encoderPlacement}
               />
             </div>
           </>
