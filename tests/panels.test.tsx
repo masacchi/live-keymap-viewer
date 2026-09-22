@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
 import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
+import { Button } from '@/components/ui/Button'
 
 describe('LoadingPanel', () => {
   it('読み込み中は、段の名前と何往復目かを出す', () => {
@@ -100,5 +101,19 @@ describe('オーバーレイの自動フェード', () => {
     )
     expect(html).toContain('L0 で薄く')
     expect(html).toMatch(/type="checkbox"[^>]*checked/)
+  })
+})
+
+describe('Button', () => {
+  it('渡したクラスが既定のクラスとぶつかれば、渡した方が勝つ', () => {
+    const html = renderToStaticMarkup(<Button className="bg-raised">戻す</Button>)
+    expect(html).toContain('bg-raised')
+    expect(html).not.toContain('bg-surface ')
+    expect(html).toContain('type="button"')
+  })
+
+  it('主ボタンはレイヤー色を使わない(レイヤーの表示と見分けが付かなくなる)', () => {
+    const html = renderToStaticMarkup(<Button variant="primary">接続</Button>)
+    expect(html).not.toMatch(/layer-\d/)
   })
 })

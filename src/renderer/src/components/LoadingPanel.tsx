@@ -38,7 +38,7 @@ export function LoadingPanel({ deviceLabel, progress }: LoadingPanelProps): JSX.
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line-soft">
             <div
-              className="h-full rounded-full bg-layer-2 transition-[width] duration-100"
+              className="h-full rounded-full bg-ink transition-[width] duration-100"
               style={{ width: `${Math.round(ratio * 100)}%` }}
             />
           </div>

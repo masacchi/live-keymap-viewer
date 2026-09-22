@@ -7,6 +7,7 @@ import { LoadingPanel } from './components/LoadingPanel'
 import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
+import { Button } from './components/ui/Button'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import type { LabelMode } from './keycodes/labels'
@@ -178,20 +179,20 @@ export default function App(): JSX.Element {
         }
       >
         {keyboard.error && (
-          <div className="flex items-center gap-3 rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
+          <div className="flex items-center gap-3 rounded-lg border border-danger/50 bg-danger/10 px-4 py-2 text-xs text-ink">
             <span className="min-w-0 flex-1">{keyboard.error}</span>
             {keyboard.reconnecting ? (
               <span className="shrink-0 text-muted">自動で繋ぎ直す…</span>
             ) : (
-              <button
-                type="button"
+              <Button
+                size="sm"
                 // オーバーレイはクリックが透過するので、付けないと押せない(OverlayControls)
                 data-interactive
                 onClick={() => void keyboard.connect()}
-                className="shrink-0 rounded-md bg-surface px-3 py-1 font-medium text-ink hover:bg-line-soft"
+                className="shrink-0"
               >
                 接続し直す
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -276,20 +277,12 @@ function EmptyState({
       </p>
       {/* オーバーレイはクリックが透過するので、ボタンの並びだけ透過を切る(OverlayControls) */}
       <div data-interactive className="flex gap-2">
-        <button
-          type="button"
-          onClick={onConnect}
-          className="rounded-md bg-layer-2 px-4 py-2 text-xs font-semibold text-neutral-900"
-        >
+        <Button variant="primary" size="lg" onClick={onConnect}>
           キーボードに接続
-        </button>
-        <button
-          type="button"
-          onClick={onMock}
-          className="rounded-md bg-surface px-4 py-2 text-xs font-medium"
-        >
+        </Button>
+        <Button size="lg" onClick={onMock}>
           モックで試す
-        </button>
+        </Button>
       </div>
     </div>
   )

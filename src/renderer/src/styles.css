@@ -23,8 +23,18 @@
   --color-faint: #5d656a;
   --color-line: #3a4247;
   --color-line-soft: #2b3236;
-  --color-sym-fill: #15343a;
-  --color-sym-ink: #7fd3db;
+  /* 地より一段明るい面。切り替えボタンの選択中など */
+  --color-raised: #353e44;
+  /* 明るい地(レイヤー色・押下の黄色・主ボタン)の上に載せる文字 */
+  --color-ink-inverse: #101315;
+  /*
+   * 記号キー。以前はティールで塗っていたが、L2(記号レイヤー)の色と同じ系統で、L2 に入ると
+   * 背景の色とまぎれて一番見分けにくくなっていた。色味(色相)はレイヤーだけに使うことにして、
+   * 記号キーは一段明るい面と明るい枠で見せる。
+   */
+  --color-sym-fill: #262d32;
+  --color-sym-line: #4d575d;
+  --color-sym-ink: #f1f4f5;
   --color-shift-ink: #cfd6da;
   --color-press: #f2c230;
   --color-layer-0: #b9c0c4;
@@ -42,6 +52,19 @@
    * 見分けが付かなかった。どのレイヤー色とも押下の黄色とも重ならない、白に近い色にする。
    */
   --color-unlock: #f4f7f8;
+
+  /* 接続の状態(ツールバーの丸)とエラー表示。Tailwind の既定色を直に書かない */
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #f43f5e;
+
+  /*
+   * 文字の大きさは Tailwind の text-xs(12px)/ text-sm / text-lg と、これ(11px)だけにする。
+   * 以前は 10px と 11px の任意値が混ざっていた。"2xs" は tailwind-merge が文字サイズと
+   * 分かる名前(lib/cn.ts の注意を参照)。
+   */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
 
   /*
    * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJK を持つフォントを
@@ -139,7 +162,7 @@ body.overlay .app-shell.faded {
 }
 
 .band-text {
-  fill: #101315;
+  fill: var(--color-ink-inverse);
   font-size: 9px;
   font-weight: 700;
   text-anchor: middle;
@@ -149,7 +172,7 @@ body.overlay .app-shell.faded {
 /* --- 種類 --- */
 .key-sym .cap {
   fill: var(--color-sym-fill);
-  stroke: color-mix(in srgb, var(--color-sym-ink) 45%, transparent);
+  stroke: var(--color-sym-line);
 }
 
 .key-sym .main,
@@ -170,9 +193,13 @@ body.overlay .app-shell.faded {
   cursor: pointer;
 }
 
-/* 透過(KC_TRNS)。下のレイヤーの値を薄く出す */
+/*
+ * 透過(KC_TRNS)。下のレイヤーの値を薄く出す。枠も種類によらず同じにする ―
+ * 記号キーの明るい枠が残ると、透過なのにそのレイヤーで決めたキーのように見える。
+ */
 .key-trns .cap {
   fill: var(--color-surface-2);
+  stroke: var(--color-line-soft);
 }
 
 .key-trns .main,
@@ -209,7 +236,7 @@ body.overlay .app-shell.faded {
 .key-pressed .main,
 .key-pressed .shift,
 .key-pressed .sub {
-  fill: #101315;
+  fill: var(--color-ink-inverse);
   opacity: 1;
 }
 
@@ -227,22 +254,28 @@ body.overlay .app-shell.faded {
 
 .key-holding .main,
 .key-holding .sub {
-  fill: #101315;
+  fill: var(--color-ink-inverse);
   opacity: 1;
   font-weight: 700;
 }
 
-/* アンロックのために押し続けるキー。レイヤー色と区別できるよう、専用の色で脈打たせる */
+/*
+ * アンロックのために押し続けるキー。白い実線の枠は「Shift で変わるキー」(.key-shifted)と
+ * 同じに見えていたので、色ではなく**回り続ける破線**で区別する。アンロック中は押下が
+ * 読めず、押しても光らないので、動いていること自体が「待っている」合図にもなる。
+ */
 .key-unlock .cap {
-  fill: color-mix(in srgb, var(--color-unlock) 16%, var(--color-surface));
+  fill: color-mix(in srgb, var(--color-unlock) 22%, var(--color-surface));
   stroke: var(--color-unlock);
-  stroke-width: 2.5;
-  animation: unlock-pulse 1.2s ease-in-out infinite;
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  animation: unlock-march 0.9s linear infinite;
 }
 
-@keyframes unlock-pulse {
-  50% {
-    stroke-opacity: 0.3;
+/* 破線 1 周期(8 + 5)の倍だけずらすと、継ぎ目なく回る */
+@keyframes unlock-march {
+  to {
+    stroke-dashoffset: -26;
   }
 }
 

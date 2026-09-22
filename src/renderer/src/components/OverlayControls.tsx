@@ -13,6 +13,7 @@
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { Button } from './ui/Button'
 
 /** 薄くしたときの濃さ(ウィンドウの不透明度に掛かる)。どこにあるかは分かる程度に残す。 */
 export const OVERLAY_FADED_OPACITY = 0.2
@@ -132,14 +133,14 @@ export function OverlayControls({
         </span>
 
         <span
-          className="rounded px-1.5 py-0.5 text-xs font-bold leading-none text-neutral-900"
+          className="rounded-md px-1.5 py-0.5 text-xs font-bold leading-none text-ink-inverse"
           style={{ backgroundColor: layerColor(displayLayer) }}
         >
           L{displayLayer}
           {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
         </span>
 
-        <label className="flex items-center gap-1.5 text-[11px] text-muted">
+        <label className="flex items-center gap-1.5 text-2xs text-muted">
           濃さ
           <input
             type="range"
@@ -148,31 +149,28 @@ export function OverlayControls({
             step={5}
             value={Math.round(opacity * 100)}
             onChange={(event) => onOpacity(Number(event.target.value) / 100)}
-            className="h-1 w-24 accent-layer-2"
+            className="h-1 w-24 accent-ink"
           />
           <span className="w-8 tabular-nums text-right text-ink">{Math.round(opacity * 100)}%</span>
         </label>
 
         <label
-          className="flex items-center gap-1 text-[11px] text-muted"
+          className="flex items-center gap-1 text-2xs text-muted"
           title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
         >
           <input
             type="checkbox"
             checked={autoFade}
             onChange={(event) => onAutoFade(event.target.checked)}
-            className="accent-layer-2"
+            className="accent-ink"
           />
           L0 で薄く
         </label>
 
-        <button
-          type="button"
-          onClick={onExit}
-          className="rounded bg-surface-2 px-2 py-1 text-[11px] font-medium hover:bg-line-soft"
-        >
+        {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
+        <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
           通常ウィンドウに戻す
-        </button>
+        </Button>
       </div>
 
       {/* 右下のリサイズつまみ。枠が無いので OS の境界は使えない */}

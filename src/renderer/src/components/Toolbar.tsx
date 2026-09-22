@@ -3,6 +3,7 @@ import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { Button } from './ui/Button'
 
 export interface ToolbarProps {
   status: ConnectionStatus
@@ -32,35 +33,12 @@ const STATUS_TEXT: Record<ConnectionStatus, string> = {
 }
 
 const STATUS_COLOR: Record<ConnectionStatus, string> = {
-  idle: 'bg-neutral-500',
-  connecting: 'bg-amber-400',
-  loading: 'bg-amber-400',
-  unlocking: 'bg-amber-400',
-  ready: 'bg-emerald-400',
-  error: 'bg-rose-500'
-}
-
-function Button({
-  children,
-  onClick,
-  active = false
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  active?: boolean
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors md:px-3',
-        active ? 'bg-layer-2 text-neutral-900' : 'bg-surface text-ink hover:bg-line-soft'
-      )}
-    >
-      {children}
-    </button>
-  )
+  idle: 'bg-faint',
+  connecting: 'bg-warn',
+  loading: 'bg-warn',
+  unlocking: 'bg-warn',
+  ready: 'bg-ok',
+  error: 'bg-danger'
 }
 
 export function Toolbar({
@@ -94,7 +72,7 @@ export function Toolbar({
       {displayLayer !== null && (
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className="truncate rounded-md px-2 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors md:px-3"
+            className="truncate rounded-md px-2 py-1 text-lg font-bold leading-none text-ink-inverse transition-colors md:px-3"
             style={{ backgroundColor: layerColor(displayLayer) }}
           >
             L{displayLayer}
@@ -103,7 +81,7 @@ export function Toolbar({
             )}
           </span>
           {shift && (
-            <span className="rounded bg-ink px-1.5 py-0.5 text-[11px] font-bold leading-none text-neutral-900">
+            <span className="rounded-md bg-ink px-1.5 py-0.5 text-2xs font-bold leading-none text-ink-inverse">
               Shift
             </span>
           )}
@@ -111,18 +89,24 @@ export function Toolbar({
       )}
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2">
+        {/* 切り替えは枠でひとまとめにし、選んでいる方だけ明るくする */}
         <div className="flex overflow-hidden rounded-md border border-line-soft">
-          <Button onClick={() => onLabelMode('jis')} active={labelMode === 'jis'}>
-            JIS
-          </Button>
-          <Button onClick={() => onLabelMode('us')} active={labelMode === 'us'}>
-            US
-          </Button>
+          {(['jis', 'us'] as const).map((mode) => (
+            <Button
+              key={mode}
+              onClick={() => onLabelMode(mode)}
+              selected={labelMode === mode}
+              aria-pressed={labelMode === mode}
+              className="rounded-none"
+            >
+              {mode.toUpperCase()}
+            </Button>
+          ))}
         </div>
 
         <Button onClick={onToggleWindowMode}>
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
-          <span className="ml-1.5 text-[10px] text-muted max-lg:hidden">Ctrl+Alt+K</span>
+          <span className="text-2xs text-muted max-lg:hidden">Ctrl+Alt+K</span>
         </Button>
 
         {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない)ので出さない */}

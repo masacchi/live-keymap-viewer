@@ -1,6 +1,7 @@
 /** Vial デバイスが複数見つかったときの選択。main の select-hid-device から呼ばれる。 */
 import type { JSX } from 'react'
 import type { HidCandidate } from '../../../shared/ipc'
+import { Button } from './ui/Button'
 
 export interface DevicePickerProps {
   devices: HidCandidate[]
@@ -9,7 +10,7 @@ export interface DevicePickerProps {
 
 export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Element {
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-ground/80">
       {/* オーバーレイから接続したときも押せるように、透過を切る(OverlayControls) */}
       <div data-interactive className="w-96 rounded-lg border border-line bg-surface p-4">
         <p className="text-sm font-semibold">接続するキーボードを選ぶ</p>
@@ -31,13 +32,9 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
             </li>
           ))}
         </ul>
-        <button
-          type="button"
-          onClick={() => onChoose(null)}
-          className="mt-3 w-full rounded-md px-3 py-1.5 text-xs text-muted hover:bg-line-soft"
-        >
+        <Button variant="ghost" onClick={() => onChoose(null)} className="mt-3 w-full">
           やめる
-        </button>
+        </Button>
       </div>
     </div>
   )

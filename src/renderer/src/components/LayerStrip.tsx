@@ -11,6 +11,7 @@ import { type JSX, useEffect, useRef, useState } from 'react'
 import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { Button } from './ui/Button'
 
 export interface LayerStripProps {
   /** レイヤーの数。 */
@@ -74,8 +75,8 @@ export function LayerStrip({
             onClick={() => onPreview(preview === layer ? null : layer)}
             onDoubleClick={() => onRename && setEditing(layer)}
             className={cn(
-              'rounded border px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors',
-              filled ? 'text-neutral-900' : 'text-muted hover:text-ink',
+              'rounded-md border px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors',
+              filled ? 'text-ink-inverse' : 'text-muted hover:text-ink',
               // 輪は box-shadow で描かれるので、縁取りは border で付ける(style で box-shadow を触らない)
               shownLayer === layer && 'ring-2 ring-ink ring-offset-2 ring-offset-ground'
             )}
@@ -92,13 +93,9 @@ export function LayerStrip({
       {preview !== null && (
         <span className="ml-1 flex items-center gap-2 text-xs text-muted">
           <span className="max-md:hidden">L{preview} をプレビュー中(キーを押すか Esc で戻る)</span>
-          <button
-            type="button"
-            onClick={() => onPreview(null)}
-            className="rounded bg-surface px-2 py-0.5 font-medium text-ink hover:bg-line-soft"
-          >
+          <Button size="sm" onClick={() => onPreview(null)}>
             戻る
-          </button>
+          </Button>
         </span>
       )}
     </div>
@@ -143,7 +140,7 @@ function NameInput({
         if (event.key === 'Escape') finish(null)
       }}
       onBlur={(event) => finish(event.currentTarget.value)}
-      className="w-28 rounded border bg-surface px-2 py-0.5 text-xs text-ink outline-none"
+      className="w-28 rounded-md border bg-surface px-2 py-0.5 text-xs text-ink outline-none"
       style={{ borderColor: color }}
     />
   )
