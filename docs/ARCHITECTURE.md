@@ -101,8 +101,12 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `keyboardConnection.ts` | 接続を持ち続ける: デバイスの選び方、セッションの差し替え、切れたら繋ぎ直す |
 | `hooks/` | `useVialKeyboard.ts` | 接続の状態を React に渡す。フォーカス復帰で読み直す |
 | | `useSettings.ts` | 設定を React に渡す。変えるのは `update(patch)` だけ |
+| | `usePreview.ts` | 図のプレビュー(乗せる・固定・記号の案内)と戻す規則。規則は `previewReducer` / `resolvePreview` の純粋な関数 |
+| | `useKeymapGuide.ts` | キーマップから読む案内(行き方・記号の打ち方・キーの名前) |
+| | `useOverlayFade.ts` | オーバーレイを薄くするか(`overlayFaded`)と、後ろのぼかしの入り切り |
 | `components/` | `KeyboardView.tsx` / `KeyCap.tsx` | SVG の描画。プレビュー・Shift の強調・レイヤー名の色帯 |
 | | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方つき、空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
+| | `KeyboardFrame.tsx` / `StatusViews.tsx` | 図の枠(レイヤー色の縁・プレビューの破線) / エラーの帯と未接続の画面 |
 | | `SymbolFinder.tsx` | 記号の出し方の一覧。押すと App がそのレイヤーをプレビューし、押すキーを光らせる |
 | | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・ノブの位置・オーバーレイ) / Ctrl・Shift・Alt・Win の印 |
 | | `ui/` | 共通の部品(`Button` / `Popover` / `Menu` / アイコン)。ボタンはすべて `Button` を使う |
@@ -194,6 +198,7 @@ stateDiagram-v2
 | **読み直し・切断はデバイス名のメニューにしまう** | 使う頻度が低く、切断は押し間違えると困る。よく使う JIS/US・オーバーレイと同じ重さで並べない |
 | **lint とフォーマットは Biome、コミット時の検査は husky** | どちらも依存が小さく設定が 1 か所で済む(ESLint + Prettier は 6 パッケージ・設定 2 ファイルになる)。husky は誰でも見れば分かる標準的な置き場所 |
 | **renderer からの設定の変更は 1 本の IPC**(`settings:update`) | 以前は項目ごとにチャネルがあり、設定を 1 つ足すのに型・既定値・検証・チャネル名・API の型・preload・main の受け口・App の state と変更関数・パネルの props と 9 か所ほど触っていた。いまは変えてよい項目を `RENDERER_SETTINGS_KEYS` に決め打ちし、main はそれ以外を捨ててから `sanitizeSettings` で検証する(壊れた値は手で直したファイルと同じく既定値に戻る)。ウィンドウの位置・モード・許可したデバイスは renderer から書かせない |
+| **App は部品をつなぐだけ。状態と規則はフックに置く** | 以前は App が 497 行・フック 40 個で、設定・プレビュー・案内の状態が混ざっていた。プレビューの規則(キーを押したら戻る、Esc、乗せている方が勝つ …)は一番こみ入っているので reducer にして、画面なしでテストする(`tests/preview.test.ts`) |
 | **設定は項目ごとに検証して読む**(`sanitizeSettings`) | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す |
 
 ## 7. 壊しやすいところ

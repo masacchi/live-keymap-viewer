@@ -12,35 +12,10 @@
  */
 import { type JSX, useEffect, useRef, useState } from 'react'
 import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
-import type { LayerSummary, LayerTrigger, TriggerKind } from '../engine/layerSummary'
-import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
+import { describeTrigger, type LayerSummary } from '../engine/layerSummary'
+import type { LabelContext, LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
-
-/** 入り方ごとの言い方。キーの名前の後ろに付ける。 */
-const KIND_TEXT: Record<TriggerKind, string> = {
-  hold: '長押し',
-  momentary: '押す間',
-  toggle: 'で固定',
-  to: 'で移動',
-  default: 'で既定',
-  oneshot: 'で 1 回',
-  tapToggle: '押す間'
-}
-
-/**
- * 行き方の短い説明。LT / Tap Dance はタップ側の文字(「Space 長押し」)、MO や TG は
- * キーそのものの名前(「TG2 で固定」)で言う。ベースレイヤー以外にあるキーなら、先にそのレイヤーを書く。
- */
-export function describeTrigger(
-  trigger: LayerTrigger,
-  mode: LabelMode,
-  context: LabelContext
-): string {
-  const name = labelForKeycode(trigger.keycode, mode, context).main
-  const from = trigger.fromLayer === 0 ? '' : `L${trigger.fromLayer} → `
-  return `${from}${name} ${KIND_TEXT[trigger.kind]}`
-}
 
 export interface LayerStripProps {
   summaries: readonly LayerSummary[]

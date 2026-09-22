@@ -22,26 +22,6 @@ import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
 import { PercentSlider } from './ui/PercentSlider'
 
-/**
- * オーバーレイの図を薄くするか。ベースレイヤーで、Shift も押しておらず、案内(アンロックや
- * エラー)も出ていないときだけ。ほかのレイヤーに入った瞬間に濃く戻す。
- */
-export function overlayFaded(state: {
-  autoFade: boolean
-  shownLayer: number
-  shift: boolean
-  status: string
-  error: string | null
-}): boolean {
-  return (
-    state.autoFade &&
-    state.status === 'ready' &&
-    state.error === null &&
-    state.shownLayer === 0 &&
-    !state.shift
-  )
-}
-
 export interface OverlayControlsProps {
   displayLayer: number
   /** そのレイヤーの名前。無ければ番号だけ。 */

@@ -1,32 +1,35 @@
-import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+/**
+ * 画面全体の組み立て。状態と規則はフックに置き、ここは部品をつなぐだけにする。
+ *
+ *   useVialKeyboard … キーボードとの接続・押下・レイヤー
+ *   useSettings     … 設定(settings.json)
+ *   useKeymapGuide  … キーマップから読む案内(行き方・記号の打ち方・キーの名前)
+ *   usePreview      … 図のプレビュー(乗せる・固定・記号の案内)と、戻す規則
+ *   useOverlayFade  … オーバーレイを薄くするかと、後ろのぼかし
+ */
+import { type JSX, useCallback, useEffect, useMemo, useState } from 'react'
 import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
+import { KeyboardFrame } from './components/KeyboardFrame'
 import { KeyboardView } from './components/KeyboardView'
-import { describeTrigger, LayerStrip } from './components/LayerStrip'
+import { LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
-import { OverlayControls, overlayFaded } from './components/OverlayControls'
+import { OverlayControls } from './components/OverlayControls'
 import { PreviewNotice } from './components/PreviewNotice'
 import { SettingsPanel } from './components/SettingsPanel'
-import { RouteChips, routeSteps, SymbolFinder } from './components/SymbolFinder'
+import { EmptyState, ErrorBanner } from './components/StatusViews'
+import { RouteChips, SymbolFinder } from './components/SymbolFinder'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
-import { Button } from './components/ui/Button'
-import { summarizeLayers } from './engine/layerSummary'
-import { findSymbolRoutes, type SymbolRoute, shiftKeysOf } from './engine/symbolRoutes'
+import { useKeymapGuide } from './hooks/useKeymapGuide'
+import { FADE_DELAY_MS, overlayFaded, useOverlayBlurSync } from './hooks/useOverlayFade'
+import { usePreview } from './hooks/usePreview'
 import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
-import { decodeKeycode, MOD_SHIFT } from './keycodes/decode'
-import { type LabelContext, labelForKeycode } from './keycodes/labels'
+import { MOD_SHIFT } from './keycodes/decode'
 import { cn } from './lib/cn'
-import { layerColor } from './lib/theme'
 
 type WindowMode = 'normal' | 'overlay'
-
-/**
- * オーバーレイを薄くし始めるまでの待ち(ms)。レイヤーキーの短い押下で薄い / 濃いを
- * 行き来してちらつかせないため。
- */
-const FADE_DELAY_MS = 300
 
 /**
  * 後ろの画面のぼかし(Windows 11 のアクリル)が使えるか。main は Windows でしか効かせないので、
@@ -37,7 +40,6 @@ const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
 export default function App(): JSX.Element {
   const keyboard = useVialKeyboard()
   const { settings, update: updateSettings, setLayerName, canSave } = useSettings()
-  const { labelMode } = settings
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
 
@@ -45,19 +47,14 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.body.classList.toggle('overlay', windowMode === 'overlay')
   }, [windowMode])
-
   // main からのモード変更(グローバルショートカット)はウィンドウ再生成で反映されるので、
   // 起動時に現在のモードを聞き直す
   useEffect(() => {
     void window.api?.getMode().then(setWindowMode)
   }, [])
-
   useEffect(() => window.api?.onChooseDevice(setCandidates), [])
 
-  const onToggleWindowMode = useCallback(() => {
-    void window.api?.toggleMode()
-  }, [])
-
+  const onToggleWindowMode = useCallback(() => void window.api?.toggleMode(), [])
   const onChooseDevice = useCallback((deviceId: string | null) => {
     window.api?.chooseDevice(deviceId)
     setCandidates(null)
@@ -65,148 +62,40 @@ export default function App(): JSX.Element {
 
   const { geometry, snapshot, engine, layers } = keyboard
   const ready = geometry !== null && snapshot !== null && engine !== null && layers !== null
-
+  // アンロック中は押下が読めず、レイヤーも切り替わらないので、レイヤーまわりの表示は出さない
+  const live = ready && keyboard.status !== 'unlocking'
   const overlay = windowMode === 'overlay'
 
-  /**
-   * プレビュー中のレイヤー(LayerStrip で選ぶ)。ポインタを乗せているあいだ(hovered)と、
-   * 押して固定したもの(preview)がある。乗せている方が勝つ。
-   * キーを押したらどちらもやめて実際の表示に戻す ― 打ち始めたのに違うレイヤーが出たままだと、
-   * 押したキーと図が食い違うので。
-   */
-  const [preview, setPreview] = useState<number | null>(null)
-  const [hovered, setHovered] = useState<number | null>(null)
-  /** 記号の出し方で選んだ記号と、その打ち方。そのレイヤーを出しているあいだだけ効かせる。 */
-  const [lookup, setLookup] = useState<{ symbol: string; route: SymbolRoute } | null>(null)
-  const heldRef = useRef<ReadonlySet<string>>(new Set())
-  useEffect(() => {
-    const held = new Set(layers?.held.keys() ?? [])
-    const pressedNew = [...held].some((id) => !heldRef.current.has(id))
-    heldRef.current = held
-    if (pressedNew) {
-      setPreview(null)
-      setHovered(null)
-      setLookup(null)
-    }
-  }, [layers])
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      setPreview(null)
-      setLookup(null)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-  // キーボードが替わったり、レイヤーの数が減ったりしたら、その番号は意味を失う
-  const layerCount = snapshot?.layers ?? 0
-  useEffect(() => {
-    const valid = (current: number | null) =>
-      current !== null && current < layerCount ? current : null
-    setPreview(valid)
-    setHovered(valid)
-    setLookup(null)
-  }, [layerCount])
-  /** レイヤーの一覧やプレビューの札から、固定のプレビューを変えるとき。記号の案内はやめる。 */
-  const onPinPreview = useCallback((layer: number | null) => {
-    setLookup(null)
-    setPreview(layer)
-  }, [])
-
-  const requested = overlay ? null : (hovered ?? preview)
-  // 実際に出ているレイヤーを「プレビュー」しても何も変わらないので、札や破線は出さない
-  const previewLayer = requested === layers?.displayLayer ? null : requested
+  const guide = useKeymapGuide(snapshot, settings.labelMode)
+  const preview = usePreview({ layers, layerCount: snapshot?.layers ?? 0, overlay })
+  const { previewLayer, lookup } = preview
   const shownLayer = previewLayer ?? layers?.displayLayer ?? 0
 
-  const shift = ((layers?.mods ?? 0) & MOD_SHIFT) !== 0
   const faded =
     overlay &&
     overlayFaded({
       autoFade: settings.overlayAutoFade,
       shownLayer,
-      shift,
+      shift: ((layers?.mods ?? 0) & MOD_SHIFT) !== 0,
       status: keyboard.status,
       error: keyboard.error
     })
+  useOverlayBlurSync(overlay, faded)
 
-  const summaries = useMemo(() => (snapshot ? summarizeLayers(snapshot) : []), [snapshot])
-  const labelContext = useMemo<LabelContext>(
-    () => ({ customKeycodes: snapshot?.definition.customKeycodes, tapDance: snapshot?.tapDance }),
-    [snapshot]
-  )
   // プレビュー中は、そのレイヤーに入るキーを図の上で縁取る(「このキーでここに来る」)
   const triggerKeys = useMemo(
-    () => (previewLayer === null ? [] : (summaries[previewLayer]?.triggers ?? [])),
-    [summaries, previewLayer]
+    () => (previewLayer === null ? [] : (guide.summaries[previewLayer]?.triggers ?? [])),
+    [guide.summaries, previewLayer]
   )
-
-  // 記号の出し方。どの文字が出るかは表記で変わる。行き方の無いレイヤーの文字は打てないので数えない
-  const symbolRoutes = useMemo(
-    () =>
-      snapshot
-        ? findSymbolRoutes({
-            keymap: snapshot.keymap,
-            labelOf: (keycode) => labelForKeycode(keycode, labelMode, labelContext),
-            reachable: (layer) => (summaries[layer]?.triggers.length ?? 0) > 0
-          })
-        : new Map<string, SymbolRoute[]>(),
-    [snapshot, labelMode, labelContext, summaries]
-  )
-  const shiftKeys = useMemo(() => (snapshot ? shiftKeysOf(snapshot.keymap) : []), [snapshot])
-  const stepsOf = useCallback(
-    (route: SymbolRoute) => {
-      const raw = snapshot?.keymap[0]?.[route.row]?.[route.col] ?? 0
-      const keyName = labelForKeycode(decodeKeycode(raw), labelMode, labelContext).main
-      const trigger = summaries[route.layer]?.triggers[0]
-      return routeSteps(
-        route,
-        keyName,
-        trigger ? describeTrigger(trigger, labelMode, labelContext) : null
-      )
-    },
-    [snapshot, labelMode, labelContext, summaries]
-  )
-  const onPickSymbol = useCallback((symbol: string, route: SymbolRoute) => {
-    setHovered(null)
-    setPreview(route.layer === 0 ? null : route.layer)
-    setLookup({ symbol, route })
-  }, [])
-  // ほかのレイヤーに乗せている・押して変えたなら、案内はそのレイヤーには当てはまらない
-  const activeLookup =
-    lookup && hovered === null && preview === (lookup.route.layer === 0 ? null : lookup.route.layer)
-      ? lookup
-      : null
   const flashKeys = useMemo(
-    () =>
-      activeLookup ? [activeLookup.route, ...(activeLookup.route.shift ? shiftKeys : [])] : [],
-    [activeLookup, shiftKeys]
+    () => (lookup ? guide.keysToPress(lookup.route) : []),
+    [lookup, guide.keysToPress]
   )
-
   // アンロックで押すキーの名前。ロック中はレイヤーが動かないので、ベースレイヤーの表示で言う
   const unlockKeyNames = useMemo(
-    () =>
-      (keyboard.unlock?.keys ?? []).map(
-        ({ row, col }) =>
-          labelForKeycode(
-            decodeKeycode(snapshot?.keymap[0]?.[row]?.[col] ?? 0),
-            labelMode,
-            labelContext
-          ).main
-      ),
-    [keyboard.unlock?.keys, snapshot, labelMode, labelContext]
+    () => (keyboard.unlock?.keys ?? []).map(guide.baseKeyName),
+    [keyboard.unlock?.keys, guide.baseKeyName]
   )
-
-  // 後ろのぼかし(OS が描く)も、図を薄くしているあいだは外す。図が薄くなり始めるのは 300ms 後
-  // (下の transition)なので、外すのも同じだけ待つ。濃く戻すときはすぐ
-  useEffect(() => {
-    if (!overlay) return
-    if (!faded) {
-      window.api?.setOverlayBlurActive(true)
-      return
-    }
-    const timer = setTimeout(() => window.api?.setOverlayBlurActive(false), FADE_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [overlay, faded])
 
   const uid = snapshot?.uid ?? null
   const names = (uid && settings.layerNames[uid]) || []
@@ -215,6 +104,25 @@ export default function App(): JSX.Element {
       if (uid) setLayerName(uid, layer, name)
     },
     [uid, setLayerName]
+  )
+
+  const noticeLayer = lookup?.route.layer ?? previewLayer
+  const notice = noticeLayer !== null && (
+    <PreviewNotice
+      layer={noticeLayer}
+      name={names[noticeLayer]}
+      pinned={preview.pinned}
+      onExit={() => preview.pin(null)}
+      hint={
+        lookup && (
+          <span className="flex items-center gap-1.5">
+            <b className="text-sm font-bold leading-none">{lookup.symbol}</b>
+            <span>は</span>
+            <RouteChips steps={guide.stepsOf(lookup.route)} />
+          </span>
+        )
+      }
+    />
   )
 
   return (
@@ -236,34 +144,27 @@ export default function App(): JSX.Element {
         <Toolbar
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
-          // アンロック中は押下が読めず、レイヤーも切り替わらないので一覧は出さない
           layers={
-            ready &&
-            keyboard.status !== 'unlocking' && (
+            live && (
               <LayerStrip
-                summaries={summaries}
+                summaries={guide.summaries}
                 activeLayers={layers.activeLayers}
                 shownLayer={shownLayer}
-                preview={preview}
+                preview={preview.state.pinned}
                 names={names}
-                labelMode={labelMode}
-                labelContext={labelContext}
-                onPreview={onPinPreview}
-                onHover={setHovered}
+                labelMode={settings.labelMode}
+                labelContext={guide.labelContext}
+                onPreview={preview.pin}
+                onHover={preview.hover}
                 onRename={canSave ? onRename : undefined}
               />
             )
           }
           settings={
             <SettingsPanel
-              layers={summaries
-                .filter((s) => !s.blank)
-                .map((s) => ({
-                  layer: s.layer,
-                  how: s.triggers[0]
-                    ? describeTrigger(s.triggers[0], labelMode, labelContext)
-                    : null
-                }))}
+              layers={guide.summaries
+                .filter((summary) => !summary.blank)
+                .map(({ layer }) => ({ layer, how: guide.howTo(layer) }))}
               names={names}
               onRename={canSave && uid ? onRename : undefined}
               settings={settings}
@@ -272,26 +173,26 @@ export default function App(): JSX.Element {
             />
           }
           symbols={
-            ready && keyboard.status !== 'unlocking'
+            live
               ? (close) => (
                   <SymbolFinder
-                    routes={symbolRoutes}
-                    stepsOf={stepsOf}
+                    routes={guide.symbolRoutes}
+                    stepsOf={guide.stepsOf}
                     onPick={(symbol, route) => {
                       close()
-                      onPickSymbol(symbol, route)
+                      preview.pickSymbol(symbol, route)
                     }}
                   />
                 )
               : undefined
           }
-          mods={ready && keyboard.status !== 'unlocking' ? layers.mods : null}
-          labelMode={labelMode}
+          mods={live ? layers.mods : null}
+          labelMode={settings.labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}
           onReload={() => void keyboard.reload()}
           onDisconnect={() => void keyboard.disconnect()}
-          onLabelMode={(mode) => updateSettings({ labelMode: mode })}
+          onLabelMode={(labelMode) => updateSettings({ labelMode })}
           onToggleWindowMode={onToggleWindowMode}
         />
       )}
@@ -313,22 +214,11 @@ export default function App(): JSX.Element {
         }
       >
         {keyboard.error && (
-          <div className="flex items-center gap-3 rounded-lg border border-danger/50 bg-danger/10 px-4 py-2 text-xs text-ink">
-            <span className="min-w-0 flex-1">{keyboard.error}</span>
-            {keyboard.reconnecting ? (
-              <span className="shrink-0 text-muted">自動で繋ぎ直す…</span>
-            ) : (
-              <Button
-                size="sm"
-                // オーバーレイはクリックが透過するので、付けないと押せない(OverlayControls)
-                data-interactive
-                onClick={() => void keyboard.connect()}
-                className="shrink-0"
-              >
-                接続し直す
-              </Button>
-            )}
-          </div>
+          <ErrorBanner
+            message={keyboard.error}
+            reconnecting={keyboard.reconnecting}
+            onRetry={() => void keyboard.connect()}
+          />
         )}
 
         {keyboard.unlock && keyboard.status === 'unlocking' && (
@@ -336,61 +226,22 @@ export default function App(): JSX.Element {
         )}
 
         {ready ? (
-          <>
-            {/*
-             * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、
-             * 背景にも薄く同じ色を敷く。視線がキーの上にあっても気づけるように。
-             * プレビュー中は縁を破線にして、実際の状態ではないことを示し、縁の上に札を出す。
-             */}
-            <div
-              className="relative min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
-              style={
-                shownLayer === 0
-                  ? {
-                      borderColor: previewLayer === null ? 'transparent' : layerColor(0),
-                      borderStyle: previewLayer === null ? 'solid' : 'dashed',
-                      backgroundColor: 'transparent'
-                    }
-                  : {
-                      borderColor: layerColor(shownLayer),
-                      borderStyle: previewLayer === null ? 'solid' : 'dashed',
-                      backgroundColor: `color-mix(in srgb, ${layerColor(shownLayer)} 14%, transparent)`
-                    }
-              }
-            >
-              {(activeLookup || previewLayer !== null) && (
-                <PreviewNotice
-                  layer={activeLookup?.route.layer ?? previewLayer ?? 0}
-                  name={names[activeLookup?.route.layer ?? previewLayer ?? 0]}
-                  pinned={hovered === null}
-                  onExit={() => onPinPreview(null)}
-                  hint={
-                    activeLookup && (
-                      <span className="flex items-center gap-1.5">
-                        <b className="text-sm font-bold leading-none">{activeLookup.symbol}</b>
-                        <span>は</span>
-                        <RouteChips steps={stepsOf(activeLookup.route)} />
-                      </span>
-                    )
-                  }
-                />
-              )}
-              <KeyboardView
-                geometry={geometry}
-                snapshot={snapshot}
-                engine={engine}
-                layers={layers}
-                labelMode={labelMode}
-                unlockKeys={keyboard.unlock?.keys ?? []}
-                onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
-                previewLayer={previewLayer}
-                layerNames={names}
-                highlightKeys={triggerKeys}
-                flashKeys={flashKeys}
-                encoderPlacement={settings.encoderPlacement}
-              />
-            </div>
-          </>
+          <KeyboardFrame shownLayer={shownLayer} preview={previewLayer !== null} notice={notice}>
+            <KeyboardView
+              geometry={geometry}
+              snapshot={snapshot}
+              engine={engine}
+              layers={layers}
+              labelMode={settings.labelMode}
+              unlockKeys={keyboard.unlock?.keys ?? []}
+              onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
+              previewLayer={previewLayer}
+              layerNames={names}
+              highlightKeys={triggerKeys}
+              flashKeys={flashKeys}
+              encoderPlacement={settings.encoderPlacement}
+            />
+          </KeyboardFrame>
         ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (
           <LoadingPanel deviceLabel={keyboard.deviceLabel} progress={keyboard.loading} />
         ) : (
@@ -402,31 +253,6 @@ export default function App(): JSX.Element {
       </main>
 
       {candidates && <DevicePicker devices={candidates} onChoose={onChooseDevice} />}
-    </div>
-  )
-}
-
-function EmptyState({
-  onConnect,
-  onMock
-}: {
-  onConnect: () => void
-  onMock: () => void
-}): JSX.Element {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <p className="text-sm text-muted">
-        Vial のキーボードに接続すると、キーマップと押しているキーがここに出る。
-      </p>
-      {/* オーバーレイはクリックが透過するので、ボタンの並びだけ透過を切る(OverlayControls) */}
-      <div data-interactive className="flex gap-2">
-        <Button variant="primary" size="lg" onClick={onConnect}>
-          キーボードに接続
-        </Button>
-        <Button size="lg" onClick={onMock}>
-          モックで試す
-        </Button>
-      </div>
     </div>
   )
 }

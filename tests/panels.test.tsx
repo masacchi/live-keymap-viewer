@@ -1,16 +1,18 @@
 /** ツールバーや案内など、キーボード図以外の部品を静的に描いて確かめる。 */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { describeTrigger, LayerStrip } from '@/components/LayerStrip'
+import { LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
 import { ModifierBadges } from '@/components/ModifierBadges'
-import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
+import { OverlayControls } from '@/components/OverlayControls'
 import { PreviewNotice } from '@/components/PreviewNotice'
 import { SettingsPanel } from '@/components/SettingsPanel'
-import { routeSteps, SymbolFinder } from '@/components/SymbolFinder'
+import { SymbolFinder } from '@/components/SymbolFinder'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
-import type { LayerSummary, LayerTrigger } from '@/engine/layerSummary'
+import { describeTrigger, type LayerSummary, type LayerTrigger } from '@/engine/layerSummary'
+import { routeSteps } from '@/engine/symbolRoutes'
+import { overlayFaded } from '@/hooks/useOverlayFade'
 import {
   decodeKeycode,
   MOD_CTRL,

@@ -78,3 +78,22 @@ export function shiftKeysOf(keymap: number[][][]): Array<{ row: number; col: num
   })
   return keys
 }
+
+/** 経路の一歩(レイヤーに入る / Shift / キー)。 */
+export type RouteStep =
+  | { kind: 'layer'; layer: number; text: string }
+  | { kind: 'shift' }
+  | { kind: 'key'; text: string }
+
+/**
+ * 経路を手順に分ける。レイヤーは行き方(「Space 長押し」)で言い、無ければ番号。
+ * キーはベースレイヤーでの名前(L2 の @ でも「W」)。キーの位置はふだんの文字で覚えているので。
+ */
+export function routeSteps(route: SymbolRoute, keyName: string, how: string | null): RouteStep[] {
+  const steps: RouteStep[] = []
+  if (route.layer > 0)
+    steps.push({ kind: 'layer', layer: route.layer, text: how ?? `L${route.layer}` })
+  if (route.shift) steps.push({ kind: 'shift' })
+  steps.push({ kind: 'key', text: route.tap ? `${keyName} タップ` : keyName })
+  return steps
+}
