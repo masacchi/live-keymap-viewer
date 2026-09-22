@@ -38,9 +38,9 @@ export interface KeyCapProps {
 }
 
 const GAP = 0.08
-const BAND_HEIGHT = 15
+const BAND_HEIGHT = 17
 /** 色帯の文字の大きさ(px)。styles.css の .band-text と揃える。 */
-const BAND_FONT = 9
+const BAND_FONT = 11
 
 /** おおよその文字幅。全角は字の大きさ、半角はその 6 割として数える。 */
 function textWidth(text: string, fontSize: number): number {
@@ -51,14 +51,17 @@ function textWidth(text: string, fontSize: number): number {
 }
 
 /**
- * 長押しの色帯の文字。名前があれば名前で出し、キーの幅に収まらなければ短くする。
- * 名前が長すぎるときは番号に戻す(色でどのレイヤーかは分かる)。
+ * 長押しの色帯の文字。行き先のレイヤーだけを書く(「L2 記号」→「記号」→「L2」の順に、入るもの)。
+ *
+ * 以前は「長押し→L2」と書いていたが、9px でも 1u にぎりぎりで、傾いた親指キーでは読めなかった。
+ * 「長押しで」の部分はツールバーの一覧(L2 Space 長押し)とツールチップが言うので、帯は行き先だけに
+ * して字を大きくする。色でもどのレイヤーかは分かる。
  */
 function bandText(layer: number, name: string | undefined, width: number): string {
-  for (const text of name ? [`長押し→${name}`, `→${name}`] : []) {
+  for (const text of name ? [`L${layer} ${name}`, name] : []) {
     if (textWidth(text, BAND_FONT) <= width - 6) return text
   }
-  return `長押し→L${layer}`
+  return `L${layer}`
 }
 
 function mainFontSize(text: string): number {
@@ -292,13 +295,20 @@ export function KeyCap({
         </>
       )}
 
-      <title>{describe(keycode, label)}</title>
+      <title>{describe(keycode, label, holdLayer, holdLayerName)}</title>
     </g>
   )
 }
 
-function describe(keycode: Keycode, label: KeyLabel): string {
+function describe(
+  keycode: Keycode,
+  label: KeyLabel,
+  holdLayer: number | null,
+  holdLayerName: string | undefined
+): string {
   const parts = [label.main || '(なし)']
+  if (holdLayer !== null)
+    parts.push(`長押しで L${holdLayer}${holdLayerName ? ` ${holdLayerName}` : ''}`)
   if (label.shift) parts.push(`Shift: ${label.shift}`)
   if (label.sub) parts.push(label.sub)
   if (label.description) parts.push(label.description)

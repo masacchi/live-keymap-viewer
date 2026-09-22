@@ -11,8 +11,8 @@ import { UnlockPanel } from './components/UnlockPanel'
 import { Button } from './components/ui/Button'
 import { summarizeLayers } from './engine/layerSummary'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
-import { MOD_SHIFT } from './keycodes/decode'
-import type { LabelContext, LabelMode } from './keycodes/labels'
+import { decodeKeycode, MOD_SHIFT } from './keycodes/decode'
+import { type LabelContext, type LabelMode, labelForKeycode } from './keycodes/labels'
 import { cn } from './lib/cn'
 import { layerColor } from './lib/theme'
 
@@ -141,6 +141,20 @@ export default function App(): JSX.Element {
     [summaries, previewLayer]
   )
 
+  // アンロックで押すキーの名前。ロック中はレイヤーが動かないので、ベースレイヤーの表示で言う
+  const unlockKeyNames = useMemo(
+    () =>
+      (keyboard.unlock?.keys ?? []).map(
+        ({ row, col }) =>
+          labelForKeycode(
+            decodeKeycode(snapshot?.keymap[0]?.[row]?.[col] ?? 0),
+            labelMode,
+            labelContext
+          ).main
+      ),
+    [keyboard.unlock?.keys, snapshot, labelMode, labelContext]
+  )
+
   const uid = snapshot?.uid ?? null
   const names = (uid && layerNames[uid]) || []
   const onRename = useCallback(
@@ -173,8 +187,10 @@ export default function App(): JSX.Element {
         <Toolbar
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
+          // アンロック中は押下が読めず、レイヤーも切り替わらないので一覧は出さない
           layers={
-            ready && (
+            ready &&
+            keyboard.status !== 'unlocking' && (
               <LayerStrip
                 summaries={summaries}
                 activeLayers={layers.activeLayers}
@@ -189,7 +205,7 @@ export default function App(): JSX.Element {
               />
             )
           }
-          shift={shift}
+          mods={ready && keyboard.status !== 'unlocking' ? layers.mods : null}
           labelMode={labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}
@@ -236,7 +252,7 @@ export default function App(): JSX.Element {
         )}
 
         {keyboard.unlock && keyboard.status === 'unlocking' && (
-          <UnlockPanel unlock={keyboard.unlock} mock={keyboard.mock} />
+          <UnlockPanel unlock={keyboard.unlock} keyNames={unlockKeyNames} mock={keyboard.mock} />
         )}
 
         {ready ? (

@@ -95,10 +95,12 @@ describe('KeyboardView', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
-    expect(html).toContain('長押し→L1')
-    expect(html).toContain('長押し→L2')
-    expect(html).toContain('長押し→L3')
-    expect(html).toContain('長押し→L4')
+    // 帯は行き先だけ。「長押しで」はツールチップが言う
+    for (const layer of [1, 2, 3, 4]) {
+      expect(html).toContain(`<text class="band-text"`)
+      expect(html).toMatch(new RegExp(`class="band-text"[^>]*>L${layer}</text>`))
+      expect(html).toContain(`長押しで L${layer}`)
+    }
   })
 
   it('押されたキーに pressed が付く', () => {
@@ -120,7 +122,7 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     // 1u には「Space 長押し中」が収まらないので「長押し中」だけにする(キーの名前はツールチップ)
     expect(html).toContain('>長押し中<')
-    expect(html).toContain('<title>Space / raw 0x422c</title>')
+    expect(html).toContain('<title>Space / 長押しで L2 / raw 0x422c</title>')
     expect(html).toContain('>L2<')
     // L2 の (0,1) は LSFT(KC_1) → JIS では "!"
     expect(html).toContain('>!<')
@@ -241,11 +243,12 @@ describe('KeyboardView', () => {
       null,
       names
     )
-    // 1u のキーには「長押し→記号」が収まらないので「→記号」に縮める
-    expect(idle).toContain('>→記号<') // Space(L2)
-    expect(idle).toContain('>→数字<') // BS(L1)
-    expect(idle).toContain('>長押し→L3<') // 長すぎる名前は番号に戻す
-    expect(idle).toContain('>長押し→L4<') // 名前が無い
+    // 帯は「L2 記号」。入らなければ名前だけ、それも入らなければ番号
+    expect(idle).toContain('>L2 記号<') // Space
+    expect(idle).toContain('>L1 数字<') // BS
+    expect(idle).toMatch(/class="band-text"[^>]*>L3<\/text>/) // 長すぎる名前は番号に戻す
+    expect(idle).toMatch(/class="band-text"[^>]*>L4<\/text>/) // 名前が無い
+    expect(idle).toContain('長押しで L2 記号') // ツールチップには名前も出す
 
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[7][5] = true // LT2(KC_SPACE)

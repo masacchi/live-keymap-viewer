@@ -1,12 +1,13 @@
 /**
  * 通常ウィンドウのツールバー。常に 1 行。
  *
- *   [● Cornix LP ▾] [L0] [L1 BS 長押し] [L2 Space 長押し] … +5 空 [Shift]   [JIS|US] [オーバーレイへ]
+ *   [● Cornix LP ▾] [L0] [L1 BS 長押し] [L2 Space 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [オーバーレイへ]
  *
  * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
  * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
  *   大きな「L0」の札があり、下の段の一覧と同じことを 2 回言っていた。一覧をここに入れて 1 段減らし、
  *   そのぶん図を大きくする
+ *   の横に、いま効いているモディファイア
  * - 右: 表記の切り替えとオーバーレイ
  *
  * 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
@@ -16,6 +17,7 @@ import type { JSX, ReactNode } from 'react'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
+import { ModifierBadges } from './ModifierBadges'
 import { Button } from './ui/Button'
 import { Menu, MenuItem } from './ui/Menu'
 
@@ -24,8 +26,8 @@ export interface ToolbarProps {
   deviceLabel: string | null
   /** レイヤーの一覧。キーボードを読み込むまでは渡さない。 */
   layers?: ReactNode
-  /** Shift が効いているか(図では Shift で入る文字を目立たせている)。 */
-  shift: boolean
+  /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
+  mods: number | null
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
@@ -57,7 +59,7 @@ export function Toolbar({
   status,
   deviceLabel,
   layers,
-  shift,
+  mods,
   labelMode,
   windowMode,
   reloading,
@@ -97,11 +99,7 @@ export function Toolbar({
 
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {layers}
-        {shift && (
-          <span className="shrink-0 rounded-md bg-ink px-1.5 py-0.5 text-2xs font-bold leading-none text-ink-inverse">
-            Shift
-          </span>
-        )}
+        {mods !== null && <ModifierBadges mods={mods} />}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 md:gap-2">

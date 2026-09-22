@@ -3,11 +3,20 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { describeTrigger, LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
+import { ModifierBadges } from '@/components/ModifierBadges'
 import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
 import { PreviewNotice } from '@/components/PreviewNotice'
+import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
 import type { LayerSummary, LayerTrigger } from '@/engine/layerSummary'
-import { decodeKeycode, QK_LAYER_TAP, QK_MOMENTARY, QK_TOGGLE_LAYER } from '@/keycodes/decode'
+import {
+  decodeKeycode,
+  MOD_CTRL,
+  MOD_SHIFT,
+  QK_LAYER_TAP,
+  QK_MOMENTARY,
+  QK_TOGGLE_LAYER
+} from '@/keycodes/decode'
 
 describe('LoadingPanel', () => {
   it('読み込み中は、段の名前と何往復目かを出す', () => {
@@ -170,5 +179,43 @@ describe('Button', () => {
   it('主ボタンはレイヤー色を使わない(レイヤーの表示と見分けが付かなくなる)', () => {
     const html = renderToStaticMarkup(<Button variant="primary">接続</Button>)
     expect(html).not.toMatch(/layer-\d/)
+  })
+})
+
+describe('ModifierBadges', () => {
+  it('4 つとも並べ、効いているものだけ点ける', () => {
+    const html = renderToStaticMarkup(<ModifierBadges mods={MOD_CTRL | MOD_SHIFT} />)
+    const on = [...html.matchAll(/title="(\w+)[^"]*" data-on="(true|false)"/g)].map((m) => [
+      m[1],
+      m[2]
+    ])
+    expect(on).toEqual([
+      ['Ctrl', 'true'],
+      ['Shift', 'true'],
+      ['Alt', 'false'],
+      ['Win', 'false']
+    ])
+  })
+})
+
+describe('UnlockPanel', () => {
+  const unlock = {
+    keys: [
+      { row: 0, col: 0 },
+      { row: 0, col: 1 }
+    ],
+    counter: 25,
+    max: 50
+  }
+
+  it('押すキーを名前で言う', () => {
+    const html = renderToStaticMarkup(<UnlockPanel unlock={unlock} keyNames={['Tab', 'Q']} />)
+    expect(html).toMatch(/<kbd[^>]*>Tab<\/kbd> と <kbd[^>]*>Q<\/kbd> を同時に、/)
+    expect(html).toContain('width:50%')
+  })
+
+  it('名前が分からなければ図を指す', () => {
+    const html = renderToStaticMarkup(<UnlockPanel unlock={unlock} />)
+    expect(html).toContain('図で白い破線が回っているキー')
   })
 })
