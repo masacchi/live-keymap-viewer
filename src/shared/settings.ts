@@ -32,12 +32,21 @@ export interface Settings {
   overlayOpacity: number
   /** 一度許可した HID デバイス。次回から自動で繋ぐ。 */
   grantedDevices: GrantedDevice[]
+  /**
+   * レイヤーの名前。キーボードの UID ごとに、レイヤー番号の順に並べる('' は名前なし)。
+   * Vial にはレイヤー名が無いので、アプリ側で持つ。
+   */
+  layerNames: Record<string, string[]>
 }
 
 export const MIN_WINDOW_WIDTH = 420
 export const MIN_WINDOW_HEIGHT = 240
 /** これより薄くすると、操作パネルごと見えなくなって戻せなくなる。 */
 export const OVERLAY_OPACITY_MIN = 0.2
+/** レイヤー名の長さの上限(文字数)。ツールバーやキーの色帯に収まるように。 */
+export const LAYER_NAME_MAX_LENGTH = 12
+/** 名前を持てるレイヤーの数。Vial の上限(32)に合わせる。 */
+export const MAX_LAYERS = 32
 
 export const DEFAULT_BOUNDS: Bounds = { x: 80, y: 80, width: 1180, height: 620 }
 
@@ -47,7 +56,8 @@ export const DEFAULT_SETTINGS: Settings = {
   normalBounds: DEFAULT_BOUNDS,
   overlayBounds: DEFAULT_BOUNDS,
   overlayOpacity: 0.82,
-  grantedDevices: []
+  grantedDevices: [],
+  layerNames: {}
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -92,6 +102,53 @@ function sanitizeDevices(value: unknown): GrantedDevice[] {
   return out
 }
 
+/** キーボードの UID(64 ビットの 10 進数)か。layerNames のキーにはこれしか使わない。 */
+export function isKeyboardUid(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{1,20}$/.test(value)
+}
+
+/** 名前を 1 つ整える。前後の空白を落とし、長すぎれば切る(絵文字などを途中で割らない)。 */
+export function sanitizeLayerName(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return [...value.trim()].slice(0, LAYER_NAME_MAX_LENGTH).join('')
+}
+
+/** 1 台ぶんの名前の並び。末尾の名前なしは落とす。何も残らなければ null。 */
+function sanitizeNameList(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null
+  const names = value.slice(0, MAX_LAYERS).map(sanitizeLayerName)
+  while (names.length > 0 && names[names.length - 1] === '') names.pop()
+  return names.length > 0 ? names : null
+}
+
+function sanitizeLayerNames(value: unknown): Record<string, string[]> {
+  if (!isRecord(value)) return {}
+  const out: Record<string, string[]> = {}
+  for (const [uid, list] of Object.entries(value)) {
+    if (!isKeyboardUid(uid)) continue
+    const names = sanitizeNameList(list)
+    if (names) out[uid] = names
+  }
+  return out
+}
+
+/** 1 つのレイヤーの名前を変えた layerNames を返す(元は変えない)。空にすると名前を消す。 */
+export function withLayerName(
+  all: Readonly<Record<string, string[]>>,
+  uid: string,
+  layer: number,
+  name: string
+): Record<string, string[]> {
+  const list = [...(all[uid] ?? [])]
+  while (list.length <= layer) list.push('')
+  list[layer] = sanitizeLayerName(name)
+  const next = { ...all }
+  const cleaned = sanitizeNameList(list)
+  if (cleaned) next[uid] = cleaned
+  else delete next[uid]
+  return next
+}
+
 /** 何が入っていても、使える Settings にして返す。 */
 export function sanitizeSettings(raw: unknown): Settings {
   const value = isRecord(raw) ? raw : {}
@@ -101,7 +158,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     normalBounds: sanitizeBounds(value.normalBounds) ?? DEFAULT_SETTINGS.normalBounds,
     overlayBounds: sanitizeBounds(value.overlayBounds) ?? DEFAULT_SETTINGS.overlayBounds,
     overlayOpacity: clampOpacity(value.overlayOpacity),
-    grantedDevices: sanitizeDevices(value.grantedDevices)
+    grantedDevices: sanitizeDevices(value.grantedDevices),
+    layerNames: sanitizeLayerNames(value.layerNames)
   }
 }
 

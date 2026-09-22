@@ -28,6 +28,8 @@ export interface KeyboardViewProps {
    * 値をたどる。押しているキーの表示は実際の状態のまま。
    */
   previewLayer?: number | null
+  /** レイヤーの名前(番号順、'' は名前なし)。長押しの色帯などに使う。 */
+  layerNames?: readonly string[]
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
@@ -43,7 +45,8 @@ export function KeyboardView({
   encoderPlacement = 'bottom',
   unit = 58,
   onKeyClick,
-  previewLayer = null
+  previewLayer = null,
+  layerNames = []
 }: KeyboardViewProps): JSX.Element {
   // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
@@ -121,7 +124,7 @@ export function KeyboardView({
       viewBox={viewBox}
       className="w-full h-full"
       role="img"
-      aria-label={`レイヤー ${view.displayLayer} のキーマップ`}
+      aria-label={`レイヤー ${view.displayLayer}${layerNames[view.displayLayer] ? `(${layerNames[view.displayLayer]})` : ''} のキーマップ`}
     >
       {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
       {strip?.items.map((item) => (
@@ -150,6 +153,7 @@ export function KeyboardView({
             label={label}
             keycode={resolved.effective}
             holdLayer={holdLayer}
+            holdLayerName={holdLayer !== null ? layerNames[holdLayer] : undefined}
             pressed={held !== undefined}
             holding={held?.holdActive === true}
             transparent={resolved.transparent}

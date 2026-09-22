@@ -253,6 +253,18 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     expect(settings.loadSettings().labelMode).toBe('jis')
   })
 
+  it('レイヤー名は UID とレイヤー番号を確かめてから保存する', async () => {
+    const { settings } = await setup()
+    const uid = '16882930253541522617'
+    expect(await invoke('settings:set-layer-name', uid, 2, '記号')).toEqual(['', '', '記号'])
+    expect(settings.loadSettings().layerNames[uid]).toEqual(['', '', '記号'])
+    // UID でない・番号が範囲外・名前が文字列でない
+    expect(await invoke('settings:set-layer-name', '../etc', 0, 'x')).toEqual([])
+    expect(await invoke('settings:set-layer-name', uid, 99, 'x')).toEqual(['', '', '記号'])
+    expect(await invoke('settings:set-layer-name', uid, 2, { evil: true })).toEqual([])
+    expect(settings.loadSettings().layerNames).toEqual({})
+  })
+
   it('不透明度は範囲に丸め、数値でなければ既定値', async () => {
     await setup()
     expect(await invoke('window:set-overlay-opacity', 0)).toBe(0.2)

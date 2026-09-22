@@ -11,6 +11,7 @@ export type { Bounds, GrantedDevice, LabelMode, Settings, WindowMode } from './s
 export const IPC = {
   settingsGet: 'settings:get',
   settingsSetLabelMode: 'settings:set-label-mode',
+  settingsSetLayerName: 'settings:set-layer-name',
   windowGetMode: 'window:get-mode',
   windowToggleMode: 'window:toggle-mode',
   windowSetOverlayOpacity: 'window:set-overlay-opacity',
@@ -33,6 +34,11 @@ export interface HidCandidate {
 export interface RendererApi {
   getSettings(): Promise<Settings>
   setLabelMode(mode: LabelMode): Promise<LabelMode>
+  /**
+   * キーボード(UID)のレイヤーに名前を付ける。空文字で名前を消す。
+   * 長すぎる名前は切って保存し、そのキーボードの名前の並びを返す。
+   */
+  setLayerName(uid: string, layer: number, name: string): Promise<string[]>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

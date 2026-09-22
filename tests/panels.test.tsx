@@ -51,3 +51,22 @@ describe('LayerStrip', () => {
     expect(html).toContain('>戻る<')
   })
 })
+
+describe('LayerStrip: 名前', () => {
+  it('名前があれば番号の横に出す', () => {
+    const html = renderToStaticMarkup(
+      <LayerStrip
+        count={3}
+        activeLayers={[0]}
+        shownLayer={0}
+        preview={null}
+        names={['基本', '', '記号']}
+        onPreview={() => undefined}
+        onRename={() => undefined}
+      />
+    )
+    expect(html).toContain('L0<span class="ml-1 font-medium">基本</span>')
+    expect(html).toContain('L2<span class="ml-1 font-medium">記号</span>')
+    expect(html).toContain('ダブルクリックで名前を付ける')
+  })
+})

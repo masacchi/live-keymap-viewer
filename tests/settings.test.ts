@@ -7,7 +7,8 @@ import {
   MIN_WINDOW_WIDTH,
   OVERLAY_OPACITY_MIN,
   sanitizeBounds,
-  sanitizeSettings
+  sanitizeSettings,
+  withLayerName
 } from '../src/shared/settings'
 
 describe('sanitizeSettings', () => {
@@ -24,7 +25,8 @@ describe('sanitizeSettings', () => {
       normalBounds: { x: 10, y: 20, width: 800, height: 400 },
       overlayBounds: { x: 30, y: 40, width: 900, height: 500 },
       overlayOpacity: 0.5,
-      grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }]
+      grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
+      layerNames: { '16882930253541522617': ['基本', '', '記号'] }
     }
     expect(sanitizeSettings(settings)).toEqual(settings)
   })
@@ -60,6 +62,35 @@ describe('sanitizeSettings', () => {
 
   it('余計な項目は落とす', () => {
     expect(sanitizeSettings({ evil: true })).not.toHaveProperty('evil')
+  })
+})
+
+describe('レイヤー名', () => {
+  const UID = '16882930253541522617'
+
+  it('キーボードの UID ごとに読み、UID でないキーや壊れた並びは捨てる', () => {
+    const settings = sanitizeSettings({
+      layerNames: {
+        [UID]: ['基本', '', '記号'],
+        __proto__: ['x'],
+        'not-a-uid': ['x'],
+        '123': 'not an array'
+      }
+    })
+    expect(settings.layerNames).toEqual({ [UID]: ['基本', '', '記号'] })
+  })
+
+  it('長すぎる名前は切り、文字列でなければ名前なしにし、末尾の名前なしは落とす', () => {
+    const long = 'あ'.repeat(20)
+    const settings = sanitizeSettings({ layerNames: { [UID]: [` ${long} `, 42, '', ''] } })
+    expect(settings.layerNames[UID]).toEqual(['あ'.repeat(12)])
+  })
+
+  it('1 つだけ変えられ、空にすると消える(何も残らなければキーボードごと消える)', () => {
+    const named = withLayerName({}, UID, 2, '記号')
+    expect(named).toEqual({ [UID]: ['', '', '記号'] })
+    expect(withLayerName(named, UID, 0, '基本')[UID]).toEqual(['基本', '', '記号'])
+    expect(withLayerName(named, UID, 2, '  ')).toEqual({})
   })
 })
 

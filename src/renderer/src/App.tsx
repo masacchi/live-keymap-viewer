@@ -18,6 +18,8 @@ export default function App(): JSX.Element {
   const [labelMode, setLabelMode] = useState<LabelMode>('jis')
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [overlayOpacity, setOverlayOpacity] = useState(0.82)
+  /** キーボードの UID ごとのレイヤー名(設定の layerNames)。 */
+  const [layerNames, setLayerNames] = useState<Record<string, string[]>>({})
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
 
   // 設定を読み、オーバーレイなら body にクラスを付けて背景を透かす
@@ -26,6 +28,7 @@ export default function App(): JSX.Element {
       setLabelMode(settings.labelMode)
       setWindowMode(settings.mode)
       setOverlayOpacity(settings.overlayOpacity)
+      setLayerNames(settings.layerNames)
     })
   }, [])
 
@@ -93,11 +96,24 @@ export default function App(): JSX.Element {
   const previewLayer = overlay ? null : preview
   const shownLayer = previewLayer ?? layers?.displayLayer ?? 0
 
+  const uid = snapshot?.uid ?? null
+  const names = (uid && layerNames[uid]) || []
+  const onRename = useCallback(
+    (layer: number, name: string) => {
+      if (!uid) return
+      void window.api?.setLayerName(uid, layer, name).then((saved) => {
+        setLayerNames((current) => ({ ...current, [uid]: saved }))
+      })
+    },
+    [uid]
+  )
+
   return (
     <div className="app-shell relative flex h-full flex-col overflow-hidden">
       {overlay && (
         <OverlayControls
           displayLayer={layers?.displayLayer ?? 0}
+          displayLayerName={names[layers?.displayLayer ?? 0]}
           opacity={overlayOpacity}
           onOpacity={onOverlayOpacity}
           onExit={onToggleWindowMode}
@@ -109,6 +125,7 @@ export default function App(): JSX.Element {
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
           displayLayer={ready ? layers.displayLayer : null}
+          displayLayerName={ready ? names[layers.displayLayer] : undefined}
           shift={((layers?.mods ?? 0) & MOD_SHIFT) !== 0}
           labelMode={labelMode}
           windowMode={windowMode}
@@ -156,7 +173,9 @@ export default function App(): JSX.Element {
                 activeLayers={layers.activeLayers}
                 shownLayer={shownLayer}
                 preview={previewLayer}
+                names={names}
                 onPreview={setPreview}
+                onRename={window.api ? onRename : undefined}
               />
             )}
             {/*
@@ -189,6 +208,7 @@ export default function App(): JSX.Element {
                 unlockKeys={keyboard.unlock?.keys ?? []}
                 onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
                 previewLayer={previewLayer}
+                layerNames={names}
               />
             </div>
           </>

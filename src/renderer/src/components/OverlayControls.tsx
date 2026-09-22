@@ -12,6 +12,8 @@ import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState }
 
 export interface OverlayControlsProps {
   displayLayer: number
+  /** そのレイヤーの名前。無ければ番号だけ。 */
+  displayLayerName?: string
   opacity: number
   onOpacity: (value: number) => void
   onExit: () => void
@@ -19,6 +21,7 @@ export interface OverlayControlsProps {
 
 export function OverlayControls({
   displayLayer,
+  displayLayerName,
   opacity,
   onOpacity,
   onExit
@@ -101,6 +104,7 @@ export function OverlayControls({
           style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
         >
           L{displayLayer}
+          {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
         </span>
 
         <label className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">

@@ -38,7 +38,8 @@ function render(
   layers: LayerSnapshot,
   mode: 'jis' | 'us' = 'jis',
   unlockKeys: Array<{ row: number; col: number }> = [],
-  previewLayer: number | null = null
+  previewLayer: number | null = null,
+  layerNames: string[] = []
 ): string {
   return renderToStaticMarkup(
     <KeyboardView
@@ -49,6 +50,7 @@ function render(
       labelMode={mode}
       unlockKeys={unlockKeys}
       previewLayer={previewLayer}
+      layerNames={layerNames}
     />
   )
 }
@@ -192,6 +194,31 @@ describe('KeyboardView', () => {
     expect(html).toContain('key-trns')
     // 押しているキーの表示は実際の状態のまま
     expect(html).toContain('key-pressed')
+  })
+
+  it('レイヤーに名前があれば、長押しの色帯と長押し中のキーで名前を使う', () => {
+    const engine = newEngine()
+    const names = ['', '数字', '記号', 'とても長いレイヤー名']
+    const idle = render(
+      engine,
+      engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0),
+      'jis',
+      [],
+      null,
+      names
+    )
+    // 1u のキーには「長押し→記号」が収まらないので「→記号」に縮める
+    expect(idle).toContain('>→記号<') // Space(L2)
+    expect(idle).toContain('>→数字<') // BS(L1)
+    expect(idle).toContain('>長押し→L3<') // 長すぎる名前は番号に戻す
+    expect(idle).toContain('>長押し→L4<') // 名前が無い
+
+    const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
+    matrix[7][5] = true // LT2(KC_SPACE)
+    engine.update(matrix, 0)
+    const holding = render(engine, engine.update(matrix, 300), 'jis', [], null, names)
+    expect(holding).toContain('>記号<')
+    expect(holding).toContain('レイヤー 2(記号) のキーマップ')
   })
 
   it('ノブの割り当てを、そのレイヤーの内容で出す', () => {

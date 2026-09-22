@@ -6,7 +6,7 @@
  */
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { LabelMode } from '../shared/settings'
+import { isKeyboardUid, type LabelMode, MAX_LAYERS, withLayerName } from '../shared/settings'
 import type { HidPermissions } from './hid'
 import { loadSettings, saveSettings } from './settings'
 import type { WindowManager } from './windows'
@@ -23,6 +23,25 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
     saveSettings({ labelMode })
     return labelMode
   })
+
+  ipcMain.handle(
+    IPC.settingsSetLayerName,
+    (_event, uid: unknown, layer: unknown, name: unknown): string[] => {
+      if (!isKeyboardUid(uid)) return []
+      const current = loadSettings().layerNames
+      if (!Number.isInteger(layer) || (layer as number) < 0 || (layer as number) >= MAX_LAYERS) {
+        return current[uid] ?? []
+      }
+      const layerNames = withLayerName(
+        current,
+        uid,
+        layer as number,
+        typeof name === 'string' ? name : ''
+      )
+      saveSettings({ layerNames })
+      return layerNames[uid] ?? []
+    }
+  )
 
   ipcMain.handle(IPC.windowGetMode, () => windows.mode)
 

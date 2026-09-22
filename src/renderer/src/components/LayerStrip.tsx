@@ -4,8 +4,11 @@
  * 押すとそのレイヤーを図に出す(プレビュー)。キーマップを覚えるときに、レイヤーキーを
  * 押さえ続けなくても中身を見られるように。次にキーを押すと実際の表示に戻る(App.tsx)。
  * オーバーレイはクリックが透過するので、通常ウィンドウでだけ出す。
+ *
+ * ダブルクリックでレイヤーに名前を付けられる(Enter で決定、Esc でやめる、空にすると消す)。
  */
-import type { JSX } from 'react'
+import { type JSX, useEffect, useRef, useState } from 'react'
+import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
 
 export interface LayerStripProps {
   /** レイヤーの数。 */
@@ -16,7 +19,11 @@ export interface LayerStripProps {
   shownLayer: number
   /** プレビュー中のレイヤー。していなければ null。 */
   preview: number | null
+  /** レイヤーの名前(番号順、'' は名前なし)。 */
+  names?: readonly string[]
   onPreview: (layer: number | null) => void
+  /** 名前を付けた(空なら消した)とき。渡さなければ名前は付けられない。 */
+  onRename?: (layer: number, name: string) => void
 }
 
 export function LayerStrip({
@@ -24,22 +31,45 @@ export function LayerStrip({
   activeLayers,
   shownLayer,
   preview,
-  onPreview
+  names = [],
+  onPreview,
+  onRename
 }: LayerStripProps): JSX.Element {
   const active = new Set(activeLayers)
+  /** 名前を編集しているレイヤー。 */
+  const [editing, setEditing] = useState<number | null>(null)
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {Array.from({ length: count }, (_, layer) => {
         const color = `var(--layer-${layer % 10})`
         const filled = active.has(layer)
+        if (editing === layer && onRename) {
+          return (
+            <NameInput
+              // biome-ignore lint/suspicious/noArrayIndexKey: レイヤー番号そのものが識別子
+              key={layer}
+              layer={layer}
+              initial={names[layer] ?? ''}
+              color={color}
+              onDone={(name) => {
+                setEditing(null)
+                if (name !== null) onRename(layer, name)
+              }}
+            />
+          )
+        }
         return (
           <button
             // biome-ignore lint/suspicious/noArrayIndexKey: レイヤー番号そのものが識別子
             key={layer}
             type="button"
-            title={preview === layer ? '実際の表示に戻る' : `L${layer} を見る(キーを押すと戻る)`}
+            title={
+              (preview === layer ? '実際の表示に戻る' : `L${layer} を見る(キーを押すと戻る)`) +
+              (onRename ? '。ダブルクリックで名前を付ける' : '')
+            }
             onClick={() => onPreview(preview === layer ? null : layer)}
+            onDoubleClick={() => onRename && setEditing(layer)}
             className={[
               'rounded border px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors',
               filled ? 'text-neutral-900' : 'text-[var(--muted)] hover:text-[var(--ink)]',
@@ -54,6 +84,7 @@ export function LayerStrip({
             }}
           >
             L{layer}
+            {names[layer] && <span className="ml-1 font-medium">{names[layer]}</span>}
           </button>
         )
       })}
@@ -70,5 +101,49 @@ export function LayerStrip({
         </span>
       )}
     </div>
+  )
+}
+
+/** レイヤー名の入力欄。Enter か欄の外で決定、Esc でやめる(onDone に null)。 */
+function NameInput({
+  layer,
+  initial,
+  color,
+  onDone
+}: {
+  layer: number
+  initial: string
+  color: string
+  onDone: (name: string | null) => void
+}): JSX.Element {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    ref.current?.focus()
+    ref.current?.select()
+  }, [])
+  // Esc でやめたあと、欄が消えるときの blur で保存してしまわないよう、決まるのは 1 回だけ
+  const finished = useRef(false)
+  const finish = (name: string | null): void => {
+    if (finished.current) return
+    finished.current = true
+    onDone(name)
+  }
+  return (
+    <input
+      ref={ref}
+      aria-label={`L${layer} の名前`}
+      placeholder={`L${layer} の名前`}
+      defaultValue={initial}
+      maxLength={LAYER_NAME_MAX_LENGTH}
+      onKeyDown={(event) => {
+        // App の Esc(プレビューをやめる)まで届かせない
+        event.stopPropagation()
+        if (event.key === 'Enter') finish(event.currentTarget.value)
+        if (event.key === 'Escape') finish(null)
+      }}
+      onBlur={(event) => finish(event.currentTarget.value)}
+      className="w-28 rounded border bg-[var(--surface)] px-2 py-0.5 text-xs text-[var(--ink)] outline-none"
+      style={{ borderColor: color }}
+    />
   )
 }

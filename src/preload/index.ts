@@ -5,6 +5,8 @@ import { type HidCandidate, IPC, type LabelMode, type RendererApi } from '../sha
 const api: RendererApi = {
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   setLabelMode: (mode: LabelMode) => ipcRenderer.invoke(IPC.settingsSetLabelMode, mode),
+  setLayerName: (uid: string, layer: number, name: string) =>
+    ipcRenderer.invoke(IPC.settingsSetLayerName, uid, layer, name),
 
   getMode: () => ipcRenderer.invoke(IPC.windowGetMode),
   toggleMode: () => ipcRenderer.invoke(IPC.windowToggleMode),

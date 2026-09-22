@@ -16,6 +16,8 @@ export interface KeyCapProps {
   keycode: Keycode
   /** このキーを長押しすると出るレイヤー。無ければ null。 */
   holdLayer: number | null
+  /** そのレイヤーの名前。無ければ番号で出す。 */
+  holdLayerName?: string
   pressed: boolean
   /** 押されていて、かつ長押しレイヤーが有効になっているか。 */
   holding: boolean
@@ -30,6 +32,27 @@ export interface KeyCapProps {
 
 const GAP = 0.08
 const BAND_HEIGHT = 15
+/** 色帯の文字の大きさ(px)。styles.css の .band-text と揃える。 */
+const BAND_FONT = 9
+
+/** おおよその文字幅。全角は字の大きさ、半角はその 6 割として数える。 */
+function textWidth(text: string, fontSize: number): number {
+  let width = 0
+  for (const ch of text)
+    width += /[\u2190-\u21ff\u3000-\u9fff\uff00-\uffef]/.test(ch) ? fontSize : fontSize * 0.6
+  return width
+}
+
+/**
+ * 長押しの色帯の文字。名前があれば名前で出し、キーの幅に収まらなければ短くする。
+ * 名前が長すぎるときは番号に戻す(色でどのレイヤーかは分かる)。
+ */
+function bandText(layer: number, name: string | undefined, width: number): string {
+  for (const text of name ? [`長押し→${name}`, `→${name}`] : []) {
+    if (textWidth(text, BAND_FONT) <= width - 6) return text
+  }
+  return `長押し→L${layer}`
+}
 
 function mainFontSize(text: string): number {
   const length = [...text].length
@@ -45,6 +68,7 @@ export function KeyCap({
   label,
   keycode,
   holdLayer,
+  holdLayerName,
   pressed,
   holding,
   transparent,
@@ -120,8 +144,13 @@ export function KeyCap({
 
       {holding ? (
         <>
-          <text className="main" x={cx} y={cy - 9} fontSize={13}>
-            {`L${holdLayer}`}
+          <text
+            className="main"
+            x={cx}
+            y={cy - 9}
+            fontSize={holdLayerName ? Math.min(13, mainFontSize(holdLayerName)) : 13}
+          >
+            {holdLayerName || `L${holdLayer}`}
           </text>
           <text className="sub" x={cx} y={cy + 8}>
             {`${label.main} 長押し中`}
@@ -156,7 +185,7 @@ export function KeyCap({
                 fill={`var(--layer-${holdLayer % 10})`}
               />
               <text className="band-text" x={cx} y={y + height - BAND_HEIGHT / 2}>
-                {`長押し→L${holdLayer}`}
+                {bandText(holdLayer, holdLayerName, width)}
               </text>
             </>
           )}

@@ -7,6 +7,8 @@ export interface ToolbarProps {
   deviceLabel: string | null
   /** 表示しているレイヤー。キーボードを読み込むまでは null(出さない)。 */
   displayLayer: number | null
+  /** そのレイヤーの名前。無ければ番号だけ。 */
+  displayLayerName?: string
   /** Shift が効いているか(図では Shift で入る文字を目立たせている)。 */
   shift: boolean
   labelMode: LabelMode
@@ -65,6 +67,7 @@ export function Toolbar({
   status,
   deviceLabel,
   displayLayer,
+  displayLayerName,
   shift,
   labelMode,
   windowMode,
@@ -92,6 +95,9 @@ export function Toolbar({
             style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
           >
             L{displayLayer}
+            {displayLayerName && (
+              <span className="ml-1.5 text-sm font-semibold">{displayLayerName}</span>
+            )}
           </span>
           {shift && (
             <span className="rounded bg-[var(--ink)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-neutral-900">
