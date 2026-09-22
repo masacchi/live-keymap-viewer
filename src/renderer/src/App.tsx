@@ -1,16 +1,18 @@
-import { type JSX, useCallback, useEffect, useRef, useState } from 'react'
+import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
 import { LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
 import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
+import { PreviewNotice } from './components/PreviewNotice'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { Button } from './components/ui/Button'
+import { summarizeLayers } from './engine/layerSummary'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
-import type { LabelMode } from './keycodes/labels'
+import type { LabelContext, LabelMode } from './keycodes/labels'
 import { cn } from './lib/cn'
 import { layerColor } from './lib/theme'
 
@@ -79,16 +81,22 @@ export default function App(): JSX.Element {
   const overlay = windowMode === 'overlay'
 
   /**
-   * プレビュー中のレイヤー(LayerStrip で選ぶ)。キーを押したら実際の表示に戻す ―
-   * 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違うので。
+   * プレビュー中のレイヤー(LayerStrip で選ぶ)。ポインタを乗せているあいだ(hovered)と、
+   * 押して固定したもの(preview)がある。乗せている方が勝つ。
+   * キーを押したらどちらもやめて実際の表示に戻す ― 打ち始めたのに違うレイヤーが出たままだと、
+   * 押したキーと図が食い違うので。
    */
   const [preview, setPreview] = useState<number | null>(null)
+  const [hovered, setHovered] = useState<number | null>(null)
   const heldRef = useRef<ReadonlySet<string>>(new Set())
   useEffect(() => {
     const held = new Set(layers?.held.keys() ?? [])
     const pressedNew = [...held].some((id) => !heldRef.current.has(id))
     heldRef.current = held
-    if (pressedNew) setPreview(null)
+    if (pressedNew) {
+      setPreview(null)
+      setHovered(null)
+    }
   }, [layers])
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -100,10 +108,15 @@ export default function App(): JSX.Element {
   // キーボードが替わったり、レイヤーの数が減ったりしたら、その番号は意味を失う
   const layerCount = snapshot?.layers ?? 0
   useEffect(() => {
-    setPreview((current) => (current !== null && current < layerCount ? current : null))
+    const valid = (current: number | null) =>
+      current !== null && current < layerCount ? current : null
+    setPreview(valid)
+    setHovered(valid)
   }, [layerCount])
 
-  const previewLayer = overlay ? null : preview
+  const requested = overlay ? null : (hovered ?? preview)
+  // 実際に出ているレイヤーを「プレビュー」しても何も変わらないので、札や破線は出さない
+  const previewLayer = requested === layers?.displayLayer ? null : requested
   const shownLayer = previewLayer ?? layers?.displayLayer ?? 0
 
   const shift = ((layers?.mods ?? 0) & MOD_SHIFT) !== 0
@@ -116,6 +129,17 @@ export default function App(): JSX.Element {
       status: keyboard.status,
       error: keyboard.error
     })
+
+  const summaries = useMemo(() => (snapshot ? summarizeLayers(snapshot) : []), [snapshot])
+  const labelContext = useMemo<LabelContext>(
+    () => ({ customKeycodes: snapshot?.definition.customKeycodes, tapDance: snapshot?.tapDance }),
+    [snapshot]
+  )
+  // プレビュー中は、そのレイヤーに入るキーを図の上で縁取る(「このキーでここに来る」)
+  const triggerKeys = useMemo(
+    () => (previewLayer === null ? [] : (summaries[previewLayer]?.triggers ?? [])),
+    [summaries, previewLayer]
+  )
 
   const uid = snapshot?.uid ?? null
   const names = (uid && layerNames[uid]) || []
@@ -149,8 +173,22 @@ export default function App(): JSX.Element {
         <Toolbar
           status={keyboard.status}
           deviceLabel={keyboard.deviceLabel}
-          displayLayer={ready ? layers.displayLayer : null}
-          displayLayerName={ready ? names[layers.displayLayer] : undefined}
+          layers={
+            ready && (
+              <LayerStrip
+                summaries={summaries}
+                activeLayers={layers.activeLayers}
+                shownLayer={shownLayer}
+                preview={preview}
+                names={names}
+                labelMode={labelMode}
+                labelContext={labelContext}
+                onPreview={setPreview}
+                onHover={setHovered}
+                onRename={window.api ? onRename : undefined}
+              />
+            )
+          }
           shift={shift}
           labelMode={labelMode}
           windowMode={windowMode}
@@ -203,24 +241,13 @@ export default function App(): JSX.Element {
 
         {ready ? (
           <>
-            {!overlay && (
-              <LayerStrip
-                count={snapshot.layers}
-                activeLayers={layers.activeLayers}
-                shownLayer={shownLayer}
-                preview={previewLayer}
-                names={names}
-                onPreview={setPreview}
-                onRename={window.api ? onRename : undefined}
-              />
-            )}
             {/*
              * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、
              * 背景にも薄く同じ色を敷く。視線がキーの上にあっても気づけるように。
-             * プレビュー中は縁を破線にして、実際の状態ではないことを示す。
+             * プレビュー中は縁を破線にして、実際の状態ではないことを示し、縁の上に札を出す。
              */}
             <div
-              className="min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
+              className="relative min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
               style={
                 shownLayer === 0
                   ? {
@@ -235,6 +262,14 @@ export default function App(): JSX.Element {
                     }
               }
             >
+              {previewLayer !== null && (
+                <PreviewNotice
+                  layer={previewLayer}
+                  name={names[previewLayer]}
+                  pinned={hovered === null}
+                  onExit={() => setPreview(null)}
+                />
+              )}
               <KeyboardView
                 geometry={geometry}
                 snapshot={snapshot}
@@ -245,6 +280,7 @@ export default function App(): JSX.Element {
                 onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
                 previewLayer={previewLayer}
                 layerNames={names}
+                highlightKeys={triggerKeys}
               />
             </div>
           </>

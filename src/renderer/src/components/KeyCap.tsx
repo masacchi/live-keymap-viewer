@@ -29,6 +29,8 @@ export interface KeyCapProps {
   transparent: boolean
   /** アンロックのために押すべきキーか。 */
   unlockHint: boolean
+  /** 縁取るか(プレビュー中の、そのレイヤーに入るキー)。色は --trigger。 */
+  highlight?: boolean
   /** Shift が効いているか。Shift で入る文字が変わるキーは、そちらを主にして目立たせる。 */
   shifted?: boolean
   unit: number
@@ -156,6 +158,7 @@ export function KeyCap({
   holding,
   transparent,
   unlockHint,
+  highlight = false,
   shifted = false,
   unit,
   onClick
@@ -180,6 +183,7 @@ export function KeyCap({
     // 「いまどのキーのせいでこのレイヤーなのか」が一目で分かるように。
     'key-holding': holding,
     'key-unlock': unlockHint,
+    'key-trigger': highlight,
     'key-shifted': swapShift,
     'key-clickable': onClick !== undefined
   })

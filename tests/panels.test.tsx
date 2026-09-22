@@ -1,10 +1,13 @@
 /** ツールバーや案内など、キーボード図以外の部品を静的に描いて確かめる。 */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { LayerStrip } from '@/components/LayerStrip'
+import { describeTrigger, LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
 import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
+import { PreviewNotice } from '@/components/PreviewNotice'
 import { Button } from '@/components/ui/Button'
+import type { LayerSummary, LayerTrigger } from '@/engine/layerSummary'
+import { decodeKeycode, QK_LAYER_TAP, QK_MOMENTARY, QK_TOGGLE_LAYER } from '@/keycodes/decode'
 
 describe('LoadingPanel', () => {
   it('読み込み中は、段の名前と何往復目かを出す', () => {
@@ -26,50 +29,102 @@ describe('LoadingPanel', () => {
   })
 })
 
-describe('LayerStrip', () => {
-  const strip = (preview: number | null) =>
-    renderToStaticMarkup(
-      <LayerStrip
-        count={10}
-        activeLayers={[0, 2]}
-        shownLayer={preview ?? 2}
-        preview={preview}
-        onPreview={() => undefined}
-      />
-    )
+const noop = () => undefined
 
-  it('レイヤーの数だけ並べ、有効なレイヤーはその色で塗る', () => {
-    const html = strip(null)
-    expect(html.match(/<button/g)).toHaveLength(10)
+/** Cornix と同じく、L0〜L4 に中身があり L5〜L9 は空、という一覧。 */
+function cornixLike(triggers: Partial<Record<number, LayerTrigger[]>> = {}): LayerSummary[] {
+  return Array.from({ length: 10 }, (_, layer) => ({
+    layer,
+    triggers: triggers[layer] ?? [],
+    blank: layer >= 5
+  }))
+}
+
+function strip(props: Partial<Parameters<typeof LayerStrip>[0]> = {}): string {
+  return renderToStaticMarkup(
+    <LayerStrip
+      summaries={cornixLike()}
+      activeLayers={[0, 2]}
+      shownLayer={2}
+      preview={null}
+      labelMode="jis"
+      labelContext={{}}
+      onPreview={noop}
+      onHover={noop}
+      {...props}
+    />
+  )
+}
+
+describe('LayerStrip', () => {
+  it('出しているレイヤーは塗り、ほかに有効なものは薄く塗り、無効なものは枠だけにする', () => {
+    const html = strip()
     expect(html).toContain('background-color:var(--color-layer-2)')
-    expect(html).toContain('background-color:var(--color-layer-0)')
+    expect(html).toContain(
+      'background-color:color-mix(in srgb, var(--color-layer-0) 28%, transparent)'
+    )
     expect(html).not.toContain('background-color:var(--color-layer-1)')
-    expect(html).not.toContain('プレビュー中')
   })
 
-  it('プレビュー中は、そう書いて戻るボタンを出す', () => {
-    const html = strip(5)
-    expect(html).toContain('L5 をプレビュー中')
-    expect(html).toContain('>戻る<')
+  it('中身の無いレイヤーは「+5 空」に畳む', () => {
+    const html = strip()
+    expect(html.match(/>L\d</g)).toEqual(['>L0<', '>L1<', '>L2<', '>L3<', '>L4<'])
+    expect(html).toContain('+5 空')
+  })
+
+  it('空のレイヤーでも、有効になっていれば畳まずに出す', () => {
+    const html = strip({ activeLayers: [0, 7], shownLayer: 7 })
+    expect(html).toContain('>L7<')
+    expect(html).toContain('+4 空')
+  })
+
+  it('そのレイヤーへの行き方を添える', () => {
+    const space: LayerTrigger = {
+      fromLayer: 0,
+      row: 7,
+      col: 5,
+      kind: 'hold',
+      keycode: decodeKeycode(QK_LAYER_TAP | (2 << 8) | 0x2c) // LT2(KC_SPACE)
+    }
+    const html = strip({ summaries: cornixLike({ 2: [space] }) })
+    expect(html).toContain('>Space 長押し<')
+    expect(html).toContain('title="L2: Space 長押し。')
+  })
+
+  it('名前があれば番号の横に出す', () => {
+    const html = strip({ names: ['基本', '', '記号'], onRename: noop })
+    expect(html).toContain('<span>L0</span><span class="font-medium max-md:hidden">基本</span>')
+    expect(html).toContain('<span>L2</span><span class="font-medium max-md:hidden">記号</span>')
+    expect(html).toContain('ダブルクリックで名前を付ける')
   })
 })
 
-describe('LayerStrip: 名前', () => {
-  it('名前があれば番号の横に出す', () => {
+describe('describeTrigger', () => {
+  const at = (fromLayer: number, raw: number, kind: LayerTrigger['kind']) =>
+    describeTrigger({ fromLayer, row: 0, col: 0, kind, keycode: decodeKeycode(raw) }, 'jis', {})
+
+  it('LT はタップ側の文字、TG はキーの名前で言い、ベース以外にあるキーはレイヤーを先に書く', () => {
+    expect(at(0, QK_LAYER_TAP | (1 << 8) | 0x2a, 'hold')).toBe('BS 長押し')
+    expect(at(0, QK_TOGGLE_LAYER | 3, 'toggle')).toBe('TG3 で固定')
+    expect(at(1, QK_MOMENTARY | 4, 'momentary')).toBe('L1 → MO4 押す間')
+  })
+})
+
+describe('PreviewNotice', () => {
+  it('押して固定したプレビューは、戻り方と「戻る」を出す', () => {
+    const html = renderToStaticMarkup(<PreviewNotice layer={5} pinned onExit={noop} />)
+    expect(html).toContain('をプレビュー中')
+    expect(html).toContain('キーを押すか Esc で戻る')
+    expect(html).toContain('>戻る<')
+  })
+
+  it('ポインタを乗せているだけなら「戻る」は出さない', () => {
     const html = renderToStaticMarkup(
-      <LayerStrip
-        count={3}
-        activeLayers={[0]}
-        shownLayer={0}
-        preview={null}
-        names={['基本', '', '記号']}
-        onPreview={() => undefined}
-        onRename={() => undefined}
-      />
+      <PreviewNotice layer={3} name="記号" pinned={false} onExit={noop} />
     )
-    expect(html).toContain('L0<span class="ml-1 font-medium max-md:hidden">基本</span>')
-    expect(html).toContain('L2<span class="ml-1 font-medium max-md:hidden">記号</span>')
-    expect(html).toContain('ダブルクリックで名前を付ける')
+    expect(html).toContain('L3 記号')
+    expect(html).toContain('ポインタを外すと戻る')
+    expect(html).not.toContain('>戻る<')
   })
 })
 

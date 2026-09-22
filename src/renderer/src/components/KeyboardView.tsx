@@ -8,6 +8,7 @@ import { holdLayerOf } from '../keycodes/tapDance'
 import { type EncoderPlacement, layoutEncoderStrip, viewBoxFor } from '../layout/encoderStrip'
 import { type KeyboardGeometry, keyId, visibleKeys } from '../layout/geometry'
 import { decodeLayoutOptions } from '../layout/layoutOptions'
+import { layerColor } from '../lib/theme'
 import { KeyCap } from './KeyCap'
 
 export interface KeyboardViewProps {
@@ -30,6 +31,11 @@ export interface KeyboardViewProps {
   previewLayer?: number | null
   /** レイヤーの名前(番号順、'' は名前なし)。長押しの色帯などに使う。 */
   layerNames?: readonly string[]
+  /**
+   * 縁取るキー。プレビュー中に、そのレイヤーに入るキー(Space など)を示すのに使う。
+   * 色は図に出しているレイヤーの色。
+   */
+  highlightKeys?: ReadonlyArray<{ row: number; col: number }>
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
@@ -46,7 +52,8 @@ export function KeyboardView({
   unit = 58,
   onKeyClick,
   previewLayer = null,
-  layerNames = []
+  layerNames = [],
+  highlightKeys = []
 }: KeyboardViewProps): JSX.Element {
   // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
@@ -87,6 +94,10 @@ export function KeyboardView({
   )
 
   const unlockSet = useMemo(() => new Set(unlockKeys.map((k) => keyId(k.row, k.col))), [unlockKeys])
+  const highlightSet = useMemo(
+    () => new Set(highlightKeys.map((k) => keyId(k.row, k.col))),
+    [highlightKeys]
+  )
 
   const strip = useMemo(() => {
     const items = geometry.encoders
@@ -124,6 +135,7 @@ export function KeyboardView({
       viewBox={viewBox}
       className="w-full h-full"
       role="img"
+      style={{ '--trigger': layerColor(view.displayLayer) } as React.CSSProperties}
       aria-label={`レイヤー ${view.displayLayer}${layerNames[view.displayLayer] ? `(${layerNames[view.displayLayer]})` : ''} のキーマップ`}
     >
       {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
@@ -163,6 +175,7 @@ export function KeyboardView({
             // 押しているキーは押した瞬間の値を出しているので、透過をたどった体(薄い表示)にしない
             transparent={held ? false : resolved.transparent}
             unlockHint={unlockSet.has(id)}
+            highlight={highlightSet.has(id)}
             shifted={shifted}
             unit={unit}
             onClick={onKeyClick && (() => onKeyClick(physical.row, physical.col))}

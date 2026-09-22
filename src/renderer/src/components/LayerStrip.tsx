@@ -1,57 +1,100 @@
 /**
- * レイヤーの一覧。有効なレイヤーは塗り、いま図に出しているレイヤーには輪を付ける。
+ * レイヤーの一覧(ツールバーの中)。
  *
- * 押すとそのレイヤーを図に出す(プレビュー)。キーマップを覚えるときに、レイヤーキーを
- * 押さえ続けなくても中身を見られるように。次にキーを押すと実際の表示に戻る(App.tsx)。
- * オーバーレイはクリックが透過するので、通常ウィンドウでだけ出す。
- *
- * ダブルクリックでレイヤーに名前を付けられる(Enter で決定、Esc でやめる、空にすると消す)。
+ * - いま図に出しているレイヤーはその色で塗り、輪を付ける。ほかに有効なレイヤー(L2 の下の L0 など)は
+ *   薄く塗る。以前は有効なものをすべて同じに塗っていて、どれが出ているのか輪でしか分からなかった
+ * - 番号の横に「Space 長押し」のような**そのレイヤーへの行き方**を出す(engine/layerSummary.ts)
+ * - 中身の無いレイヤー(Cornix の L5〜L9)は「+5」に畳む。有効になったら畳んでいても出す
+ * - ポインタを乗せているあいだ、そのレイヤーを図に出す(プレビュー)。押すとプレビューのまま固定し、
+ *   もう一度押すか、キーを押すか Esc で戻る(App.tsx)。キーマップを覚えるときに、レイヤーキーを
+ *   押さえ続けなくても中身を見られるように。オーバーレイはクリックが透過するので出さない
+ * - ダブルクリックでレイヤーに名前を付けられる(Enter で決定、Esc でやめる、空にすると消す)
  */
 import { type JSX, useEffect, useRef, useState } from 'react'
 import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
+import type { LayerSummary, LayerTrigger, TriggerKind } from '../engine/layerSummary'
+import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
-import { Button } from './ui/Button'
+
+/** 入り方ごとの言い方。キーの名前の後ろに付ける。 */
+const KIND_TEXT: Record<TriggerKind, string> = {
+  hold: '長押し',
+  momentary: '押す間',
+  toggle: 'で固定',
+  to: 'で移動',
+  default: 'で既定',
+  oneshot: 'で 1 回',
+  tapToggle: '押す間'
+}
+
+/**
+ * 行き方の短い説明。LT / Tap Dance はタップ側の文字(「Space 長押し」)、MO や TG は
+ * キーそのものの名前(「TG2 で固定」)で言う。ベースレイヤー以外にあるキーなら、先にそのレイヤーを書く。
+ */
+export function describeTrigger(
+  trigger: LayerTrigger,
+  mode: LabelMode,
+  context: LabelContext
+): string {
+  const name = labelForKeycode(trigger.keycode, mode, context).main
+  const from = trigger.fromLayer === 0 ? '' : `L${trigger.fromLayer} → `
+  return `${from}${name} ${KIND_TEXT[trigger.kind]}`
+}
 
 export interface LayerStripProps {
-  /** レイヤーの数。 */
-  count: number
+  summaries: readonly LayerSummary[]
   /** 実際に有効なレイヤー(プレビューとは関係なく、キーボードの状態)。 */
   activeLayers: readonly number[]
   /** 図に出しているレイヤー(プレビュー中ならそのレイヤー)。 */
   shownLayer: number
-  /** プレビュー中のレイヤー。していなければ null。 */
+  /** 押して固定したプレビュー。していなければ null。 */
   preview: number | null
   /** レイヤーの名前(番号順、'' は名前なし)。 */
   names?: readonly string[]
+  labelMode: LabelMode
+  labelContext: LabelContext
+  /** 押したとき。固定のプレビューを切り替える(null で戻る)。 */
   onPreview: (layer: number | null) => void
+  /** ポインタを乗せた / 外したとき(外したら null)。 */
+  onHover: (layer: number | null) => void
   /** 名前を付けた(空なら消した)とき。渡さなければ名前は付けられない。 */
   onRename?: (layer: number, name: string) => void
 }
 
 export function LayerStrip({
-  count,
+  summaries,
   activeLayers,
   shownLayer,
   preview,
   names = [],
+  labelMode,
+  labelContext,
   onPreview,
+  onHover,
   onRename
 }: LayerStripProps): JSX.Element {
   const active = new Set(activeLayers)
   /** 名前を編集しているレイヤー。 */
   const [editing, setEditing] = useState<number | null>(null)
+  /** 空のレイヤーも並べるか。 */
+  const [showBlank, setShowBlank] = useState(false)
+
+  // 空でも、いま効いている・出している・編集しているレイヤーは隠さない
+  const visible = (s: LayerSummary): boolean =>
+    !s.blank || showBlank || active.has(s.layer) || s.layer === shownLayer || s.layer === editing
+  const hiddenBlank = summaries.filter((s) => !visible(s))
+  const blankCount = summaries.filter((s) => s.blank).length
 
   return (
-    // 低いウィンドウでは隠す。図に使える高さの方が大事で、プレビューや名前付けは広げてから使えば足りる
-    <div className="flex flex-wrap items-center gap-1.5 [@media(max-height:420px)]:hidden">
-      {Array.from({ length: count }, (_, layer) => {
+    // 幅が足りなければ横に流す(折り返すとツールバーが 2 行になり、図に使える高さが減る)。
+    // 流せる枠は縦にもはみ出しを切るので、輪(ring-offset)のぶん余白を取り、負のマージンで高さを戻す
+    <div className="-my-1 flex min-w-0 items-center gap-1 overflow-x-auto px-1 py-1 [scrollbar-width:none]">
+      {summaries.filter(visible).map(({ layer, triggers }) => {
         const color = layerColor(layer)
-        const filled = active.has(layer)
         if (editing === layer && onRename) {
           return (
             <NameInput
-              // biome-ignore lint/suspicious/noArrayIndexKey: レイヤー番号そのものが識別子
               key={layer}
               layer={layer}
               initial={names[layer] ?? ''}
@@ -63,40 +106,75 @@ export function LayerStrip({
             />
           )
         }
+        const shown = shownLayer === layer
+        const how = triggers[0] ? describeTrigger(triggers[0], labelMode, labelContext) : null
         return (
           <button
-            // biome-ignore lint/suspicious/noArrayIndexKey: レイヤー番号そのものが識別子
             key={layer}
             type="button"
-            title={
-              (preview === layer ? '実際の表示に戻る' : `L${layer} を見る(キーを押すと戻る)`) +
-              (onRename ? '。ダブルクリックで名前を付ける' : '')
-            }
+            aria-pressed={preview === layer}
+            title={[
+              how ? `L${layer}: ${how}` : `L${layer}`,
+              preview === layer ? '押すと実際の表示に戻る' : 'ポインタを乗せると表示、押すと固定',
+              onRename ? 'ダブルクリックで名前を付ける' : null
+            ]
+              .filter(Boolean)
+              .join('。')}
+            // クリックでフォーカスを取らない。取ったままだと、このあと実機で Space / Enter を押したとき
+            // ブラウザがこのボタンを押したことにして、キーを押して戻したプレビューがまた固定される
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => onPreview(preview === layer ? null : layer)}
             onDoubleClick={() => onRename && setEditing(layer)}
+            onMouseEnter={() => onHover(layer)}
+            onMouseLeave={() => onHover(null)}
+            onFocus={() => onHover(layer)}
+            onBlur={() => onHover(null)}
             className={cn(
-              'rounded-md border px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors',
-              filled ? 'text-ink-inverse' : 'text-muted hover:text-ink',
-              // 輪は box-shadow で描かれるので、縁取りは border で付ける(style で box-shadow を触らない)
-              shownLayer === layer && 'ring-2 ring-ink ring-offset-2 ring-offset-ground'
+              'flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold',
+              'tabular-nums transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ink/60',
+              shown
+                ? 'text-ink-inverse ring-2 ring-ink ring-offset-2 ring-offset-ground'
+                : 'text-ink hover:brightness-125'
             )}
+            // 出している: 塗る / ほかに有効: 薄く塗る / 無効: 枠だけ
             style={{
-              backgroundColor: filled ? color : 'transparent',
-              borderColor: filled ? color : `color-mix(in srgb, ${color} 55%, transparent)`
+              backgroundColor: shown
+                ? color
+                : active.has(layer)
+                  ? `color-mix(in srgb, ${color} 28%, transparent)`
+                  : 'transparent',
+              borderColor:
+                shown || active.has(layer) ? color : `color-mix(in srgb, ${color} 55%, transparent)`
             }}
           >
-            L{layer}
-            {names[layer] && <span className="ml-1 font-medium max-md:hidden">{names[layer]}</span>}
+            <span>L{layer}</span>
+            {names[layer] && <span className="font-medium max-md:hidden">{names[layer]}</span>}
+            {how && (
+              <span
+                className={cn(
+                  'text-2xs font-normal max-lg:hidden',
+                  shown ? 'opacity-75' : 'text-muted'
+                )}
+              >
+                {how}
+              </span>
+            )}
           </button>
         )
       })}
-      {preview !== null && (
-        <span className="ml-1 flex items-center gap-2 text-xs text-muted">
-          <span className="max-md:hidden">L{preview} をプレビュー中(キーを押すか Esc で戻る)</span>
-          <Button size="sm" onClick={() => onPreview(null)}>
-            戻る
-          </Button>
-        </span>
+      {blankCount > 0 && (hiddenBlank.length > 0 || showBlank) && (
+        <button
+          type="button"
+          onClick={() => setShowBlank((on) => !on)}
+          title={
+            showBlank
+              ? '中身の無いレイヤーを隠す'
+              : `L${hiddenBlank.map((s) => s.layer).join(' / L')} は中身が無い(透過・無効か L0 と同じ)。押すと並べる`
+          }
+          className="h-7 shrink-0 rounded-md px-1.5 text-2xs text-muted hover:bg-line-soft hover:text-ink"
+        >
+          {showBlank ? '隠す' : `+${hiddenBlank.length} 空`}
+        </button>
       )}
     </div>
   )
@@ -140,7 +218,7 @@ function NameInput({
         if (event.key === 'Escape') finish(null)
       }}
       onBlur={(event) => finish(event.currentTarget.value)}
-      className="w-28 rounded-md border bg-surface px-2 py-0.5 text-xs text-ink outline-none"
+      className="h-7 w-28 shrink-0 rounded-md border bg-surface px-2 text-xs text-ink outline-none"
       style={{ borderColor: color }}
     />
   )

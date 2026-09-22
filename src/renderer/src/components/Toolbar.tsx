@@ -1,17 +1,29 @@
-import type { JSX } from 'react'
+/**
+ * 通常ウィンドウのツールバー。常に 1 行。
+ *
+ *   [● Cornix LP ▾] [L0] [L1 BS 長押し] [L2 Space 長押し] … +5 空 [Shift]   [JIS|US] [オーバーレイへ]
+ *
+ * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
+ * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
+ *   大きな「L0」の札があり、下の段の一覧と同じことを 2 回言っていた。一覧をここに入れて 1 段減らし、
+ *   そのぶん図を大きくする
+ * - 右: 表記の切り替えとオーバーレイ
+ *
+ * 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
+ * 幅が足りなければ状態の文字やレイヤーの補足を隠す(状態は丸の色と、ボタンの説明で分かる)。
+ */
+import type { JSX, ReactNode } from 'react'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
-import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
+import { Menu, MenuItem } from './ui/Menu'
 
 export interface ToolbarProps {
   status: ConnectionStatus
   deviceLabel: string | null
-  /** 表示しているレイヤー。キーボードを読み込むまでは null(出さない)。 */
-  displayLayer: number | null
-  /** そのレイヤーの名前。無ければ番号だけ。 */
-  displayLayerName?: string
+  /** レイヤーの一覧。キーボードを読み込むまでは渡さない。 */
+  layers?: ReactNode
   /** Shift が効いているか(図では Shift で入る文字を目立たせている)。 */
   shift: boolean
   labelMode: LabelMode
@@ -44,8 +56,7 @@ const STATUS_COLOR: Record<ConnectionStatus, string> = {
 export function Toolbar({
   status,
   deviceLabel,
-  displayLayer,
-  displayLayerName,
+  layers,
   shift,
   labelMode,
   windowMode,
@@ -55,40 +66,45 @@ export function Toolbar({
   onLabelMode,
   onToggleWindowMode
 }: ToolbarProps): JSX.Element {
-  // 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
-  // 狭いウィンドウでも 1 行に収める。折り返すと図に使える高さが減るので、
-  // 幅が足りなければ状態の文字や補足を隠す(状態は丸の色と、丸に重ねた説明で分かる)
-  const statusText = [STATUS_TEXT[status], deviceLabel].filter(Boolean).join(' ')
+  const statusText = reloading ? '読み直し中…' : STATUS_TEXT[status]
+  const title = [statusText, deviceLabel].filter(Boolean).join(' ')
+  const statusLabel = (
+    <>
+      <span className={cn('inline-block size-2 shrink-0 rounded-full', STATUS_COLOR[status])} />
+      <span className="shrink-0 text-muted max-md:hidden">{statusText}</span>
+      {deviceLabel && (
+        <span className="max-w-40 truncate font-medium text-ink max-md:hidden">{deviceLabel}</span>
+      )}
+    </>
+  )
+
   return (
-    <header className="flex items-center gap-2 border-b border-line-soft px-2 py-2 md:gap-3 md:px-4 md:py-2.5">
-      <div className="flex min-w-0 items-center gap-2" title={statusText}>
-        <span className={cn('inline-block size-2 shrink-0 rounded-full', STATUS_COLOR[status])} />
-        <span className="shrink-0 text-xs text-muted max-md:hidden">{STATUS_TEXT[status]}</span>
-        {deviceLabel && (
-          <span className="truncate text-xs font-medium text-ink max-md:hidden">{deviceLabel}</span>
+    <header className="flex items-center gap-2 border-b border-line-soft px-2 py-2 md:gap-3 md:px-4">
+      {status === 'idle' ? (
+        <div className="flex h-7 min-w-0 shrink-0 items-center gap-2 px-2 text-xs" title={title}>
+          {statusLabel}
+        </div>
+      ) : (
+        <Menu label={statusLabel} title={title} className="shrink-0">
+          {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない) */}
+          <MenuItem onSelect={onReload} disabled={status !== 'ready' || reloading}>
+            キーマップを読み直す
+          </MenuItem>
+          {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}
+          <MenuItem onSelect={onDisconnect}>切断</MenuItem>
+        </Menu>
+      )}
+
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {layers}
+        {shift && (
+          <span className="shrink-0 rounded-md bg-ink px-1.5 py-0.5 text-2xs font-bold leading-none text-ink-inverse">
+            Shift
+          </span>
         )}
       </div>
 
-      {displayLayer !== null && (
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className="truncate rounded-md px-2 py-1 text-lg font-bold leading-none text-ink-inverse transition-colors md:px-3"
-            style={{ backgroundColor: layerColor(displayLayer) }}
-          >
-            L{displayLayer}
-            {displayLayerName && (
-              <span className="ml-1.5 text-sm font-semibold">{displayLayerName}</span>
-            )}
-          </span>
-          {shift && (
-            <span className="rounded-md bg-ink px-1.5 py-0.5 text-2xs font-bold leading-none text-ink-inverse">
-              Shift
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
         {/* 切り替えは枠でひとまとめにし、選んでいる方だけ明るくする */}
         <div className="flex overflow-hidden rounded-md border border-line-soft">
           {(['jis', 'us'] as const).map((mode) => (
@@ -108,23 +124,6 @@ export function Toolbar({
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
           <span className="text-2xs text-muted max-lg:hidden">Ctrl+Alt+K</span>
         </Button>
-
-        {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない)ので出さない */}
-        {status === 'ready' && (
-          <Button onClick={onReload}>
-            {reloading ? (
-              '読み込み中…'
-            ) : (
-              <>
-                <span className="max-md:hidden">キーマップ再読み込み</span>
-                <span className="md:hidden">再読込</span>
-              </>
-            )}
-          </Button>
-        )}
-
-        {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}
-        {status !== 'idle' && <Button onClick={onDisconnect}>切断</Button>}
       </div>
     </header>
   )
