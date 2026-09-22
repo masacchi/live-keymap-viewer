@@ -327,27 +327,40 @@ describe('SymbolFinder', () => {
     tap,
     cost: (layer > 0 ? 1 : 0) + (shift ? 1 : 0)
   })
-
-  it('記号ごとに一番手数の少ない打ち方を出し、出せない記号は押せなくする', () => {
-    const routes = new Map([
-      ['@', [route(2)]],
-      ['<', [route(0, true)]],
-      ['¥', []]
-    ])
-    const html = renderToStaticMarkup(
+  const finder = (routes: Map<string, ReturnType<typeof route>[]>) =>
+    renderToStaticMarkup(
       <SymbolFinder
         routes={routes}
         stepsOf={(r) =>
-          routeSteps(r, r.layer === 2 ? 'W' : ',', r.layer === 2 ? 'Space 長押し' : null)
+          routeSteps(
+            r,
+            r.layer === 2 ? 'W' : r.shift ? '2' : ',',
+            r.layer === 2 ? 'Space 長押し' : null
+          )
         }
         onPick={noop}
       />
     )
-    // 一覧ではレイヤーを番号で短く出し、ツールチップで行き方まで言う
-    expect(html).toMatch(/title="Space 長押し \+ W"/)
-    expect(html).toContain('>L2<')
+
+  it('記号ごとに 1 枚のカードにし、記号と押すキーの組み合わせを対で出す', () => {
+    const html = finder(new Map([['@', [route(2)]]]))
+    // 読み上げでも「@ は Space 長押し + W」と分かる
+    expect(html).toContain('aria-label="@: Space 長押し + W"')
+    // レイヤーは番号ではなく行き方で言う
+    expect(html).toMatch(/background-color:var\(--color-layer-2\)">Space 長押し</)
+    expect(html).toMatch(/>W<\/span>/)
+  })
+
+  it('2 番目の打ち方を「または」で小さく添える', () => {
+    const html = finder(new Map([['"', [route(2), route(0, true)]]]))
+    expect(html).toContain('または')
     expect(html).toContain('>Shift<')
-    expect(html).toMatch(/disabled=""[^>]*title="このキーマップでは出せない"/)
+    expect(html).toContain('title="Space 長押し + W / または Shift + 2"')
+  })
+
+  it('出せない記号のカードは押せなくし、そう書く', () => {
+    const html = finder(new Map([['¥', []]]))
+    expect(html).toMatch(/disabled=""[^>]*aria-label="¥: このキーマップでは出せない"/)
   })
 
   it('タップと長押しを兼ねるキーは「タップ」と添える', () => {

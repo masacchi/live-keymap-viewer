@@ -186,7 +186,8 @@ export const messages = {
   symbols: {
     lead: '押すと、そのキーを図で示す。キーを押すか Esc で戻る',
     unavailable: 'このキーマップでは出せない',
-    none: 'なし',
+    /** 2 番目に手数の少ない打ち方の前に置く。 */
+    alternative: 'または',
     or: ' / または ',
     tap: (key: string) => `${key} タップ`
   },

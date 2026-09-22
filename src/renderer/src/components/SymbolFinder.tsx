@@ -1,9 +1,19 @@
 /**
- * 記号の出し方(ツールバーの「@ 記号」から開く)。
+ * 記号の出し方(ツールバーの「@ 記号の出し方」から開く)。
  *
  * JIS と US のずれや、記号をレイヤーに置いたキーマップでは「@ はどこ?」で手が止まる。
- * reference/keymap-preview.html にあった一覧をアプリに持ってきた。記号を押すと、その記号が出る
- * レイヤーを図に出し、押すキーを光らせる(App.tsx)。
+ * reference/keymap-preview.html にあった一覧をアプリに持ってきた。
+ *
+ * 記号ごとに 1 枚のカードにする:
+ *
+ *   ┌────────────────────────────────────┐
+ *   │ [ @ ]  →  [Space 長押し] + [W]       │
+ *   │           または [Shift] + [2]       │
+ *   └────────────────────────────────────┘
+ *
+ * 左に記号をキーの形で大きく、右に押すキーの組み合わせをキーの形の札で並べる。以前は 3 列に
+ * 詰めて札も「L2」と番号だけにしていたので、どの記号とどの組み合わせが対なのか読み取りにくかった。
+ * 押すと、その記号が出るレイヤーを図に出し、押すキーを光らせる(App.tsx)。
  *
  * キーボードで記号を打って探す形にはしない ― このアプリはキーの押下を見ているので、打った時点で
  * 図がそのレイヤーに切り替わり、探すまでもなくなる(Space 長押し + W を打てるなら @ は分かっている)。
@@ -14,24 +24,46 @@ import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
 
-export function RouteChips({ steps, compact = false }: { steps: RouteStep[]; compact?: boolean }) {
+/** 手順を文にする(ツールチップと読み上げ用)。 */
+function stepsText(steps: readonly RouteStep[]): string {
+  return steps.map((step) => (step.kind === 'shift' ? 'Shift' : step.text)).join(' + ')
+}
+
+/**
+ * 押すキーの組み合わせを、キーの形の札で並べる。下の縁を太くしてキーキャップに見せる
+ * (ただの文字の札だと「押すもの」に見えない)。
+ */
+export function RouteChips({
+  steps,
+  size = 'md'
+}: {
+  steps: readonly RouteStep[]
+  /** sm: 図の縁の札やカードの「または」、md: カードの主な組み合わせ。 */
+  size?: 'sm' | 'md'
+}): JSX.Element {
+  // text-xs などは行の高さも決めるので、leading-none はその後ろに置く(前だと tailwind-merge が消す)
+  const chip = cn(
+    'inline-flex items-center rounded-md border border-b-2 font-semibold',
+    size === 'md' ? 'h-6 px-2 text-xs' : 'h-5 px-1.5 text-2xs',
+    'leading-none'
+  )
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       {steps.map((step, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 手順の並びは変わらない
         <Fragment key={i}>
-          {i > 0 && <span className="text-faint">+</span>}
+          {i > 0 && <span className="text-2xs text-faint">+</span>}
           {step.kind === 'layer' ? (
             <span
-              className="rounded-md px-1 font-semibold text-ink-inverse"
+              className={cn(chip, 'border-black/25 text-ink-inverse')}
               style={{ backgroundColor: layerColor(step.layer) }}
             >
-              {compact ? `L${step.layer}` : step.text}
+              {step.text}
             </span>
           ) : step.kind === 'shift' ? (
-            <span className="rounded-md border border-ink/70 px-1">Shift</span>
+            <span className={cn(chip, 'border-ink/70 text-ink')}>Shift</span>
           ) : (
-            <span className="rounded-md bg-raised px-1">{step.text}</span>
+            <span className={cn(chip, 'border-line bg-raised text-ink')}>{step.text}</span>
           )}
         </Fragment>
       ))}
@@ -49,53 +81,77 @@ export interface SymbolFinderProps {
 
 export function SymbolFinder({ routes, stepsOf, onPick }: SymbolFinderProps): JSX.Element {
   return (
-    <div className="w-[26rem] max-w-[calc(100vw-2rem)] p-1">
+    <div className="w-[min(40rem,calc(100vw-2rem))] p-1">
       <p className="px-1 pb-2 text-2xs text-muted">{messages.symbols.lead}</p>
-      <ul className="grid max-h-[min(28rem,70vh)] grid-cols-3 gap-1 overflow-y-auto">
-        {[...routes].map(([symbol, list]) => {
-          const best = list[0]
-          return (
-            <li key={symbol}>
-              <button
-                type="button"
-                disabled={!best}
-                onClick={() => best && onPick(symbol, best)}
-                title={
-                  best
-                    ? list
-                        .slice(0, 3)
-                        .map((route) =>
-                          stepsOf(route)
-                            .map((s) => (s.kind === 'shift' ? 'Shift' : s.text))
-                            .join(' + ')
-                        )
-                        .join(messages.symbols.or)
-                    : messages.symbols.unavailable
-                }
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left',
-                  'outline-none hover:bg-line-soft focus-visible:bg-line-soft disabled:opacity-40'
-                )}
-              >
-                {/*
-                 * 記号は欧文の等幅で出す。日本語のフォントでは \ が ¥ の形になり、一覧に ¥ が 2 つ並んで
-                 * 見分けが付かなかった(JIS の Windows では同じ文字だが、キーは別)
-                 */}
-                <span className="w-5 shrink-0 text-center font-mono text-lg font-bold leading-none text-ink">
-                  {symbol}
-                </span>
-                <span className="min-w-0 text-2xs text-ink">
-                  {best ? (
-                    <RouteChips steps={stepsOf(best)} compact />
-                  ) : (
-                    <span className="text-faint">{messages.symbols.none}</span>
-                  )}
-                </span>
-              </button>
-            </li>
-          )
-        })}
+      <ul className="grid max-h-[min(30rem,calc(100vh-7rem))] grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
+        {[...routes].map(([symbol, list]) => (
+          <li key={symbol}>
+            <SymbolCard symbol={symbol} routes={list} stepsOf={stepsOf} onPick={onPick} />
+          </li>
+        ))}
       </ul>
     </div>
+  )
+}
+
+function SymbolCard({
+  symbol,
+  routes,
+  stepsOf,
+  onPick
+}: {
+  symbol: string
+  routes: readonly SymbolRoute[]
+  stepsOf: (route: SymbolRoute) => RouteStep[]
+  onPick: (symbol: string, route: SymbolRoute) => void
+}): JSX.Element {
+  const [best, alternative] = routes
+  const bestSteps = best ? stepsOf(best) : []
+  return (
+    <button
+      type="button"
+      disabled={!best}
+      onClick={() => best && onPick(symbol, best)}
+      aria-label={`${symbol}: ${best ? stepsText(bestSteps) : messages.symbols.unavailable}`}
+      title={
+        best
+          ? routes
+              .slice(0, 3)
+              .map((route) => stepsText(stepsOf(route)))
+              .join(messages.symbols.or)
+          : messages.symbols.unavailable
+      }
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-lg border border-line-soft bg-surface-2 p-2 text-left',
+        'outline-none transition-colors hover:border-line hover:bg-line-soft',
+        'focus-visible:ring-2 focus-visible:ring-ink/60 disabled:opacity-40'
+      )}
+    >
+      {/*
+       * 記号はキーの形で大きく、欧文の等幅で出す。日本語のフォントでは \ が ¥ の形になり、
+       * ¥ のカードと見分けが付かなかった(JIS の Windows では同じ文字だが、キーは別)
+       */}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-b-[3px] border-line bg-surface font-mono text-xl font-bold text-ink">
+        {symbol}
+      </span>
+      <span aria-hidden className="shrink-0 text-faint">
+        →
+      </span>
+      <span className="flex min-w-0 flex-col gap-1">
+        {best ? (
+          <>
+            <RouteChips steps={bestSteps} />
+            {alternative && (
+              <span className="flex flex-wrap items-center gap-1 text-2xs text-muted">
+                {messages.symbols.alternative}
+                <RouteChips steps={stepsOf(alternative)} size="sm" />
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-2xs text-faint">{messages.symbols.unavailable}</span>
+        )}
+      </span>
+    </button>
   )
 }

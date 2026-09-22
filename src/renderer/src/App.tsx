@@ -119,7 +119,7 @@ export default function App(): JSX.Element {
           <span className="flex items-center gap-1.5">
             <b className="text-sm font-bold leading-none">{lookup.symbol}</b>
             <span>{messages.preview.symbolIs}</span>
-            <RouteChips steps={guide.stepsOf(lookup.route)} />
+            <RouteChips steps={guide.stepsOf(lookup.route)} size="sm" />
           </span>
         )
       }

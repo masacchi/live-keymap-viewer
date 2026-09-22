@@ -10,6 +10,9 @@
  * 注意: styles.css の @theme に**独自の文字サイズ**(`--text-caption` など)を足すなら、
  * extendTailwindMerge で教えること。教えないと `text-caption` を色とみなし、
  * `cn('text-caption', 'text-muted')` で片方が消える。色(--color-*)はそのままで正しく扱われる。
+ *
+ * 注意: 文字の大きさ(text-xs など)は行の高さも決めるので、leading-* とぶつかる扱いになる。
+ * leading-* は大きさの**後ろ**に書く(前に書くと、後ろの text-xs に負けて消える)。
  */
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
