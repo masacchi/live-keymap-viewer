@@ -102,6 +102,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `LayerStrip.tsx` | レイヤーの一覧。押すとプレビュー、ダブルクリックで名前 |
 | | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |
 | | `LoadingPanel.tsx` / `UnlockPanel.tsx` | 読み込みの進み具合 / アンロックの案内 |
+| `lib/` | `cn.ts` / `theme.ts` | Tailwind のクラスの組み立て(clsx + tailwind-merge)、JS から使う色トークン |
 | `mock/` | `cornix.generated.ts` | モックのデータ(.vil と実機の定義から生成) |
 
 ## 4. キーを押してから画面が変わるまで

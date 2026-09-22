@@ -141,7 +141,7 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     expect(html).not.toContain('Lnull')
     expect(html).toContain('>L4<')
-    expect(html).toContain('--hold:var(--layer-4)')
+    expect(html).toContain('--hold:var(--color-layer-4)')
   })
 
   it('長いカスタムキーの名前は 2 行に割り、説明はツールチップだけに出す', () => {
@@ -170,7 +170,7 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     // 押下の黄色ではなく、レイヤー色で塗るためのクラスと変数が付く
     expect(html).toContain('key-holding')
-    expect(html).toContain('--hold:var(--layer-2)')
+    expect(html).toContain('--hold:var(--color-layer-2)')
     // ただの押下(レイヤーを出さないキー)には付かない
     const plain = newEngine()
     const plainMatrix = emptyMatrix(snapshot.rows, snapshot.cols)

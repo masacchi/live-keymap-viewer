@@ -186,6 +186,19 @@ npm run deploy:win
 `tests/labels.test.ts` にケースを足す。ベースレイヤーは `reference/keymap-preview.html` の
 L0 と一致することを確かめるテストがある。
 
+### 色やクラスを変える
+
+- **色はすべて [`styles.css`](../src/renderer/src/styles.css) 冒頭の `@theme`**。`--color-surface` を足すと
+  `bg-surface` / `text-surface` / `border-surface` … がそのまま使える。任意値(`text-[var(--…)]`)や
+  Tailwind の既定色(`bg-rose-500` など)は直に書かない
+- レイヤー色は番号で決まるのでクラスにできない。[`lib/theme.ts`](../src/renderer/src/lib/theme.ts) の
+  `layerColor(n)` を style に渡す
+- クラスの組み立ては [`lib/cn.ts`](../src/renderer/src/lib/cn.ts) の `cn()`。条件つきは
+  `cn('…', active && '…')`、ぶつかるクラスは後ろが勝つ。独自の文字サイズを `@theme` に足すときの
+  注意も同じファイルにある
+- SVG のキーキャップは Tailwind ではなく `styles.css` のクラス(`.cap` `.key-pressed` …)。
+  並びは「基本 → 種類 → 状態」を崩さない(ARCHITECTURE.md §7)
+
 ### レイヤー判定の規則を変える
 
 - 押下 → レイヤーの流れ: [`engine/layerState.ts`](../src/renderer/src/engine/layerState.ts)

@@ -1,37 +1,58 @@
 @import "tailwindcss";
 
 /*
+ * ===== 色と字のトークン =====
+ *
+ * 画面の色はすべてここで決める。@theme に置くと Tailwind のユーティリティになる
+ * (--color-surface → bg-surface / text-surface / border-surface …)。
+ * 以前は :root の変数を text-muted のような任意値で 55 か所から参照していた。
+ * SVG のキーキャップ(下の .cap など)も同じ変数を var(--color-*) で使う。
+ *
+ * static を付けて、使っていない変数も必ず出力させる。レイヤー色は JS で
+ * `var(--color-layer-${n})` と組み立てる(lib/theme.ts)ので、Tailwind からは使っているか見えない。
+ *
  * 色づかいは reference/keymap-preview.html を踏襲している。
  * レイヤー色 L0〜L4 は同じ値、それ以上は足したもの。
  */
-:root {
-  --ground: #121518;
-  --surface: #1d2226;
-  --surface-2: #181c1f;
-  --ink: #e4e7e8;
-  --muted: #98a0a5;
-  --faint: #5d656a;
-  --line: #3a4247;
-  --line-soft: #2b3236;
-  --sym-fill: #15343a;
-  --sym-ink: #7fd3db;
-  --shift-ink: #cfd6da;
-  --press: #f2c230;
-  --layer-0: #b9c0c4;
-  --layer-1: #e6a13f;
-  --layer-2: #3db5c1;
-  --layer-3: #a58beb;
-  --layer-4: #eb7a92;
-  --layer-5: #7fd38f;
-  --layer-6: #d9a0e0;
-  --layer-7: #8fa8ef;
-  --layer-8: #e3c56a;
-  --layer-9: #9ad4c8;
+@theme static {
+  --color-ground: #121518;
+  --color-surface: #1d2226;
+  --color-surface-2: #181c1f;
+  --color-ink: #e4e7e8;
+  --color-muted: #98a0a5;
+  --color-faint: #5d656a;
+  --color-line: #3a4247;
+  --color-line-soft: #2b3236;
+  --color-sym-fill: #15343a;
+  --color-sym-ink: #7fd3db;
+  --color-shift-ink: #cfd6da;
+  --color-press: #f2c230;
+  --color-layer-0: #b9c0c4;
+  --color-layer-1: #e6a13f;
+  --color-layer-2: #3db5c1;
+  --color-layer-3: #a58beb;
+  --color-layer-4: #eb7a92;
+  --color-layer-5: #7fd38f;
+  --color-layer-6: #d9a0e0;
+  --color-layer-7: #8fa8ef;
+  --color-layer-8: #e3c56a;
+  --color-layer-9: #9ad4c8;
   /*
    * アンロックで押し続けるキーの色。以前は L4 の色を借りていて、「長押し→L4」の色帯と
    * 見分けが付かなかった。どのレイヤー色とも押下の黄色とも重ならない、白に近い色にする。
    */
-  --unlock: #f4f7f8;
+  --color-unlock: #f4f7f8;
+
+  /*
+   * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJK を持つフォントを
+   * 必ず 1 つは拾えるようにしておく。Windows は Yu Gothic UI / Meiryo、macOS は
+   * Hiragino、Linux は Noto CJK 系。どれも無いと豆腐(□)になる。
+   * Tailwind の既定のフォント(html の font-family)もこれになる。
+   */
+  --font-sans:
+    "IBM Plex Sans JP", "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans CJK JP",
+    "Noto Sans JP", "Source Han Sans JP", "IPAexGothic", "VL PGothic", "TakaoPGothic", system-ui,
+    sans-serif;
 }
 
 html,
@@ -41,28 +62,16 @@ body,
   margin: 0;
 }
 
-/*
- * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJK を持つフォントを
- * 必ず 1 つは拾えるようにしておく。Windows は Yu Gothic UI / Meiryo、macOS は
- * Hiragino、Linux は Noto CJK 系。どれも無いと豆腐(□)になる。
- */
-:root {
-  --sans:
-    "IBM Plex Sans JP", "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans CJK JP",
-    "Noto Sans JP", "Source Han Sans JP", "IPAexGothic", "VL PGothic", "TakaoPGothic", system-ui,
-    sans-serif;
-}
-
 body {
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--sans);
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 /* SVG の text は body から継承するが、明示しておく */
 svg text {
-  font-family: var(--sans);
+  font-family: var(--font-sans);
 }
 
 /* オーバーレイでは背景を透かす。ウィンドウ自体も transparent で作られている。 */
@@ -71,7 +80,7 @@ body.overlay {
 }
 
 body.overlay .app-shell {
-  background: color-mix(in srgb, var(--ground) 72%, transparent);
+  background: color-mix(in srgb, var(--color-ground) 72%, transparent);
   border-radius: 14px;
   transition: background-color 80ms ease;
 }
@@ -93,13 +102,13 @@ body.overlay .app-shell.faded {
 
 /* --- 基本 --- */
 .cap {
-  fill: var(--surface);
-  stroke: var(--line);
+  fill: var(--color-surface);
+  stroke: var(--color-line);
   stroke-width: 1;
 }
 
 .main {
-  fill: var(--ink);
+  fill: var(--color-ink);
   text-anchor: middle;
   dominant-baseline: middle;
   font-weight: 600;
@@ -110,7 +119,7 @@ body.overlay .app-shell.faded {
  * 左上に 11px で出していたときは小さくて見落としていた。
  */
 .shift {
-  fill: var(--shift-ink);
+  fill: var(--color-shift-ink);
   font-size: 14px;
   font-weight: 700;
   text-anchor: middle;
@@ -118,7 +127,7 @@ body.overlay .app-shell.faded {
 }
 
 .sub {
-  fill: var(--muted);
+  fill: var(--color-muted);
   font-size: 9px;
   text-anchor: middle;
   dominant-baseline: middle;
@@ -139,18 +148,18 @@ body.overlay .app-shell.faded {
 
 /* --- 種類 --- */
 .key-sym .cap {
-  fill: var(--sym-fill);
-  stroke: color-mix(in srgb, var(--sym-ink) 45%, transparent);
+  fill: var(--color-sym-fill);
+  stroke: color-mix(in srgb, var(--color-sym-ink) 45%, transparent);
 }
 
 .key-sym .main,
 .key-sym .shift {
-  fill: var(--sym-ink);
+  fill: var(--color-sym-ink);
 }
 
 .key-none .cap {
   fill: none;
-  stroke: var(--line-soft);
+  stroke: var(--color-line-soft);
   stroke-dasharray: 3 3;
 }
 
@@ -163,7 +172,7 @@ body.overlay .app-shell.faded {
 
 /* 透過(KC_TRNS)。下のレイヤーの値を薄く出す */
 .key-trns .cap {
-  fill: var(--surface-2);
+  fill: var(--color-surface-2);
 }
 
 .key-trns .main,
@@ -178,8 +187,8 @@ body.overlay .app-shell.faded {
  * 押下より前に置く(押している記号キーは押下の配色を優先する)。
  */
 .key-shifted .cap {
-  fill: color-mix(in srgb, var(--ink) 16%, var(--surface));
-  stroke: var(--ink);
+  fill: color-mix(in srgb, var(--color-ink) 16%, var(--color-surface));
+  stroke: var(--color-ink);
   stroke-width: 2;
 }
 
@@ -193,8 +202,8 @@ body.overlay .app-shell.faded {
 }
 
 .key-pressed .cap {
-  fill: var(--press);
-  stroke: var(--press);
+  fill: var(--color-press);
+  stroke: var(--color-press);
 }
 
 .key-pressed .main,
@@ -225,8 +234,8 @@ body.overlay .app-shell.faded {
 
 /* アンロックのために押し続けるキー。レイヤー色と区別できるよう、専用の色で脈打たせる */
 .key-unlock .cap {
-  fill: color-mix(in srgb, var(--unlock) 16%, var(--surface));
-  stroke: var(--unlock);
+  fill: color-mix(in srgb, var(--color-unlock) 16%, var(--color-surface));
+  stroke: var(--color-unlock);
   stroke-width: 2.5;
   animation: unlock-pulse 1.2s ease-in-out infinite;
 }
@@ -249,13 +258,13 @@ body.overlay .app-shell.faded {
  */
 .encoder {
   fill: none;
-  stroke: var(--muted);
+  stroke: var(--color-muted);
   stroke-width: 2;
   stroke-dasharray: 3 3;
 }
 
 .encoder-label {
-  fill: var(--ink);
+  fill: var(--color-ink);
   font-size: 13px;
   text-anchor: start;
   dominant-baseline: middle;

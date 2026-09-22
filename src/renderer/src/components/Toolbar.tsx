@@ -1,6 +1,8 @@
 import type { JSX } from 'react'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
+import { cn } from '../lib/cn'
+import { layerColor } from '../lib/theme'
 
 export interface ToolbarProps {
   status: ConnectionStatus
@@ -51,12 +53,10 @@ function Button({
     <button
       type="button"
       onClick={onClick}
-      className={[
+      className={cn(
         'whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors md:px-3',
-        active
-          ? 'bg-[var(--layer-2)] text-neutral-900'
-          : 'bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--line-soft)]'
-      ].join(' ')}
+        active ? 'bg-layer-2 text-neutral-900' : 'bg-surface text-ink hover:bg-line-soft'
+      )}
     >
       {children}
     </button>
@@ -82,16 +82,12 @@ export function Toolbar({
   // 幅が足りなければ状態の文字や補足を隠す(状態は丸の色と、丸に重ねた説明で分かる)
   const statusText = [STATUS_TEXT[status], deviceLabel].filter(Boolean).join(' ')
   return (
-    <header className="flex items-center gap-2 border-b border-[var(--line-soft)] px-2 py-2 md:gap-3 md:px-4 md:py-2.5">
+    <header className="flex items-center gap-2 border-b border-line-soft px-2 py-2 md:gap-3 md:px-4 md:py-2.5">
       <div className="flex min-w-0 items-center gap-2" title={statusText}>
-        <span className={`inline-block size-2 shrink-0 rounded-full ${STATUS_COLOR[status]}`} />
-        <span className="shrink-0 text-xs text-[var(--muted)] max-md:hidden">
-          {STATUS_TEXT[status]}
-        </span>
+        <span className={cn('inline-block size-2 shrink-0 rounded-full', STATUS_COLOR[status])} />
+        <span className="shrink-0 text-xs text-muted max-md:hidden">{STATUS_TEXT[status]}</span>
         {deviceLabel && (
-          <span className="truncate text-xs font-medium text-[var(--ink)] max-md:hidden">
-            {deviceLabel}
-          </span>
+          <span className="truncate text-xs font-medium text-ink max-md:hidden">{deviceLabel}</span>
         )}
       </div>
 
@@ -99,7 +95,7 @@ export function Toolbar({
         <div className="flex min-w-0 items-center gap-2">
           <span
             className="truncate rounded-md px-2 py-1 text-lg font-bold leading-none text-neutral-900 transition-colors md:px-3"
-            style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
+            style={{ backgroundColor: layerColor(displayLayer) }}
           >
             L{displayLayer}
             {displayLayerName && (
@@ -107,7 +103,7 @@ export function Toolbar({
             )}
           </span>
           {shift && (
-            <span className="rounded bg-[var(--ink)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-neutral-900">
+            <span className="rounded bg-ink px-1.5 py-0.5 text-[11px] font-bold leading-none text-neutral-900">
               Shift
             </span>
           )}
@@ -115,7 +111,7 @@ export function Toolbar({
       )}
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2">
-        <div className="flex overflow-hidden rounded-md border border-[var(--line-soft)]">
+        <div className="flex overflow-hidden rounded-md border border-line-soft">
           <Button onClick={() => onLabelMode('jis')} active={labelMode === 'jis'}>
             JIS
           </Button>
@@ -126,7 +122,7 @@ export function Toolbar({
 
         <Button onClick={onToggleWindowMode}>
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
-          <span className="ml-1.5 text-[10px] text-[var(--muted)] max-lg:hidden">Ctrl+Alt+K</span>
+          <span className="ml-1.5 text-[10px] text-muted max-lg:hidden">Ctrl+Alt+K</span>
         </Button>
 
         {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない)ので出さない */}

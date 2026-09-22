@@ -11,6 +11,8 @@
  * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { cn } from '../lib/cn'
+import { layerColor } from '../lib/theme'
 
 /** 薄くしたときの濃さ(ウィンドウの不透明度に掛かる)。どこにあるかは分かる程度に残す。 */
 export const OVERLAY_FADED_OPACITY = 0.2
@@ -112,11 +114,11 @@ export function OverlayControls({
     <>
       <div
         data-interactive
-        className={[
+        className={cn(
           'absolute left-2 top-2 z-20 flex items-center gap-2 rounded-lg border px-2 py-1.5',
-          'border-[var(--line)] bg-[var(--surface)] transition-opacity',
+          'border-line bg-surface transition-opacity',
           active ? 'opacity-100' : 'opacity-45'
-        ].join(' ')}
+        )}
       >
         <span
           title="ドラッグでウィンドウを移動"
@@ -124,20 +126,20 @@ export function OverlayControls({
           onPointerMove={onDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
-          className="cursor-move select-none px-1 text-sm leading-none text-[var(--muted)]"
+          className="cursor-move select-none px-1 text-sm leading-none text-muted"
         >
           ⠿
         </span>
 
         <span
           className="rounded px-1.5 py-0.5 text-xs font-bold leading-none text-neutral-900"
-          style={{ backgroundColor: `var(--layer-${displayLayer % 10})` }}
+          style={{ backgroundColor: layerColor(displayLayer) }}
         >
           L{displayLayer}
           {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
         </span>
 
-        <label className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+        <label className="flex items-center gap-1.5 text-[11px] text-muted">
           濃さ
           <input
             type="range"
@@ -146,22 +148,20 @@ export function OverlayControls({
             step={5}
             value={Math.round(opacity * 100)}
             onChange={(event) => onOpacity(Number(event.target.value) / 100)}
-            className="h-1 w-24 accent-[var(--layer-2)]"
+            className="h-1 w-24 accent-layer-2"
           />
-          <span className="w-8 tabular-nums text-right text-[var(--ink)]">
-            {Math.round(opacity * 100)}%
-          </span>
+          <span className="w-8 tabular-nums text-right text-ink">{Math.round(opacity * 100)}%</span>
         </label>
 
         <label
-          className="flex items-center gap-1 text-[11px] text-[var(--muted)]"
+          className="flex items-center gap-1 text-[11px] text-muted"
           title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
         >
           <input
             type="checkbox"
             checked={autoFade}
             onChange={(event) => onAutoFade(event.target.checked)}
-            className="accent-[var(--layer-2)]"
+            className="accent-layer-2"
           />
           L0 で薄く
         </label>
@@ -169,7 +169,7 @@ export function OverlayControls({
         <button
           type="button"
           onClick={onExit}
-          className="rounded bg-[var(--surface-2)] px-2 py-1 text-[11px] font-medium hover:bg-[var(--line-soft)]"
+          className="rounded bg-surface-2 px-2 py-1 text-[11px] font-medium hover:bg-line-soft"
         >
           通常ウィンドウに戻す
         </button>
@@ -183,11 +183,11 @@ export function OverlayControls({
         onPointerMove={onDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={[
+        className={cn(
           'absolute bottom-0 right-0 z-20 size-5 cursor-nwse-resize',
-          'border-b-[3px] border-r-[3px] border-[var(--muted)] transition-opacity',
+          'border-b-[3px] border-r-[3px] border-muted transition-opacity',
           active ? 'opacity-100' : 'opacity-40'
-        ].join(' ')}
+        )}
       />
     </>
   )

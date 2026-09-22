@@ -20,18 +20,18 @@ export function UnlockPanel({ unlock, mock = false }: UnlockPanelProps): JSX.Ele
 
   return (
     // 狭いウィンドウでは説明を隠し、見出しとバーだけにする(図に使える高さを残す)
-    <div className="rounded-lg border border-[var(--unlock)] bg-[var(--surface)] px-3 py-2 md:px-4 md:py-3">
+    <div className="rounded-lg border border-unlock bg-surface px-3 py-2 md:px-4 md:py-3">
       <p className="text-xs font-semibold md:text-sm">
         図で色が付いているキーを、バーが埋まるまで押し続ける
       </p>
-      <p className="mt-1 text-xs text-[var(--muted)] max-md:hidden">
+      <p className="mt-1 text-xs text-muted max-md:hidden">
         押しているキーを読むには Vial のアンロックが要る。離すとやり直しになる。
         解除したままにしたくなければ、使い終わったらキーボードを挿し直す。
         {mock && ' (モックでは、キーをクリックすると押したままになる。もう一度で離す)'}
       </p>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--line-soft)] md:mt-3">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-line-soft md:mt-3">
         <div
-          className="h-full rounded-full bg-[var(--unlock)] transition-[width] duration-150"
+          className="h-full rounded-full bg-unlock transition-[width] duration-150"
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </div>

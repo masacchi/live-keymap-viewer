@@ -10,6 +10,8 @@ import { UnlockPanel } from './components/UnlockPanel'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import type { LabelMode } from './keycodes/labels'
+import { cn } from './lib/cn'
+import { layerColor } from './lib/theme'
 
 type WindowMode = 'normal' | 'overlay'
 
@@ -128,7 +130,7 @@ export default function App(): JSX.Element {
 
   return (
     <div
-      className={`app-shell relative flex h-full flex-col overflow-hidden${faded ? ' faded' : ''}`}
+      className={cn('app-shell relative flex h-full flex-col overflow-hidden', faded && 'faded')}
     >
       {overlay && (
         <OverlayControls
@@ -179,14 +181,14 @@ export default function App(): JSX.Element {
           <div className="flex items-center gap-3 rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
             <span className="min-w-0 flex-1">{keyboard.error}</span>
             {keyboard.reconnecting ? (
-              <span className="shrink-0 text-[var(--muted)]">自動で繋ぎ直す…</span>
+              <span className="shrink-0 text-muted">自動で繋ぎ直す…</span>
             ) : (
               <button
                 type="button"
                 // オーバーレイはクリックが透過するので、付けないと押せない(OverlayControls)
                 data-interactive
                 onClick={() => void keyboard.connect()}
-                className="shrink-0 rounded-md bg-[var(--surface)] px-3 py-1 font-medium text-[var(--ink)] hover:bg-[var(--line-soft)]"
+                className="shrink-0 rounded-md bg-surface px-3 py-1 font-medium text-ink hover:bg-line-soft"
               >
                 接続し直す
               </button>
@@ -221,14 +223,14 @@ export default function App(): JSX.Element {
               style={
                 shownLayer === 0
                   ? {
-                      borderColor: previewLayer === null ? 'transparent' : 'var(--layer-0)',
+                      borderColor: previewLayer === null ? 'transparent' : layerColor(0),
                       borderStyle: previewLayer === null ? 'solid' : 'dashed',
                       backgroundColor: 'transparent'
                     }
                   : {
-                      borderColor: `var(--layer-${shownLayer % 10})`,
+                      borderColor: layerColor(shownLayer),
                       borderStyle: previewLayer === null ? 'solid' : 'dashed',
-                      backgroundColor: `color-mix(in srgb, var(--layer-${shownLayer % 10}) 14%, transparent)`
+                      backgroundColor: `color-mix(in srgb, ${layerColor(shownLayer)} 14%, transparent)`
                     }
               }
             >
@@ -269,7 +271,7 @@ function EmptyState({
 }): JSX.Element {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <p className="text-sm text-[var(--muted)]">
+      <p className="text-sm text-muted">
         Vial のキーボードに接続すると、キーマップと押しているキーがここに出る。
       </p>
       {/* オーバーレイはクリックが透過するので、ボタンの並びだけ透過を切る(OverlayControls) */}
@@ -277,14 +279,14 @@ function EmptyState({
         <button
           type="button"
           onClick={onConnect}
-          className="rounded-md bg-[var(--layer-2)] px-4 py-2 text-xs font-semibold text-neutral-900"
+          className="rounded-md bg-layer-2 px-4 py-2 text-xs font-semibold text-neutral-900"
         >
           キーボードに接続
         </button>
         <button
           type="button"
           onClick={onMock}
-          className="rounded-md bg-[var(--surface)] px-4 py-2 text-xs font-medium"
+          className="rounded-md bg-surface px-4 py-2 text-xs font-medium"
         >
           モックで試す
         </button>

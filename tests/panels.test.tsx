@@ -40,9 +40,9 @@ describe('LayerStrip', () => {
   it('レイヤーの数だけ並べ、有効なレイヤーはその色で塗る', () => {
     const html = strip(null)
     expect(html.match(/<button/g)).toHaveLength(10)
-    expect(html).toContain('background-color:var(--layer-2)')
-    expect(html).toContain('background-color:var(--layer-0)')
-    expect(html).not.toContain('background-color:var(--layer-1)')
+    expect(html).toContain('background-color:var(--color-layer-2)')
+    expect(html).toContain('background-color:var(--color-layer-0)')
+    expect(html).not.toContain('background-color:var(--color-layer-1)')
     expect(html).not.toContain('プレビュー中')
   })
 

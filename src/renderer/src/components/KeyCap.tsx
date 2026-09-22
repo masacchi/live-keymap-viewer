@@ -5,10 +5,12 @@
  * 記号キーは色を変える、透過は薄く、長押しでレイヤーが出るキーは下端に色帯、
  * 押されているレイヤーキーは「押下中」と出す。
  */
+import { clsx } from 'clsx'
 import type { JSX } from 'react'
 import type { Keycode } from '../keycodes/decode'
 import type { KeyLabel } from '../keycodes/labels'
 import type { PhysicalKey } from '../layout/geometry'
+import { layerColor } from '../lib/theme'
 
 export interface KeyCapProps {
   physical: PhysicalKey
@@ -162,19 +164,22 @@ export function KeyCap({
   const cx = x + width / 2
   const cy = y + height / 2
 
-  const classes = ['key']
-  if (label.category === 'sym') classes.push('key-sym')
-  if (label.category === 'none' && label.main === '') classes.push('key-none')
-  if (transparent) classes.push('key-trns')
-  if (pressed) classes.push('key-pressed')
-  // レイヤーを出しているキーは、そのレイヤーの色で塗る。
-  // 「いまどのキーのせいでこのレイヤーなのか」が一目で分かるように。
-  if (holding) classes.push('key-holding')
-  if (unlockHint) classes.push('key-unlock')
   // Shift 中は、Shift で入る文字を主文字の位置に大きく出し、ふだんの文字を上に退かせる
   const swapShift = shifted && Boolean(label.shift)
-  if (swapShift) classes.push('key-shifted')
-  if (onClick) classes.push('key-clickable')
+  // styles.css のキーキャップのクラス(Tailwind ではない)なので、tailwind-merge は通さない。
+  // 効く順番はここでの並びではなく styles.css の並び(基本 → 種類 → 状態)で決まる
+  const className = clsx('key', {
+    'key-sym': label.category === 'sym',
+    'key-none': label.category === 'none' && label.main === '',
+    'key-trns': transparent,
+    'key-pressed': pressed,
+    // レイヤーを出しているキーは、そのレイヤーの色で塗る。
+    // 「いまどのキーのせいでこのレイヤーなのか」が一目で分かるように。
+    'key-holding': holding,
+    'key-unlock': unlockHint,
+    'key-shifted': swapShift,
+    'key-clickable': onClick !== undefined
+  })
   const mainText = swapShift ? (label.shift ?? '') : label.main
   const shiftText = swapShift ? label.main : label.shift
 
@@ -192,7 +197,7 @@ export function KeyCap({
       }
     : {}
 
-  const holdColor = holdLayer !== null ? `var(--layer-${holdLayer % 10})` : undefined
+  const holdColor = holdLayer !== null ? layerColor(holdLayer) : undefined
 
   const rotate =
     physical.rotationAngle !== 0
@@ -222,7 +227,7 @@ export function KeyCap({
 
   return (
     <g
-      className={classes.join(' ')}
+      className={className}
       transform={rotate}
       style={{ '--hold': holdColor } as React.CSSProperties}
       {...interactive}
@@ -270,7 +275,7 @@ export function KeyCap({
                 width={width}
                 height={BAND_HEIGHT}
                 rx={6}
-                fill={`var(--layer-${holdLayer % 10})`}
+                fill={layerColor(holdLayer)}
               />
               <text className="band-text" x={cx} y={y + height - BAND_HEIGHT / 2}>
                 {bandText(holdLayer, holdLayerName, width)}

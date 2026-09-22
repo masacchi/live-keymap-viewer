@@ -25,26 +25,26 @@ export function LoadingPanel({ deviceLabel, progress }: LoadingPanelProps): JSX.
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <p className="text-sm text-[var(--ink)]">
+      <p className="text-sm text-ink">
         {progress ? `${deviceLabel ?? 'キーボード'} を読み込み中` : '接続中…'}
       </p>
       {progress ? (
         <div className="w-64 max-w-full">
-          <div className="flex justify-between text-xs text-[var(--muted)]">
+          <div className="flex justify-between text-xs text-muted">
             <span>{STAGE_TEXT[progress.stage]}</span>
             <span className="tabular-nums">
               {progress.done} / {progress.total}
             </span>
           </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--line-soft)]">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line-soft">
             <div
-              className="h-full rounded-full bg-[var(--layer-2)] transition-[width] duration-100"
+              className="h-full rounded-full bg-layer-2 transition-[width] duration-100"
               style={{ width: `${Math.round(ratio * 100)}%` }}
             />
           </div>
         </div>
       ) : (
-        deviceLabel && <p className="text-xs text-[var(--muted)]">{deviceLabel}</p>
+        deviceLabel && <p className="text-xs text-muted">{deviceLabel}</p>
       )}
     </div>
   )
