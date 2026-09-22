@@ -1,6 +1,7 @@
 /** Vial デバイスが複数見つかったときの選択。main の select-hid-device から呼ばれる。 */
 import type { JSX } from 'react'
 import type { HidCandidate } from '../../../shared/ipc'
+import { messages } from '../messages'
 import { Button } from './ui/Button'
 
 export interface DevicePickerProps {
@@ -13,7 +14,7 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-ground/80">
       {/* オーバーレイから接続したときも押せるように、透過を切る(OverlayControls) */}
       <div data-interactive className="w-96 rounded-lg border border-line bg-surface p-4">
-        <p className="text-sm font-semibold">接続するキーボードを選ぶ</p>
+        <p className="text-sm font-semibold">{messages.devicePicker.title}</p>
         <ul className="mt-3 space-y-1.5">
           {devices.map((device) => (
             <li key={device.deviceId}>
@@ -22,7 +23,7 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
                 onClick={() => onChoose(device.deviceId)}
                 className="w-full rounded-md bg-surface-2 px-3 py-2 text-left text-xs hover:bg-line-soft"
               >
-                <span className="font-medium">{device.name || '(名前なし)'}</span>
+                <span className="font-medium">{device.name || messages.devicePicker.unnamed}</span>
                 <span className="ml-2 text-muted">
                   {`${device.vendorId.toString(16).padStart(4, '0')}:${device.productId
                     .toString(16)
@@ -33,7 +34,7 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
           ))}
         </ul>
         <Button variant="ghost" onClick={() => onChoose(null)} className="mt-3 w-full">
-          やめる
+          {messages.devicePicker.cancel}
         </Button>
       </div>
     </div>

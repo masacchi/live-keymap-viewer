@@ -17,6 +17,7 @@ import type { JSX, ReactNode } from 'react'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
+import { messages } from '../messages'
 import { ModifierBadges } from './ModifierBadges'
 import { Button, buttonVariants } from './ui/Button'
 import { SlidersIcon } from './ui/icons'
@@ -43,15 +44,6 @@ export interface ToolbarProps {
   onToggleWindowMode: () => void
 }
 
-const STATUS_TEXT: Record<ConnectionStatus, string> = {
-  idle: '未接続',
-  connecting: '接続中…',
-  loading: '設定を読み込み中…',
-  unlocking: 'アンロック中…',
-  ready: '接続済み',
-  error: 'エラー'
-}
-
 const STATUS_COLOR: Record<ConnectionStatus, string> = {
   idle: 'bg-faint',
   connecting: 'bg-warn',
@@ -76,7 +68,7 @@ export function Toolbar({
   onLabelMode,
   onToggleWindowMode
 }: ToolbarProps): JSX.Element {
-  const statusText = reloading ? '読み直し中…' : STATUS_TEXT[status]
+  const statusText = reloading ? messages.status.reloading : messages.status[status]
   const title = [statusText, deviceLabel].filter(Boolean).join(' ')
   const statusLabel = (
     <>
@@ -98,10 +90,10 @@ export function Toolbar({
         <Menu label={statusLabel} title={title} className="shrink-0">
           {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない) */}
           <MenuItem onSelect={onReload} disabled={status !== 'ready' || reloading}>
-            キーマップを読み直す
+            {messages.deviceMenu.reload}
           </MenuItem>
           {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}
-          <MenuItem onSelect={onDisconnect}>切断</MenuItem>
+          <MenuItem onSelect={onDisconnect}>{messages.deviceMenu.disconnect}</MenuItem>
         </Menu>
       )}
 
@@ -130,13 +122,13 @@ export function Toolbar({
           <Popover
             role="dialog"
             align="end"
-            title="記号の出し方"
+            title={messages.toolbar.symbols}
             buttonClassName={buttonVariants()}
             label={
               <>
                 <span className="font-bold">@</span>
                 {/* 既定の幅(1180px)では隠す。出すとレイヤーの一覧が押し出される */}
-                <span className="max-xl:hidden">記号の出し方</span>
+                <span className="max-xl:hidden">{messages.toolbar.symbols}</span>
               </>
             }
           >
@@ -144,20 +136,20 @@ export function Toolbar({
           </Popover>
         )}
 
-        <Button onClick={onToggleWindowMode} title="Ctrl+Alt+K でも切り替えられる">
-          {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
-          <span className="text-2xs text-muted max-xl:hidden">Ctrl+Alt+K</span>
+        <Button onClick={onToggleWindowMode} title={messages.toolbar.modeShortcutHint}>
+          {windowMode === 'overlay' ? messages.toolbar.toNormal : messages.toolbar.toOverlay}
+          <span className="text-2xs text-muted max-xl:hidden">{messages.toolbar.modeShortcut}</span>
         </Button>
 
         <Popover
           role="dialog"
           align="end"
-          title="設定"
+          title={messages.toolbar.settings}
           buttonClassName={buttonVariants()}
           label={
             <>
               <SlidersIcon />
-              <span className="max-md:hidden">設定</span>
+              <span className="max-md:hidden">{messages.toolbar.settings}</span>
             </>
           }
         >

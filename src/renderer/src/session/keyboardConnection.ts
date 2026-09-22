@@ -27,6 +27,7 @@ import { type ProbeResult, pickResponsiveDevice } from '../hid/deviceProbe'
 import { MockTransport } from '../hid/mockTransport'
 import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
 import type { DefinitionCache } from '../hid/vial'
+import { messages } from '../messages'
 import {
   KeyboardSession,
   type ReloadOptions,
@@ -144,7 +145,7 @@ export class KeyboardConnection {
   async connect(): Promise<void> {
     const hid = this.options.hid
     if (!hid) {
-      this.publish({ ...IDLE, status: 'error', error: 'WebHID が使えない' })
+      this.publish({ ...IDLE, status: 'error', error: messages.connection.noWebHid })
       return
     }
     const picked = await hid.requestDevice({ filters: VIAL_HID_FILTERS })
@@ -246,7 +247,7 @@ export class KeyboardConnection {
       this.publish({
         ...IDLE,
         status: 'connecting',
-        deviceLabel: '応答するインターフェースを確認中'
+        deviceLabel: messages.connection.probing
       })
     }
 
@@ -257,9 +258,7 @@ export class KeyboardConnection {
       this.publish({
         ...IDLE,
         status: 'error',
-        error:
-          `キーボードが応答しない(${results.length} 個のインターフェースを試した)。` +
-          'Vial など別のアプリで使っていないか、USB / Bluetooth の出力先を確かめる'
+        error: messages.connection.noResponse(results.length)
       })
       if (this.reconnecting) this.scheduleRetry()
       return

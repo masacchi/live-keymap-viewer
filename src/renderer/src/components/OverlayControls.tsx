@@ -19,6 +19,7 @@ import {
 } from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 import { Button } from './ui/Button'
 import { PercentSlider } from './ui/PercentSlider'
 
@@ -114,7 +115,7 @@ export function OverlayControls({
         )}
       >
         <span
-          title="ドラッグでウィンドウを移動"
+          title={messages.overlay.move}
           onPointerDown={startDrag('move')}
           onPointerMove={onDrag}
           onPointerUp={endDrag}
@@ -140,7 +141,7 @@ export function OverlayControls({
           )}
         >
           <PercentSlider
-            label="濃さ"
+            label={messages.overlay.opacity}
             value={settings.overlayOpacity}
             min={OVERLAY_OPACITY_MIN}
             max={1}
@@ -148,21 +149,18 @@ export function OverlayControls({
           />
 
           <span className="flex items-center gap-1.5">
-            <label
-              className="flex items-center gap-1"
-              title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
-            >
+            <label className="flex items-center gap-1" title={messages.overlay.autoFadeHint}>
               <input
                 type="checkbox"
                 checked={settings.overlayAutoFade}
                 onChange={(event) => onChange({ overlayAutoFade: event.target.checked })}
                 className="accent-ink"
               />
-              L0 で薄く
+              {messages.overlay.autoFade}
             </label>
             <PercentSlider
-              label="残す"
-              title="薄くしたときに残す濃さ。0% で消える(このパネルは残る)"
+              label={messages.overlay.fadedOpacity}
+              title={messages.overlay.fadedOpacityHint}
               value={settings.overlayFadedOpacity}
               min={0}
               max={OVERLAY_FADED_OPACITY_MAX}
@@ -173,23 +171,20 @@ export function OverlayControls({
           </span>
 
           {blurSupported && (
-            <label
-              className="flex items-center gap-1"
-              title="後ろの画面をすりガラスのようにぼかす(Windows 11)。薄くしているあいだは外す"
-            >
+            <label className="flex items-center gap-1" title={messages.overlay.blurHint}>
               <input
                 type="checkbox"
                 checked={settings.overlayBlur}
                 onChange={(event) => onChange({ overlayBlur: event.target.checked })}
                 className="accent-ink"
               />
-              後ろをぼかす
+              {messages.overlay.blur}
             </label>
           )}
 
           {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
           <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
-            通常ウィンドウに戻す
+            {messages.overlay.exit}
           </Button>
         </div>
       </div>
@@ -197,7 +192,7 @@ export function OverlayControls({
       {/* 右下のリサイズつまみ。枠が無いので OS の境界は使えない */}
       <div
         data-interactive
-        title="ドラッグで大きさを変える"
+        title={messages.overlay.resize}
         onPointerDown={startDrag('resize')}
         onPointerMove={onDrag}
         onPointerUp={endDrag}

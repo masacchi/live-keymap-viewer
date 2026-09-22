@@ -9,6 +9,7 @@
 import type { JSX } from 'react'
 import { MOD_ALT, MOD_CTRL, MOD_GUI, MOD_SHIFT } from '../keycodes/decode'
 import { cn } from '../lib/cn'
+import { messages } from '../messages'
 
 const MODIFIERS = [
   { bit: MOD_CTRL, name: 'Ctrl' },
@@ -25,7 +26,7 @@ export function ModifierBadges({ mods }: { mods: number }): JSX.Element {
         return (
           <span
             key={name}
-            title={on ? `${name} が効いている` : name}
+            title={on ? messages.modifiers.on(name) : name}
             data-on={on}
             className={cn(
               'rounded-md border px-1.5 py-0.5 text-2xs font-bold leading-none transition-colors',
@@ -35,7 +36,7 @@ export function ModifierBadges({ mods }: { mods: number }): JSX.Element {
             {/* 狭いウィンドウでは頭文字だけ(C / S / A / W) */}
             <span className="md:hidden">{name[0]}</span>
             <span className="max-md:hidden">{name}</span>
-            {on && <span className="sr-only">(効いている)</span>}
+            {on && <span className="sr-only">{messages.modifiers.onForReader}</span>}
           </span>
         )
       })}

@@ -7,13 +7,7 @@
  */
 import type { JSX } from 'react'
 import type { LoadProgress } from '../hid/vial'
-
-const STAGE_TEXT: Record<LoadProgress['stage'], string> = {
-  definition: '配置(定義)',
-  keymap: 'キーマップ',
-  encoders: 'ノブの割り当て',
-  tapDance: 'Tap Dance'
-}
+import { messages } from '../messages'
 
 export interface LoadingPanelProps {
   deviceLabel: string | null
@@ -26,12 +20,12 @@ export function LoadingPanel({ deviceLabel, progress }: LoadingPanelProps): JSX.
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
       <p className="text-sm text-ink">
-        {progress ? `${deviceLabel ?? 'キーボード'} を読み込み中` : '接続中…'}
+        {progress ? messages.loading.reading(deviceLabel) : messages.loading.connecting}
       </p>
       {progress ? (
         <div className="w-64 max-w-full">
           <div className="flex justify-between text-xs text-muted">
-            <span>{STAGE_TEXT[progress.stage]}</span>
+            <span>{messages.loading.stages[progress.stage]}</span>
             <span className="tabular-nums">
               {progress.done} / {progress.total}
             </span>

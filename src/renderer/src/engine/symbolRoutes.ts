@@ -9,6 +9,7 @@
  */
 import { decodeKeycode, KC_NO, KC_TRNS, type Keycode } from '../keycodes/decode'
 import type { KeyLabel } from '../keycodes/labels'
+import { messages } from '../messages'
 
 /** 探す記号。JIS / US のどちらかで出るもの。 */
 export const SYMBOLS: readonly string[] = [...'!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~', '¥']
@@ -94,6 +95,6 @@ export function routeSteps(route: SymbolRoute, keyName: string, how: string | nu
   if (route.layer > 0)
     steps.push({ kind: 'layer', layer: route.layer, text: how ?? `L${route.layer}` })
   if (route.shift) steps.push({ kind: 'shift' })
-  steps.push({ kind: 'key', text: route.tap ? `${keyName} タップ` : keyName })
+  steps.push({ kind: 'key', text: route.tap ? messages.symbols.tap(keyName) : keyName })
   return steps
 }

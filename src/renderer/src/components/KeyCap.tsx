@@ -14,6 +14,7 @@ import type { Keycode } from '../keycodes/decode'
 import type { KeyLabel } from '../keycodes/labels'
 import type { PhysicalKey } from '../layout/geometry'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 
 export interface KeyCapProps {
   physical: PhysicalKey
@@ -133,8 +134,8 @@ function subFontSize(text: string, width: number): number {
  * (はみ出していた)。入らなければ「長押し中」だけにする。キーの名前はツールチップにある。
  */
 function holdingSub(keyName: string, width: number): string {
-  const full = `${keyName} 長押し中`.trim()
-  return textWidth(full, SUB_FONT) <= width - TEXT_PADDING ? full : '長押し中'
+  const full = messages.keyCap.holdingKey(keyName)
+  return textWidth(full, SUB_FONT) <= width - TEXT_PADDING ? full : messages.keyCap.holding
 }
 
 /** 複数行の文字を、中心の y に揃えて縦に並べる。1 行なら tspan を使わない。 */
@@ -310,10 +311,9 @@ function describe(
   holdLayer: number | null,
   holdLayerName: string | undefined
 ): string {
-  const parts = [label.main || '(なし)']
-  if (holdLayer !== null)
-    parts.push(`長押しで L${holdLayer}${holdLayerName ? ` ${holdLayerName}` : ''}`)
-  if (label.shift) parts.push(`Shift: ${label.shift}`)
+  const parts = [label.main || messages.keyCap.none]
+  if (holdLayer !== null) parts.push(messages.keyCap.holdTo(holdLayer, holdLayerName))
+  if (label.shift) parts.push(messages.keyCap.shift(label.shift))
   if (label.sub) parts.push(label.sub)
   if (label.description) parts.push(label.description)
   parts.push(`raw 0x${keycode.raw.toString(16).padStart(4, '0')}`)

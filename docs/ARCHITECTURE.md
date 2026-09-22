@@ -112,6 +112,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `ui/` | 共通の部品(`Button` / `Popover` / `Menu` / アイコン)。ボタンはすべて `Button` を使う |
 | | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |
 | | `LoadingPanel.tsx` / `UnlockPanel.tsx` | 読み込みの進み具合 / アンロックの案内 |
+| (直下) | `messages.ts` | 画面に出す文言。部品・接続まわりの案内はここから引く(キーの表示名は `keycodes/labels.ts`) |
 | `lib/` | `cn.ts` / `theme.ts` | Tailwind のクラスの組み立て(clsx + tailwind-merge)、JS から使う色トークン |
 | `mock/` | `cornix.generated.ts` | モックのデータ(.vil と実機の定義から生成) |
 

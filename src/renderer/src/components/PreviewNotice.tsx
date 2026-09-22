@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from 'react'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 import { Button } from './ui/Button'
 
 /**
@@ -31,15 +32,15 @@ export function PreviewNotice({
             L{layer}
             {name ? ` ${name}` : ''}
           </b>{' '}
-          をプレビュー中
+          {messages.preview.previewing}
         </span>
       )}
       <span className="-ml-1 text-muted max-md:hidden">
-        {pinned ? '(キーを押すか Esc で戻る)' : '(ポインタを外すと戻る)'}
+        {pinned ? messages.preview.pinnedHint : messages.preview.hoverHint}
       </span>
       {pinned ? (
         <Button size="sm" onClick={onExit} className="rounded-full py-0.5">
-          戻る
+          {messages.preview.back}
         </Button>
       ) : (
         <span className="pr-2" />

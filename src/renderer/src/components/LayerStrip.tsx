@@ -16,6 +16,7 @@ import { describeTrigger, type LayerSummary } from '../engine/layerSummary'
 import type { LabelContext, LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 
 export interface LayerStripProps {
   summaries: readonly LayerSummary[]
@@ -89,12 +90,12 @@ export function LayerStrip({
             type="button"
             aria-pressed={preview === layer}
             title={[
-              how ? `L${layer}: ${how}` : `L${layer}`,
-              preview === layer ? '押すと実際の表示に戻る' : 'ポインタを乗せると表示、押すと固定',
-              onRename ? 'ダブルクリックで名前を付ける' : null
+              messages.layerStrip.chipTitle(layer, how),
+              preview === layer ? messages.layerStrip.pinnedHint : messages.layerStrip.unpinnedHint,
+              onRename ? messages.layerStrip.renameHint : null
             ]
               .filter(Boolean)
-              .join('。')}
+              .join(messages.layerStrip.joiner)}
             // クリックでフォーカスを取らない。取ったままだと、このあと実機で Space / Enter を押したとき
             // ブラウザがこのボタンを押したことにして、キーを押して戻したプレビューがまた固定される
             onMouseDown={(event) => event.preventDefault()}
@@ -143,12 +144,14 @@ export function LayerStrip({
           onClick={() => setShowBlank((on) => !on)}
           title={
             showBlank
-              ? '中身の無いレイヤーを隠す'
-              : `L${hiddenBlank.map((s) => s.layer).join(' / L')} は中身が無い(透過・無効か L0 と同じ)。押すと並べる`
+              ? messages.layerStrip.hideBlankTitle
+              : messages.layerStrip.showBlankTitle(hiddenBlank.map((s) => s.layer))
           }
           className="h-7 shrink-0 rounded-md px-1.5 text-2xs text-muted hover:bg-line-soft hover:text-ink"
         >
-          {showBlank ? '隠す' : `+${hiddenBlank.length} 空`}
+          {showBlank
+            ? messages.layerStrip.hideBlank
+            : messages.layerStrip.showBlank(hiddenBlank.length)}
         </button>
       )}
     </div>
@@ -182,8 +185,8 @@ function NameInput({
   return (
     <input
       ref={ref}
-      aria-label={`L${layer} の名前`}
-      placeholder={`L${layer} の名前`}
+      aria-label={messages.layerStrip.nameLabel(layer)}
+      placeholder={messages.layerStrip.nameLabel(layer)}
       defaultValue={initial}
       maxLength={LAYER_NAME_MAX_LENGTH}
       onKeyDown={(event) => {

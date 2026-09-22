@@ -12,6 +12,7 @@ import { Fragment, type JSX } from 'react'
 import type { RouteStep, SymbolRoute } from '../engine/symbolRoutes'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 
 export function RouteChips({ steps, compact = false }: { steps: RouteStep[]; compact?: boolean }) {
   return (
@@ -49,9 +50,7 @@ export interface SymbolFinderProps {
 export function SymbolFinder({ routes, stepsOf, onPick }: SymbolFinderProps): JSX.Element {
   return (
     <div className="w-[26rem] max-w-[calc(100vw-2rem)] p-1">
-      <p className="px-1 pb-2 text-2xs text-muted">
-        押すと、そのキーを図で示す。キーを押すか Esc で戻る
-      </p>
+      <p className="px-1 pb-2 text-2xs text-muted">{messages.symbols.lead}</p>
       <ul className="grid max-h-[min(28rem,70vh)] grid-cols-3 gap-1 overflow-y-auto">
         {[...routes].map(([symbol, list]) => {
           const best = list[0]
@@ -70,8 +69,8 @@ export function SymbolFinder({ routes, stepsOf, onPick }: SymbolFinderProps): JS
                             .map((s) => (s.kind === 'shift' ? 'Shift' : s.text))
                             .join(' + ')
                         )
-                        .join(' / または ')
-                    : 'このキーマップでは出せない'
+                        .join(messages.symbols.or)
+                    : messages.symbols.unavailable
                 }
                 className={cn(
                   'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left',
@@ -89,7 +88,7 @@ export function SymbolFinder({ routes, stepsOf, onPick }: SymbolFinderProps): JS
                   {best ? (
                     <RouteChips steps={stepsOf(best)} compact />
                   ) : (
-                    <span className="text-faint">なし</span>
+                    <span className="text-faint">{messages.symbols.none}</span>
                   )}
                 </span>
               </button>

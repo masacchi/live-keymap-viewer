@@ -18,6 +18,7 @@ import {
 } from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 import { Button } from './ui/Button'
 import { PercentSlider } from './ui/PercentSlider'
 
@@ -59,7 +60,7 @@ export function SettingsPanel({
 }: SettingsPanelProps): JSX.Element {
   return (
     <div className="w-80 divide-y divide-line-soft">
-      <Section title="レイヤー名">
+      <Section title={messages.settings.layerNames}>
         {onRename && layers.length > 0 ? (
           <>
             <ul className="space-y-1.5">
@@ -74,8 +75,8 @@ export function SettingsPanel({
                   <input
                     // 保存した名前が変われば欄を作り直す(ツールバーのダブルクリックで変えたときなど)
                     key={names[layer] ?? ''}
-                    aria-label={`L${layer} の名前`}
-                    placeholder={how ?? '名前なし'}
+                    aria-label={messages.layerStrip.nameLabel(layer)}
+                    placeholder={how ?? messages.settings.unnamed}
                     defaultValue={names[layer] ?? ''}
                     maxLength={LAYER_NAME_MAX_LENGTH}
                     onKeyDown={(event) => {
@@ -96,21 +97,19 @@ export function SettingsPanel({
                 </li>
               ))}
             </ul>
-            <p className="text-2xs text-muted">
-              キーの色帯やツールバーに出る。キーボードごとに覚える。空にすると消える
-            </p>
+            <p className="text-2xs text-muted">{messages.settings.layerNamesHint}</p>
           </>
         ) : (
-          <p className="text-2xs text-muted">キーボードに繋ぐと付けられる</p>
+          <p className="text-2xs text-muted">{messages.settings.connectToName}</p>
         )}
       </Section>
 
-      <Section title="ノブの割り当て">
+      <Section title={messages.settings.knobs}>
         <div className="flex overflow-hidden rounded-md border border-line-soft">
           {(
             [
-              ['top', '図の上'],
-              ['bottom', '図の下']
+              ['top', messages.settings.knobsTop],
+              ['bottom', messages.settings.knobsBottom]
             ] as const
           ).map(([placement, text]) => (
             <Button
@@ -126,9 +125,9 @@ export function SettingsPanel({
         </div>
       </Section>
 
-      <Section title="オーバーレイ">
+      <Section title={messages.settings.overlay}>
         <PercentSlider
-          label="濃さ"
+          label={messages.settings.opacity}
           value={settings.overlayOpacity}
           min={OVERLAY_OPACITY_MIN}
           max={1}
@@ -145,15 +144,13 @@ export function SettingsPanel({
             className="mt-0.5 accent-ink"
           />
           <span>
-            L0 のあいだは薄くする
-            <span className="block text-2xs text-muted">
-              ほかのレイヤーに入るか Shift を押すと濃く戻る
-            </span>
+            {messages.settings.autoFade}
+            <span className="block text-2xs text-muted">{messages.settings.autoFadeHint}</span>
           </span>
         </label>
         <PercentSlider
-          label="薄くしたとき"
-          title="薄くしたときに残す濃さ。0% で消える(左上のパネルは残る)"
+          label={messages.settings.fadedOpacity}
+          title={messages.settings.fadedOpacityHint}
           value={settings.overlayFadedOpacity}
           min={0}
           max={OVERLAY_FADED_OPACITY_MAX}
@@ -174,15 +171,13 @@ export function SettingsPanel({
             className="mt-0.5 accent-ink"
           />
           <span>
-            後ろの画面をぼかす
+            {messages.settings.blur}
             <span className="block text-2xs text-muted">
-              {blurSupported
-                ? 'すりガラスのように(Windows 11)。強さは OS が決める。薄くしているあいだは外す'
-                : 'Windows 11 でだけ使える'}
+              {blurSupported ? messages.settings.blurHint : messages.settings.blurUnsupported}
             </span>
           </span>
         </label>
-        <p className="text-2xs text-muted">オーバーレイの左上のパネルからも変えられる</p>
+        <p className="text-2xs text-muted">{messages.settings.overlayPanelToo}</p>
       </Section>
     </div>
   )

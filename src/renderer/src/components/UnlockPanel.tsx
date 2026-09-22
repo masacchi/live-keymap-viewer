@@ -7,6 +7,7 @@
  * (オーバーレイはクリックが透過するので、そもそも押せない)
  */
 import { Fragment, type JSX } from 'react'
+import { messages } from '../messages'
 import type { UnlockState } from '../session/keyboardSession'
 
 export interface UnlockPanelProps {
@@ -27,7 +28,7 @@ function KeyNames({ names }: { names: readonly string[] }): JSX.Element {
       {names.map((name, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 同じ名前のキーが 2 つあり得る。並びは変わらない
         <Fragment key={i}>
-          {i > 0 && (i === names.length - 1 ? ' と ' : '・')}
+          {i > 0 && (i === names.length - 1 ? messages.unlock.and : messages.unlock.separator)}
           <kbd className="rounded-md border border-unlock px-1.5 font-sans">{name}</kbd>
         </Fragment>
       ))}
@@ -49,18 +50,17 @@ export function UnlockPanel({
       <p className="text-xs font-semibold md:text-sm">
         {named ? (
           <>
-            <KeyNames names={keyNames} /> {keyNames.length > 1 ? 'を同時に、' : 'を、'}
-            バーが埋まるまで押し続ける
+            <KeyNames names={keyNames} />{' '}
+            {keyNames.length > 1 ? messages.unlock.pressTogether : messages.unlock.pressOne}
+            {messages.unlock.untilFull}
           </>
         ) : (
-          '図で白い破線が回っているキーを、バーが埋まるまで押し続ける'
+          messages.unlock.pressHighlighted
         )}
       </p>
       <p className="mt-1 text-xs text-muted max-md:hidden">
-        押しているキーを読むには Vial のアンロックが要る。図では白い破線が回っているキー。
-        押しても光らないが、バーが進んでいれば効いている。離すとやり直しになる。
-        解除したままにしたくなければ、使い終わったらキーボードを挿し直す。
-        {mock && ' (モックでは、キーをクリックすると押したままになる。もう一度で離す)'}
+        {messages.unlock.explain}
+        {mock && messages.unlock.mockHint}
       </p>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-line-soft md:mt-3">
         <div

@@ -28,6 +28,7 @@ import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import { cn } from './lib/cn'
+import { messages } from './messages'
 
 type WindowMode = 'normal' | 'overlay'
 
@@ -117,7 +118,7 @@ export default function App(): JSX.Element {
         lookup && (
           <span className="flex items-center gap-1.5">
             <b className="text-sm font-bold leading-none">{lookup.symbol}</b>
-            <span>は</span>
+            <span>{messages.preview.symbolIs}</span>
             <RouteChips steps={guide.stepsOf(lookup.route)} />
           </span>
         )

@@ -9,6 +9,7 @@ import { type EncoderPlacement, layoutEncoderStrip, viewBoxFor } from '../layout
 import { type KeyboardGeometry, keyId, visibleKeys } from '../layout/geometry'
 import { decodeLayoutOptions } from '../layout/layoutOptions'
 import { layerColor } from '../lib/theme'
+import { messages } from '../messages'
 import { KeyCap } from './KeyCap'
 
 export interface KeyboardViewProps {
@@ -140,7 +141,7 @@ export function KeyboardView({
       className="w-full h-full"
       role="img"
       style={{ '--trigger': layerColor(view.displayLayer) } as React.CSSProperties}
-      aria-label={`レイヤー ${view.displayLayer}${layerNames[view.displayLayer] ? `(${layerNames[view.displayLayer]})` : ''} のキーマップ`}
+      aria-label={messages.keyboardView.label(view.displayLayer, layerNames[view.displayLayer])}
     >
       {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
       {strip?.items.map((item) => (

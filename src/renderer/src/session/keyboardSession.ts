@@ -37,6 +37,7 @@ import {
   unlockStart
 } from '../hid/vial'
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
+import { messages } from '../messages'
 
 /** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §8)。 */
 export const MATRIX_POLL_MS = 20
@@ -187,7 +188,7 @@ export class KeyboardSession {
       if (!snapshot.matrixTestSupported) {
         this.update({
           status: 'error',
-          error: 'このキーボードでは matrix state を読めない(プロトコルまたは行列サイズの制限)'
+          error: messages.connection.noMatrix
         })
         return
       }

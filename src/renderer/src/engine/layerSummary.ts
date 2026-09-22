@@ -10,6 +10,7 @@
 import { decodeKeycode, KC_NO, KC_TRNS, type Keycode } from '../keycodes/decode'
 import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
 import { holdLayerOf, type TapDanceEntry } from '../keycodes/tapDance'
+import { messages } from '../messages'
 
 /** そのキーでレイヤーに入る方法。 */
 export type TriggerKind =
@@ -132,17 +133,6 @@ export function summarizeLayers(input: LayerSummaryInput): LayerSummary[] {
   return summaries
 }
 
-/** 入り方ごとの言い方。キーの名前の後ろに付ける。 */
-const KIND_TEXT: Record<TriggerKind, string> = {
-  hold: '長押し',
-  momentary: '押す間',
-  toggle: 'で固定',
-  to: 'で移動',
-  default: 'で既定',
-  oneshot: 'で 1 回',
-  tapToggle: '押す間'
-}
-
 /**
  * 行き方の短い説明。LT / Tap Dance はタップ側の文字(「Space 長押し」)、MO や TG は
  * キーそのものの名前(「TG2 で固定」)で言う。ベースレイヤー以外にあるキーなら、先にそのレイヤーを書く。
@@ -153,6 +143,6 @@ export function describeTrigger(
   context: LabelContext
 ): string {
   const name = labelForKeycode(trigger.keycode, mode, context).main
-  const from = trigger.fromLayer === 0 ? '' : `L${trigger.fromLayer} → `
-  return `${from}${name} ${KIND_TEXT[trigger.kind]}`
+  const from = trigger.fromLayer === 0 ? '' : messages.trigger.fromLayer(trigger.fromLayer)
+  return `${from}${name} ${messages.trigger[trigger.kind]}`
 }

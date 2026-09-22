@@ -206,6 +206,15 @@ npm run deploy:win
 `tests/labels.test.ts` にケースを足す。ベースレイヤーは `reference/keymap-preview.html` の
 L0 と一致することを確かめるテストがある。
 
+### 画面の文言を変える
+
+ボタン・見出し・説明・ツールチップの文言は [`messages.ts`](../src/renderer/src/messages.ts) にまとめてある。
+部品は `messages.toolbar.settings` のように引く。値の入る文言は関数(`messages.layerStrip.showBlank(5)`)。
+
+- キーの表示名(`かな`・`マウス移動` など)は `keycodes/labels.ts` の表(上の「文字の表示を変える・足す」)
+- 通信や定義の形式のエラー(`hid/`・`layout/`)は、原因の説明と切り離せないので起きた場所に書く
+- テストは画面の文言で確かめているものが多い。文言を変えたらテストも直す
+
 ### 色やクラスを変える
 
 - **色はすべて [`styles.css`](../src/renderer/src/styles.css) 冒頭の `@theme`**。`--color-surface` を足すと
