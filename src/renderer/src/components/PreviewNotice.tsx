@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
 
@@ -10,27 +10,32 @@ export function PreviewNotice({
   layer,
   name,
   pinned,
-  onExit
+  onExit,
+  hint
 }: {
   layer: number
   name?: string
   pinned: boolean
   onExit: () => void
+  /** 「@ は L2 + W」のような案内。あれば「プレビュー中」の代わりにこれを出す(記号の出し方)。 */
+  hint?: ReactNode
 }): JSX.Element {
   return (
     <div
       className="absolute -top-3.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border-2 bg-ground py-0.5 pl-3 pr-1 text-2xs text-ink"
       style={{ borderColor: layerColor(layer) }}
     >
-      <span>
-        <b className="font-semibold">
-          L{layer}
-          {name ? ` ${name}` : ''}
-        </b>{' '}
-        をプレビュー中
-        <span className="text-muted max-md:hidden">
-          {pinned ? '(キーを押すか Esc で戻る)' : '(ポインタを外すと戻る)'}
+      {hint ?? (
+        <span>
+          <b className="font-semibold">
+            L{layer}
+            {name ? ` ${name}` : ''}
+          </b>{' '}
+          をプレビュー中
         </span>
+      )}
+      <span className="-ml-1 text-muted max-md:hidden">
+        {pinned ? '(キーを押すか Esc で戻る)' : '(ポインタを外すと戻る)'}
       </span>
       {pinned ? (
         <Button size="sm" onClick={onExit} className="rounded-full py-0.5">

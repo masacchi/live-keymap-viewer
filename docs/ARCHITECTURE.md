@@ -89,6 +89,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `encoderStrip.ts` | ノブの割り当てを横一列に並べる配置計算と viewBox |
 | | `layoutOptions.ts` | VIA のレイアウトオプション(ビット詰め)をほどく |
 | `engine/` | `layerState.ts` | `LayerEngine`。押下の列からアクティブなレイヤーを出す(HANDOFF §6) |
+| | `symbolRoutes.ts` | 記号ごとの打ち方(どのレイヤーの、どのキーを、Shift 付きか)を手数の少ない順に |
 | | `layerSummary.ts` | キーマップから、各レイヤーへの行き方(`Space 長押し` など)と空かどうかを読む |
 | `hid/` | `transport.ts` | `Transport` インターフェース、直列化キュー、`WebHidTransport` |
 | | `vial.ts` | プロトコルの各コマンドと `loadKeyboard` / `reloadKeymap` |
@@ -101,6 +102,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | `hooks/` | `useVialKeyboard.ts` | 接続の状態を React に渡す。フォーカス復帰で読み直す |
 | `components/` | `KeyboardView.tsx` / `KeyCap.tsx` | SVG の描画。プレビュー・Shift の強調・レイヤー名の色帯 |
 | | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方つき、空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
+| | `SymbolFinder.tsx` | 記号の出し方の一覧。押すと App がそのレイヤーをプレビューし、押すキーを光らせる |
 | | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・ノブの位置・オーバーレイ) / Ctrl・Shift・Alt・Win の印 |
 | | `ui/` | 共通の部品(`Button` / `Popover` / `Menu` / アイコン)。ボタンはすべて `Button` を使う |
 | | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |

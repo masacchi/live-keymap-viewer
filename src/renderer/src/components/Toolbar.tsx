@@ -1,14 +1,14 @@
 /**
  * 通常ウィンドウのツールバー。常に 1 行。
  *
- *   [● Cornix LP ▾] [L0] [L1 BS 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [オーバーレイへ] [設定]
+ *   [● Cornix LP ▾] [L0] [L1 BS 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [@ 記号の出し方] [オーバーレイへ] [設定]
  *
  * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
  * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
  *   大きな「L0」の札があり、下の段の一覧と同じことを 2 回言っていた。一覧をここに入れて 1 段減らし、
  *   そのぶん図を大きくする
  *   の横に、いま効いているモディファイア
- * - 右: 表記の切り替え・オーバーレイ・設定
+ * - 右: 表記の切り替え・記号の出し方・オーバーレイ・設定
  *
  * 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
  * 幅が足りなければ状態の文字やレイヤーの補足を隠す(状態は丸の色と、ボタンの説明で分かる)。
@@ -30,6 +30,8 @@ export interface ToolbarProps {
   layers?: ReactNode
   /** 設定パネルの中身(右端の「設定」から開く)。 */
   settings: ReactNode
+  /** 記号の出し方の中身。閉じる関数を受け取る(記号を選んだら閉じる)。キーボードを読み込むまでは渡さない。 */
+  symbols?: (close: () => void) => ReactNode
   /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
   mods: number | null
   labelMode: LabelMode
@@ -64,6 +66,7 @@ export function Toolbar({
   deviceLabel,
   layers,
   settings,
+  symbols,
   mods,
   labelMode,
   windowMode,
@@ -123,9 +126,27 @@ export function Toolbar({
           ))}
         </div>
 
-        <Button onClick={onToggleWindowMode}>
+        {symbols && (
+          <Popover
+            role="dialog"
+            align="end"
+            title="記号の出し方"
+            buttonClassName={buttonVariants()}
+            label={
+              <>
+                <span className="font-bold">@</span>
+                {/* 既定の幅(1180px)では隠す。出すとレイヤーの一覧が押し出される */}
+                <span className="max-xl:hidden">記号の出し方</span>
+              </>
+            }
+          >
+            {symbols}
+          </Popover>
+        )}
+
+        <Button onClick={onToggleWindowMode} title="Ctrl+Alt+K でも切り替えられる">
           {windowMode === 'overlay' ? '通常ウィンドウへ' : 'オーバーレイへ'}
-          <span className="text-2xs text-muted max-lg:hidden">Ctrl+Alt+K</span>
+          <span className="text-2xs text-muted max-xl:hidden">Ctrl+Alt+K</span>
         </Button>
 
         <Popover

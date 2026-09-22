@@ -7,10 +7,12 @@ import { LoadingPanel } from './components/LoadingPanel'
 import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
 import { PreviewNotice } from './components/PreviewNotice'
 import { SettingsPanel } from './components/SettingsPanel'
+import { RouteChips, routeSteps, SymbolFinder } from './components/SymbolFinder'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { Button } from './components/ui/Button'
 import { summarizeLayers } from './engine/layerSummary'
+import { findSymbolRoutes, type SymbolRoute, shiftKeysOf } from './engine/symbolRoutes'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { decodeKeycode, MOD_SHIFT } from './keycodes/decode'
 import { type LabelContext, type LabelMode, labelForKeycode } from './keycodes/labels'
@@ -96,6 +98,8 @@ export default function App(): JSX.Element {
    */
   const [preview, setPreview] = useState<number | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
+  /** 記号の出し方で選んだ記号と、その打ち方。そのレイヤーを出しているあいだだけ効かせる。 */
+  const [lookup, setLookup] = useState<{ symbol: string; route: SymbolRoute } | null>(null)
   const heldRef = useRef<ReadonlySet<string>>(new Set())
   useEffect(() => {
     const held = new Set(layers?.held.keys() ?? [])
@@ -104,11 +108,14 @@ export default function App(): JSX.Element {
     if (pressedNew) {
       setPreview(null)
       setHovered(null)
+      setLookup(null)
     }
   }, [layers])
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setPreview(null)
+      if (event.key !== 'Escape') return
+      setPreview(null)
+      setLookup(null)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -120,7 +127,13 @@ export default function App(): JSX.Element {
       current !== null && current < layerCount ? current : null
     setPreview(valid)
     setHovered(valid)
+    setLookup(null)
   }, [layerCount])
+  /** レイヤーの一覧やプレビューの札から、固定のプレビューを変えるとき。記号の案内はやめる。 */
+  const onPinPreview = useCallback((layer: number | null) => {
+    setLookup(null)
+    setPreview(layer)
+  }, [])
 
   const requested = overlay ? null : (hovered ?? preview)
   // 実際に出ているレイヤーを「プレビュー」しても何も変わらないので、札や破線は出さない
@@ -147,6 +160,48 @@ export default function App(): JSX.Element {
   const triggerKeys = useMemo(
     () => (previewLayer === null ? [] : (summaries[previewLayer]?.triggers ?? [])),
     [summaries, previewLayer]
+  )
+
+  // 記号の出し方。どの文字が出るかは表記で変わる。行き方の無いレイヤーの文字は打てないので数えない
+  const symbolRoutes = useMemo(
+    () =>
+      snapshot
+        ? findSymbolRoutes({
+            keymap: snapshot.keymap,
+            labelOf: (keycode) => labelForKeycode(keycode, labelMode, labelContext),
+            reachable: (layer) => (summaries[layer]?.triggers.length ?? 0) > 0
+          })
+        : new Map<string, SymbolRoute[]>(),
+    [snapshot, labelMode, labelContext, summaries]
+  )
+  const shiftKeys = useMemo(() => (snapshot ? shiftKeysOf(snapshot.keymap) : []), [snapshot])
+  const stepsOf = useCallback(
+    (route: SymbolRoute) => {
+      const raw = snapshot?.keymap[0]?.[route.row]?.[route.col] ?? 0
+      const keyName = labelForKeycode(decodeKeycode(raw), labelMode, labelContext).main
+      const trigger = summaries[route.layer]?.triggers[0]
+      return routeSteps(
+        route,
+        keyName,
+        trigger ? describeTrigger(trigger, labelMode, labelContext) : null
+      )
+    },
+    [snapshot, labelMode, labelContext, summaries]
+  )
+  const onPickSymbol = useCallback((symbol: string, route: SymbolRoute) => {
+    setHovered(null)
+    setPreview(route.layer === 0 ? null : route.layer)
+    setLookup({ symbol, route })
+  }, [])
+  // ほかのレイヤーに乗せている・押して変えたなら、案内はそのレイヤーには当てはまらない
+  const activeLookup =
+    lookup && hovered === null && preview === (lookup.route.layer === 0 ? null : lookup.route.layer)
+      ? lookup
+      : null
+  const flashKeys = useMemo(
+    () =>
+      activeLookup ? [activeLookup.route, ...(activeLookup.route.shift ? shiftKeys : [])] : [],
+    [activeLookup, shiftKeys]
   )
 
   // アンロックで押すキーの名前。ロック中はレイヤーが動かないので、ベースレイヤーの表示で言う
@@ -207,7 +262,7 @@ export default function App(): JSX.Element {
                 names={names}
                 labelMode={labelMode}
                 labelContext={labelContext}
-                onPreview={setPreview}
+                onPreview={onPinPreview}
                 onHover={setHovered}
                 onRename={window.api ? onRename : undefined}
               />
@@ -232,6 +287,20 @@ export default function App(): JSX.Element {
               overlayAutoFade={overlayAutoFade}
               onOverlayAutoFade={onOverlayAutoFade}
             />
+          }
+          symbols={
+            ready && keyboard.status !== 'unlocking'
+              ? (close) => (
+                  <SymbolFinder
+                    routes={symbolRoutes}
+                    stepsOf={stepsOf}
+                    onPick={(symbol, route) => {
+                      close()
+                      onPickSymbol(symbol, route)
+                    }}
+                  />
+                )
+              : undefined
           }
           mods={ready && keyboard.status !== 'unlocking' ? layers.mods : null}
           labelMode={labelMode}
@@ -306,12 +375,21 @@ export default function App(): JSX.Element {
                     }
               }
             >
-              {previewLayer !== null && (
+              {(activeLookup || previewLayer !== null) && (
                 <PreviewNotice
-                  layer={previewLayer}
-                  name={names[previewLayer]}
+                  layer={activeLookup?.route.layer ?? previewLayer ?? 0}
+                  name={names[activeLookup?.route.layer ?? previewLayer ?? 0]}
                   pinned={hovered === null}
-                  onExit={() => setPreview(null)}
+                  onExit={() => onPinPreview(null)}
+                  hint={
+                    activeLookup && (
+                      <span className="flex items-center gap-1.5">
+                        <b className="text-sm font-bold leading-none">{activeLookup.symbol}</b>
+                        <span>は</span>
+                        <RouteChips steps={stepsOf(activeLookup.route)} />
+                      </span>
+                    )
+                  }
                 />
               )}
               <KeyboardView
@@ -325,6 +403,7 @@ export default function App(): JSX.Element {
                 previewLayer={previewLayer}
                 layerNames={names}
                 highlightKeys={triggerKeys}
+                flashKeys={flashKeys}
                 encoderPlacement={encoderPlacement}
               />
             </div>

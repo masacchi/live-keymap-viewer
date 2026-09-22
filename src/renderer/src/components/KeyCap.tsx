@@ -31,6 +31,8 @@ export interface KeyCapProps {
   unlockHint: boolean
   /** 縁取るか(プレビュー中の、そのレイヤーに入るキー)。色は --trigger。 */
   highlight?: boolean
+  /** 光らせるか(記号の出し方で選んだ記号を打つのに押すキー)。 */
+  flash?: boolean
   /** Shift が効いているか。Shift で入る文字が変わるキーは、そちらを主にして目立たせる。 */
   shifted?: boolean
   unit: number
@@ -162,6 +164,7 @@ export function KeyCap({
   transparent,
   unlockHint,
   highlight = false,
+  flash = false,
   shifted = false,
   unit,
   onClick
@@ -187,6 +190,7 @@ export function KeyCap({
     'key-holding': holding,
     'key-unlock': unlockHint,
     'key-trigger': highlight,
+    'key-flash': flash,
     'key-shifted': swapShift,
     'key-clickable': onClick !== undefined
   })

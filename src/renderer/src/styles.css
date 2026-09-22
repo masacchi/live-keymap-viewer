@@ -218,6 +218,22 @@ body.overlay .app-shell.faded {
 }
 
 /*
+ * 記号の出し方で選んだ記号を打つのに押すキー。「ここを押す」なので押下と同じ黄色の枠にし
+ * (押下は塗り、こちらは枠だけ)、最初の数回だけ点滅させて目を引く。
+ */
+.key-flash .cap {
+  stroke: var(--color-press);
+  stroke-width: 3.5;
+  animation: key-flash 0.45s ease-in-out 6 alternate;
+}
+
+@keyframes key-flash {
+  to {
+    stroke-opacity: 0.2;
+  }
+}
+
+/*
  * Shift を押しているあいだ、Shift で入る文字が変わるキー。KeyCap が Shift 側の文字を
  * 主文字の位置に入れ替えているので、ここではキーごと明るくして浮かせる。
  * 押下より前に置く(押している記号キーは押下の配色を優先する)。
@@ -289,7 +305,8 @@ body.overlay .app-shell.faded {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .key-unlock .cap {
+  .key-unlock .cap,
+  .key-flash .cap {
     animation: none;
   }
 }

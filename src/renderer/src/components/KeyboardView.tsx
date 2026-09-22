@@ -36,6 +36,8 @@ export interface KeyboardViewProps {
    * 色は図に出しているレイヤーの色。
    */
   highlightKeys?: ReadonlyArray<{ row: number; col: number }>
+  /** 光らせるキー。記号の出し方で選んだ記号を打つのに押すキー(Shift も含む)。 */
+  flashKeys?: ReadonlyArray<{ row: number; col: number }>
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
@@ -53,7 +55,8 @@ export function KeyboardView({
   onKeyClick,
   previewLayer = null,
   layerNames = [],
-  highlightKeys = []
+  highlightKeys = [],
+  flashKeys = []
 }: KeyboardViewProps): JSX.Element {
   // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
@@ -94,6 +97,7 @@ export function KeyboardView({
   )
 
   const unlockSet = useMemo(() => new Set(unlockKeys.map((k) => keyId(k.row, k.col))), [unlockKeys])
+  const flashSet = useMemo(() => new Set(flashKeys.map((k) => keyId(k.row, k.col))), [flashKeys])
   const highlightSet = useMemo(
     () => new Set(highlightKeys.map((k) => keyId(k.row, k.col))),
     [highlightKeys]
@@ -176,6 +180,7 @@ export function KeyboardView({
             transparent={held ? false : resolved.transparent}
             unlockHint={unlockSet.has(id)}
             highlight={highlightSet.has(id)}
+            flash={flashSet.has(id)}
             shifted={shifted}
             unit={unit}
             onClick={onKeyClick && (() => onKeyClick(physical.row, physical.col))}

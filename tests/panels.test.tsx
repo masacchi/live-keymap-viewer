@@ -7,6 +7,7 @@ import { ModifierBadges } from '@/components/ModifierBadges'
 import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
 import { PreviewNotice } from '@/components/PreviewNotice'
 import { SettingsPanel } from '@/components/SettingsPanel'
+import { routeSteps, SymbolFinder } from '@/components/SymbolFinder'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
 import type { LayerSummary, LayerTrigger } from '@/engine/layerSummary'
@@ -262,5 +263,44 @@ describe('SettingsPanel', () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*>図の上</)
     expect(html).toContain('value="60"')
     expect(html).not.toMatch(/type="checkbox"[^>]*checked/)
+  })
+})
+
+describe('SymbolFinder', () => {
+  const route = (layer: number, shift = false, tap = false) => ({
+    layer,
+    row: 0,
+    col: 1,
+    shift,
+    tap,
+    cost: (layer > 0 ? 1 : 0) + (shift ? 1 : 0)
+  })
+
+  it('記号ごとに一番手数の少ない打ち方を出し、出せない記号は押せなくする', () => {
+    const routes = new Map([
+      ['@', [route(2)]],
+      ['<', [route(0, true)]],
+      ['¥', []]
+    ])
+    const html = renderToStaticMarkup(
+      <SymbolFinder
+        routes={routes}
+        stepsOf={(r) =>
+          routeSteps(r, r.layer === 2 ? 'W' : ',', r.layer === 2 ? 'Space 長押し' : null)
+        }
+        onPick={noop}
+      />
+    )
+    // 一覧ではレイヤーを番号で短く出し、ツールチップで行き方まで言う
+    expect(html).toMatch(/title="Space 長押し \+ W"/)
+    expect(html).toContain('>L2<')
+    expect(html).toContain('>Shift<')
+    expect(html).toMatch(/disabled=""[^>]*title="このキーマップでは出せない"/)
+  })
+
+  it('タップと長押しを兼ねるキーは「タップ」と添える', () => {
+    expect(routeSteps(route(0, false, true), '`', null)).toEqual([
+      { kind: 'key', text: '` タップ' }
+    ])
   })
 })
