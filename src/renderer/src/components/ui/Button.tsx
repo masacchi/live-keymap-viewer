@@ -56,7 +56,6 @@ export function Button({
 }: ButtonProps): JSX.Element {
   return (
     <button
-      // biome-ignore lint/a11y/useButtonType: 既定は "button"。呼び出し側が submit を選べるように変数で渡す
       type={type}
       className={cn(buttonVariants({ variant, size, selected }), className)}
       {...props}
