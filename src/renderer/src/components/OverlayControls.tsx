@@ -61,7 +61,14 @@ export function OverlayControls({
 }: OverlayControlsProps): JSX.Element {
   /** ドラッグ中は前回のポインタ位置(画面座標)。していなければ null。 */
   const dragging = useRef<{ x: number; y: number; kind: 'move' | 'resize' } | null>(null)
+  /** ポインタが透過を切っている要素(パネル・つまみ・接続ボタン)の上にあるか。 */
   const [active, setActive] = useState(false)
+  /**
+   * パネルを広げているか(ポインタがパネルの上にある)。ふだんは「⠿ L2」だけにしておく。
+   * 以前は濃さ・L0 で薄く・戻すが常に並んでいて、最前面のウィンドウの左上を横長に塞いでいた。
+   */
+  const [expanded, setExpanded] = useState(false)
+  const panel = useRef<HTMLDivElement>(null)
 
   // ポインタがパネルの上にあるあいだだけ、クリック透過を切る
   useEffect(() => {
@@ -74,9 +81,10 @@ export function OverlayControls({
     const onMove = (event: MouseEvent): void => {
       if (dragging.current) return // ドラッグ中は外に出ても離さない
       const element = document.elementFromPoint(event.clientX, event.clientY)
-      const interactive = element?.closest('[data-interactive]') != null
-      setActive(interactive)
-      apply(!interactive)
+      const target = element?.closest('[data-interactive]') ?? null
+      setActive(target !== null)
+      setExpanded(target !== null && panel.current?.contains(target) === true)
+      apply(target === null)
     }
     window.addEventListener('mousemove', onMove)
     return () => {
@@ -114,6 +122,7 @@ export function OverlayControls({
   return (
     <>
       <div
+        ref={panel}
         data-interactive
         className={cn(
           'absolute left-2 top-2 z-20 flex items-center gap-2 rounded-lg border px-2 py-1.5',
@@ -140,37 +149,42 @@ export function OverlayControls({
           {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
         </span>
 
-        <label className="flex items-center gap-1.5 text-2xs text-muted">
-          濃さ
-          <input
-            type="range"
-            min={20}
-            max={100}
-            step={5}
-            value={Math.round(opacity * 100)}
-            onChange={(event) => onOpacity(Number(event.target.value) / 100)}
-            className="h-1 w-24 accent-ink"
-          />
-          <span className="w-8 tabular-nums text-right text-ink">{Math.round(opacity * 100)}%</span>
-        </label>
+        {/* 畳んでいるあいだは隠すだけ(外すと、広げた瞬間にパネルの幅が決まらずポインタが外れる) */}
+        <div className={cn('flex items-center gap-2', !expanded && 'hidden')}>
+          <label className="flex items-center gap-1.5 text-2xs text-muted">
+            濃さ
+            <input
+              type="range"
+              min={20}
+              max={100}
+              step={5}
+              value={Math.round(opacity * 100)}
+              onChange={(event) => onOpacity(Number(event.target.value) / 100)}
+              className="h-1 w-24 accent-ink"
+            />
+            <span className="w-8 tabular-nums text-right text-ink">
+              {Math.round(opacity * 100)}%
+            </span>
+          </label>
 
-        <label
-          className="flex items-center gap-1 text-2xs text-muted"
-          title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
-        >
-          <input
-            type="checkbox"
-            checked={autoFade}
-            onChange={(event) => onAutoFade(event.target.checked)}
-            className="accent-ink"
-          />
-          L0 で薄く
-        </label>
+          <label
+            className="flex items-center gap-1 text-2xs text-muted"
+            title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
+          >
+            <input
+              type="checkbox"
+              checked={autoFade}
+              onChange={(event) => onAutoFade(event.target.checked)}
+              className="accent-ink"
+            />
+            L0 で薄く
+          </label>
 
-        {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
-        <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
-          通常ウィンドウに戻す
-        </Button>
+          {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
+          <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
+            通常ウィンドウに戻す
+          </Button>
+        </div>
       </div>
 
       {/* 右下のリサイズつまみ。枠が無いので OS の境界は使えない */}

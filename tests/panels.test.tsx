@@ -165,6 +165,9 @@ describe('オーバーレイの自動フェード', () => {
     )
     expect(html).toContain('L0 で薄く')
     expect(html).toMatch(/type="checkbox"[^>]*checked/)
+    // ふだんは畳んでおき、ポインタを乗せたら広げる
+    // (cn が display のぶつかりを解くので、flex は消えて hidden だけが残る)
+    expect(html).toContain('class="items-center gap-2 hidden"')
   })
 })
 
