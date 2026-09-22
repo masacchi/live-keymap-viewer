@@ -236,8 +236,14 @@ L0 と一致することを確かめるテストがある。
 
 ### 設定項目を足す
 
-[`shared/settings.ts`](../src/shared/settings.ts) の `Settings`・`DEFAULT_SETTINGS`・
-`sanitizeSettings` の 3 か所。壊れた値が来たら既定値に戻すこと。`tests/settings.test.ts` にテスト。
+1. [`shared/settings.ts`](../src/shared/settings.ts) の `Settings`・`DEFAULT_SETTINGS`・`sanitizeSettings`。
+   壊れた値が来たら既定値に戻すこと。`tests/settings.test.ts` にテスト
+2. 画面から変えるなら、同じファイルの `RENDERER_SETTINGS_KEYS` に足す。IPC は足さなくてよい
+   (`settings:update` 1 本で、main が変えてよい項目だけを取り出して検証する)
+3. 画面では [`hooks/useSettings.ts`](../src/renderer/src/hooks/useSettings.ts) の `settings` で読み、
+   `update({ 項目: 値 })` で変える
+4. ウィンドウに効かせるもの(濃さなど)なら、[`main/windows.ts`](../src/main/windows.ts) の
+   `applySettings` で反映する
 
 ### 生成ファイルを作り直す
 

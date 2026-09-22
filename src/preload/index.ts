@@ -1,28 +1,15 @@
 /** renderer に渡す最小限の IPC。HID そのものは renderer の WebHID で扱う。 */
 import { contextBridge, ipcRenderer } from 'electron'
-import {
-  type EncoderPlacement,
-  type HidCandidate,
-  IPC,
-  type LabelMode,
-  type RendererApi
-} from '../shared/ipc'
+import { type HidCandidate, IPC, type RendererApi, type SettingsPatch } from '../shared/ipc'
 
 const api: RendererApi = {
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
-  setLabelMode: (mode: LabelMode) => ipcRenderer.invoke(IPC.settingsSetLabelMode, mode),
+  updateSettings: (patch: SettingsPatch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   setLayerName: (uid: string, layer: number, name: string) =>
     ipcRenderer.invoke(IPC.settingsSetLayerName, uid, layer, name),
-  setEncoderPlacement: (placement: EncoderPlacement) =>
-    ipcRenderer.invoke(IPC.settingsSetEncoderPlacement, placement),
 
   getMode: () => ipcRenderer.invoke(IPC.windowGetMode),
   toggleMode: () => ipcRenderer.invoke(IPC.windowToggleMode),
-  setOverlayOpacity: (value: number) => ipcRenderer.invoke(IPC.windowSetOverlayOpacity, value),
-  setOverlayAutoFade: (on: boolean) => ipcRenderer.invoke(IPC.settingsSetOverlayAutoFade, on),
-  setOverlayFadedOpacity: (value: number) =>
-    ipcRenderer.invoke(IPC.settingsSetOverlayFadedOpacity, value),
-  setOverlayBlur: (on: boolean) => ipcRenderer.invoke(IPC.windowSetOverlayBlur, on),
   setOverlayBlurActive: (active: boolean) =>
     ipcRenderer.send(IPC.windowSetOverlayBlurActive, active),
 

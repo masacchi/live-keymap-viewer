@@ -52,6 +52,43 @@ export interface Settings {
   layerNames: Record<string, string[]>
 }
 
+/**
+ * renderer から変えてよい項目。設定パネルやオーバーレイの操作パネルから変えるもの。
+ * ウィンドウの位置・モード・許可したデバイス・レイヤー名は main が(専用の手順で)書く。
+ *
+ * 以前は項目ごとに IPC のチャネルがあり、設定を 1 つ足すのに 9 か所ほど触っていた。
+ * いまは 1 本(settings:update)で、足すのは Settings・既定値・検証とこの一覧だけでよい。
+ */
+export const RENDERER_SETTINGS_KEYS = [
+  'labelMode',
+  'overlayOpacity',
+  'overlayAutoFade',
+  'overlayFadedOpacity',
+  'overlayBlur',
+  'encoderPlacement'
+] as const satisfies ReadonlyArray<keyof Settings>
+
+export type RendererSettingsKey = (typeof RENDERER_SETTINGS_KEYS)[number]
+export type SettingsPatch = Partial<Pick<Settings, RendererSettingsKey>>
+/** オーバーレイの見え方の設定(操作パネルと設定パネルの両方で変える)。 */
+export type OverlaySettings = Pick<
+  Settings,
+  'overlayOpacity' | 'overlayAutoFade' | 'overlayFadedOpacity' | 'overlayBlur'
+>
+
+/**
+ * renderer から来た変更を、変えてよい項目だけに絞る。値そのものの検証は、保存するときの
+ * sanitizeSettings に任せる(手で直したファイルと同じ扱い)。
+ */
+export function pickRendererPatch(value: unknown): SettingsPatch {
+  if (!isRecord(value)) return {}
+  const patch: Record<string, unknown> = {}
+  for (const key of RENDERER_SETTINGS_KEYS) {
+    if (key in value) patch[key] = value[key]
+  }
+  return patch as SettingsPatch
+}
+
 export const MIN_WINDOW_WIDTH = 420
 export const MIN_WINDOW_HEIGHT = 240
 /** これより薄くすると、操作パネルごと見えなくなって戻せなくなる。 */

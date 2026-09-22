@@ -8,8 +8,14 @@
  * 表記(JIS / US)はよく切り替えるので、ここではなくツールバーに置いたまま。
  */
 import type { JSX, ReactNode } from 'react'
-import type { EncoderPlacement } from '../../../shared/settings'
-import { LAYER_NAME_MAX_LENGTH, OVERLAY_FADED_OPACITY_MAX } from '../../../shared/settings'
+import {
+  LAYER_NAME_MAX_LENGTH,
+  OVERLAY_FADED_OPACITY_MAX,
+  OVERLAY_OPACITY_MIN,
+  type OverlaySettings,
+  type Settings,
+  type SettingsPatch
+} from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
@@ -27,16 +33,9 @@ export interface SettingsPanelProps {
   names: readonly string[]
   /** 名前を付けた(空なら消した)とき。渡さなければ名前の欄は出さない。 */
   onRename?: (layer: number, name: string) => void
-  encoderPlacement: EncoderPlacement
-  onEncoderPlacement: (placement: EncoderPlacement) => void
-  overlayOpacity: number
-  onOverlayOpacity: (value: number) => void
-  overlayAutoFade: boolean
-  onOverlayAutoFade: (on: boolean) => void
-  overlayFadedOpacity: number
-  onOverlayFadedOpacity: (value: number) => void
-  overlayBlur: boolean
-  onOverlayBlur: (on: boolean) => void
+  /** いまの設定(このパネルで変える項目)。 */
+  settings: Pick<Settings, 'encoderPlacement'> & OverlaySettings
+  onChange: (patch: SettingsPatch) => void
   /** 後ろのぼかしが使えるか(Windows のときだけ)。 */
   blurSupported: boolean
 }
@@ -54,16 +53,8 @@ export function SettingsPanel({
   layers,
   names,
   onRename,
-  encoderPlacement,
-  onEncoderPlacement,
-  overlayOpacity,
-  onOverlayOpacity,
-  overlayAutoFade,
-  onOverlayAutoFade,
-  overlayFadedOpacity,
-  onOverlayFadedOpacity,
-  overlayBlur,
-  onOverlayBlur,
+  settings,
+  onChange,
   blurSupported
 }: SettingsPanelProps): JSX.Element {
   return (
@@ -124,9 +115,9 @@ export function SettingsPanel({
           ).map(([placement, text]) => (
             <Button
               key={placement}
-              selected={encoderPlacement === placement}
-              aria-pressed={encoderPlacement === placement}
-              onClick={() => onEncoderPlacement(placement)}
+              selected={settings.encoderPlacement === placement}
+              aria-pressed={settings.encoderPlacement === placement}
+              onClick={() => onChange({ encoderPlacement: placement })}
               className="flex-1 rounded-none"
             >
               {text}
@@ -138,10 +129,10 @@ export function SettingsPanel({
       <Section title="オーバーレイ">
         <PercentSlider
           label="濃さ"
-          value={overlayOpacity}
-          min={0.2}
+          value={settings.overlayOpacity}
+          min={OVERLAY_OPACITY_MIN}
           max={1}
-          onChange={onOverlayOpacity}
+          onChange={(overlayOpacity) => onChange({ overlayOpacity })}
           className="gap-2 text-xs text-ink"
           labelClassName="w-20"
           trackClassName="flex-1"
@@ -149,8 +140,8 @@ export function SettingsPanel({
         <label className="flex items-start gap-2 text-xs text-ink">
           <input
             type="checkbox"
-            checked={overlayAutoFade}
-            onChange={(event) => onOverlayAutoFade(event.target.checked)}
+            checked={settings.overlayAutoFade}
+            onChange={(event) => onChange({ overlayAutoFade: event.target.checked })}
             className="mt-0.5 accent-ink"
           />
           <span>
@@ -163,11 +154,11 @@ export function SettingsPanel({
         <PercentSlider
           label="薄くしたとき"
           title="薄くしたときに残す濃さ。0% で消える(左上のパネルは残る)"
-          value={overlayFadedOpacity}
+          value={settings.overlayFadedOpacity}
           min={0}
           max={OVERLAY_FADED_OPACITY_MAX}
-          onChange={onOverlayFadedOpacity}
-          disabled={!overlayAutoFade}
+          onChange={(overlayFadedOpacity) => onChange({ overlayFadedOpacity })}
+          disabled={!settings.overlayAutoFade}
           className="gap-2 pl-5 text-xs text-ink"
           labelClassName="w-15"
           trackClassName="flex-1"
@@ -177,9 +168,9 @@ export function SettingsPanel({
         >
           <input
             type="checkbox"
-            checked={overlayBlur}
+            checked={settings.overlayBlur}
             disabled={!blurSupported}
-            onChange={(event) => onOverlayBlur(event.target.checked)}
+            onChange={(event) => onChange({ overlayBlur: event.target.checked })}
             className="mt-0.5 accent-ink"
           />
           <span>

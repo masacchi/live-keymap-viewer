@@ -7,11 +7,10 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
 import {
-  clampFadedOpacity,
-  type EncoderPlacement,
   isKeyboardUid,
-  type LabelMode,
   MAX_LAYERS,
+  pickRendererPatch,
+  type Settings,
   withLayerName
 } from '../shared/settings'
 import type { HidPermissions } from './hid'
@@ -25,10 +24,11 @@ function isFiniteNumber(value: unknown): value is number {
 export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
   ipcMain.handle(IPC.settingsGet, () => loadSettings())
 
-  ipcMain.handle(IPC.settingsSetLabelMode, (_event, value: unknown): LabelMode => {
-    const labelMode: LabelMode = value === 'us' ? 'us' : 'jis'
-    saveSettings({ labelMode })
-    return labelMode
+  // 変えてよい項目だけを取り出し、値は保存するときに sanitizeSettings が確かめる
+  ipcMain.handle(IPC.settingsUpdate, (_event, patch: unknown): Settings => {
+    const saved = saveSettings(pickRendererPatch(patch))
+    windows.applySettings(saved)
+    return saved
   })
 
   ipcMain.handle(
@@ -50,12 +50,6 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
     }
   )
 
-  ipcMain.handle(IPC.settingsSetEncoderPlacement, (_event, value: unknown): EncoderPlacement => {
-    const encoderPlacement: EncoderPlacement = value === 'top' ? 'top' : 'bottom'
-    saveSettings({ encoderPlacement })
-    return encoderPlacement
-  })
-
   ipcMain.handle(IPC.windowGetMode, () => windows.mode)
 
   ipcMain.handle(IPC.windowToggleMode, () => {
@@ -63,29 +57,9 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
     return windows.mode
   })
 
-  ipcMain.handle(IPC.settingsSetOverlayAutoFade, (_event, value: unknown): boolean => {
-    if (typeof value !== 'boolean') return loadSettings().overlayAutoFade
-    saveSettings({ overlayAutoFade: value })
-    return value
-  })
-
-  ipcMain.handle(IPC.settingsSetOverlayFadedOpacity, (_event, value: unknown): number => {
-    const overlayFadedOpacity = clampFadedOpacity(value)
-    saveSettings({ overlayFadedOpacity })
-    return overlayFadedOpacity
-  })
-
-  ipcMain.handle(IPC.windowSetOverlayBlur, (_event, value: unknown): boolean =>
-    typeof value === 'boolean' ? windows.setOverlayBlur(value) : loadSettings().overlayBlur
-  )
-
   ipcMain.on(IPC.windowSetOverlayBlurActive, (_event, active: unknown) => {
     windows.setOverlayBlurActive(active !== false)
   })
-
-  ipcMain.handle(IPC.windowSetOverlayOpacity, (_event, value: unknown) =>
-    windows.setOverlayOpacity(isFiniteNumber(value) ? value : Number.NaN)
-  )
 
   ipcMain.on(IPC.windowSetIgnoreMouse, (_event, ignore: unknown) => {
     windows.setIgnoreMouseEvents(ignore !== false)

@@ -1,5 +1,5 @@
 import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { EncoderPlacement, HidCandidate } from '../../shared/ipc'
+import type { HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
 import { describeTrigger, LayerStrip } from './components/LayerStrip'
@@ -13,9 +13,10 @@ import { UnlockPanel } from './components/UnlockPanel'
 import { Button } from './components/ui/Button'
 import { summarizeLayers } from './engine/layerSummary'
 import { findSymbolRoutes, type SymbolRoute, shiftKeysOf } from './engine/symbolRoutes'
+import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { decodeKeycode, MOD_SHIFT } from './keycodes/decode'
-import { type LabelContext, type LabelMode, labelForKeycode } from './keycodes/labels'
+import { type LabelContext, labelForKeycode } from './keycodes/labels'
 import { cn } from './lib/cn'
 import { layerColor } from './lib/theme'
 
@@ -35,31 +36,12 @@ const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
 
 export default function App(): JSX.Element {
   const keyboard = useVialKeyboard()
-  const [labelMode, setLabelMode] = useState<LabelMode>('jis')
+  const { settings, update: updateSettings, setLayerName, canSave } = useSettings()
+  const { labelMode } = settings
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
-  const [overlayOpacity, setOverlayOpacity] = useState(0.82)
-  const [overlayAutoFade, setOverlayAutoFade] = useState(true)
-  const [overlayFadedOpacity, setOverlayFadedOpacity] = useState(0.2)
-  const [overlayBlur, setOverlayBlur] = useState(false)
-  const [encoderPlacement, setEncoderPlacement] = useState<EncoderPlacement>('bottom')
-  /** キーボードの UID ごとのレイヤー名(設定の layerNames)。 */
-  const [layerNames, setLayerNames] = useState<Record<string, string[]>>({})
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
 
-  // 設定を読み、オーバーレイなら body にクラスを付けて背景を透かす
-  useEffect(() => {
-    void window.api?.getSettings().then((settings) => {
-      setLabelMode(settings.labelMode)
-      setWindowMode(settings.mode)
-      setOverlayOpacity(settings.overlayOpacity)
-      setOverlayAutoFade(settings.overlayAutoFade)
-      setOverlayFadedOpacity(settings.overlayFadedOpacity)
-      setOverlayBlur(settings.overlayBlur)
-      setEncoderPlacement(settings.encoderPlacement)
-      setLayerNames(settings.layerNames)
-    })
-  }, [])
-
+  // オーバーレイなら body にクラスを付けて背景を透かす
   useEffect(() => {
     document.body.classList.toggle('overlay', windowMode === 'overlay')
   }, [windowMode])
@@ -72,38 +54,8 @@ export default function App(): JSX.Element {
 
   useEffect(() => window.api?.onChooseDevice(setCandidates), [])
 
-  const onLabelMode = useCallback((mode: LabelMode) => {
-    setLabelMode(mode)
-    void window.api?.setLabelMode(mode)
-  }, [])
-
   const onToggleWindowMode = useCallback(() => {
     void window.api?.toggleMode()
-  }, [])
-
-  const onOverlayOpacity = useCallback((value: number) => {
-    setOverlayOpacity(value)
-    void window.api?.setOverlayOpacity(value)
-  }, [])
-
-  const onOverlayAutoFade = useCallback((on: boolean) => {
-    setOverlayAutoFade(on)
-    void window.api?.setOverlayAutoFade(on)
-  }, [])
-
-  const onOverlayFadedOpacity = useCallback((value: number) => {
-    setOverlayFadedOpacity(value)
-    void window.api?.setOverlayFadedOpacity(value)
-  }, [])
-
-  const onOverlayBlur = useCallback((on: boolean) => {
-    setOverlayBlur(on)
-    void window.api?.setOverlayBlur(on)
-  }, [])
-
-  const onEncoderPlacement = useCallback((placement: EncoderPlacement) => {
-    setEncoderPlacement(placement)
-    void window.api?.setEncoderPlacement(placement)
   }, [])
 
   const onChooseDevice = useCallback((deviceId: string | null) => {
@@ -170,7 +122,7 @@ export default function App(): JSX.Element {
   const faded =
     overlay &&
     overlayFaded({
-      autoFade: overlayAutoFade,
+      autoFade: settings.overlayAutoFade,
       shownLayer,
       shift,
       status: keyboard.status,
@@ -257,15 +209,12 @@ export default function App(): JSX.Element {
   }, [overlay, faded])
 
   const uid = snapshot?.uid ?? null
-  const names = (uid && layerNames[uid]) || []
+  const names = (uid && settings.layerNames[uid]) || []
   const onRename = useCallback(
     (layer: number, name: string) => {
-      if (!uid) return
-      void window.api?.setLayerName(uid, layer, name).then((saved) => {
-        setLayerNames((current) => ({ ...current, [uid]: saved }))
-      })
+      if (uid) setLayerName(uid, layer, name)
     },
-    [uid]
+    [uid, setLayerName]
   )
 
   return (
@@ -276,14 +225,8 @@ export default function App(): JSX.Element {
         <OverlayControls
           displayLayer={layers?.displayLayer ?? 0}
           displayLayerName={names[layers?.displayLayer ?? 0]}
-          opacity={overlayOpacity}
-          onOpacity={onOverlayOpacity}
-          autoFade={overlayAutoFade}
-          onAutoFade={onOverlayAutoFade}
-          fadedOpacity={overlayFadedOpacity}
-          onFadedOpacity={onOverlayFadedOpacity}
-          blur={overlayBlur}
-          onBlur={onOverlayBlur}
+          settings={settings}
+          onChange={updateSettings}
           blurSupported={BLUR_SUPPORTED}
           onExit={onToggleWindowMode}
         />
@@ -307,7 +250,7 @@ export default function App(): JSX.Element {
                 labelContext={labelContext}
                 onPreview={onPinPreview}
                 onHover={setHovered}
-                onRename={window.api ? onRename : undefined}
+                onRename={canSave ? onRename : undefined}
               />
             )
           }
@@ -322,17 +265,9 @@ export default function App(): JSX.Element {
                     : null
                 }))}
               names={names}
-              onRename={window.api && uid ? onRename : undefined}
-              encoderPlacement={encoderPlacement}
-              onEncoderPlacement={onEncoderPlacement}
-              overlayOpacity={overlayOpacity}
-              onOverlayOpacity={onOverlayOpacity}
-              overlayAutoFade={overlayAutoFade}
-              onOverlayAutoFade={onOverlayAutoFade}
-              overlayFadedOpacity={overlayFadedOpacity}
-              onOverlayFadedOpacity={onOverlayFadedOpacity}
-              overlayBlur={overlayBlur}
-              onOverlayBlur={onOverlayBlur}
+              onRename={canSave && uid ? onRename : undefined}
+              settings={settings}
+              onChange={updateSettings}
               blurSupported={BLUR_SUPPORTED}
             />
           }
@@ -356,7 +291,7 @@ export default function App(): JSX.Element {
           reloading={keyboard.reloading}
           onReload={() => void keyboard.reload()}
           onDisconnect={() => void keyboard.disconnect()}
-          onLabelMode={onLabelMode}
+          onLabelMode={(mode) => updateSettings({ labelMode: mode })}
           onToggleWindowMode={onToggleWindowMode}
         />
       )}
@@ -371,7 +306,7 @@ export default function App(): JSX.Element {
         style={
           overlay
             ? {
-                opacity: faded ? overlayFadedOpacity : 1,
+                opacity: faded ? settings.overlayFadedOpacity : 1,
                 transition: faded ? `opacity 400ms ease ${FADE_DELAY_MS}ms` : 'opacity 80ms ease'
               }
             : undefined
@@ -452,7 +387,7 @@ export default function App(): JSX.Element {
                 layerNames={names}
                 highlightKeys={triggerKeys}
                 flashKeys={flashKeys}
-                encoderPlacement={encoderPlacement}
+                encoderPlacement={settings.encoderPlacement}
               />
             </div>
           </>

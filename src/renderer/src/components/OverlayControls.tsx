@@ -11,7 +11,12 @@
  * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { OVERLAY_FADED_OPACITY_MAX } from '../../../shared/settings'
+import {
+  OVERLAY_FADED_OPACITY_MAX,
+  OVERLAY_OPACITY_MIN,
+  type OverlaySettings,
+  type SettingsPatch
+} from '../../../shared/settings'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { Button } from './ui/Button'
@@ -41,17 +46,9 @@ export interface OverlayControlsProps {
   displayLayer: number
   /** そのレイヤーの名前。無ければ番号だけ。 */
   displayLayerName?: string
-  opacity: number
-  onOpacity: (value: number) => void
-  /** ベースレイヤーのあいだ図を薄くするか。 */
-  autoFade: boolean
-  onAutoFade: (on: boolean) => void
-  /** 薄くしたときに残す濃さ(0〜OVERLAY_FADED_OPACITY_MAX)。 */
-  fadedOpacity: number
-  onFadedOpacity: (value: number) => void
-  /** 後ろの画面をぼかすか(Windows 11 のアクリル)。 */
-  blur: boolean
-  onBlur: (on: boolean) => void
+  /** 濃さ・L0 で薄く・薄くしたときの濃さ・後ろのぼかし。 */
+  settings: OverlaySettings
+  onChange: (patch: SettingsPatch) => void
   /** ぼかしが使えるか(Windows のときだけ)。使えなければ欄を出さない。 */
   blurSupported: boolean
   onExit: () => void
@@ -60,14 +57,8 @@ export interface OverlayControlsProps {
 export function OverlayControls({
   displayLayer,
   displayLayerName,
-  opacity,
-  onOpacity,
-  autoFade,
-  onAutoFade,
-  fadedOpacity,
-  onFadedOpacity,
-  blur,
-  onBlur,
+  settings,
+  onChange,
   blurSupported,
   onExit
 }: OverlayControlsProps): JSX.Element {
@@ -168,7 +159,13 @@ export function OverlayControls({
             !expanded && 'hidden'
           )}
         >
-          <PercentSlider label="濃さ" value={opacity} min={0.2} max={1} onChange={onOpacity} />
+          <PercentSlider
+            label="濃さ"
+            value={settings.overlayOpacity}
+            min={OVERLAY_OPACITY_MIN}
+            max={1}
+            onChange={(overlayOpacity) => onChange({ overlayOpacity })}
+          />
 
           <span className="flex items-center gap-1.5">
             <label
@@ -177,8 +174,8 @@ export function OverlayControls({
             >
               <input
                 type="checkbox"
-                checked={autoFade}
-                onChange={(event) => onAutoFade(event.target.checked)}
+                checked={settings.overlayAutoFade}
+                onChange={(event) => onChange({ overlayAutoFade: event.target.checked })}
                 className="accent-ink"
               />
               L0 で薄く
@@ -186,11 +183,11 @@ export function OverlayControls({
             <PercentSlider
               label="残す"
               title="薄くしたときに残す濃さ。0% で消える(このパネルは残る)"
-              value={fadedOpacity}
+              value={settings.overlayFadedOpacity}
               min={0}
               max={OVERLAY_FADED_OPACITY_MAX}
-              onChange={onFadedOpacity}
-              disabled={!autoFade}
+              onChange={(overlayFadedOpacity) => onChange({ overlayFadedOpacity })}
+              disabled={!settings.overlayAutoFade}
               trackClassName="w-16"
             />
           </span>
@@ -202,8 +199,8 @@ export function OverlayControls({
             >
               <input
                 type="checkbox"
-                checked={blur}
-                onChange={(event) => onBlur(event.target.checked)}
+                checked={settings.overlayBlur}
+                onChange={(event) => onChange({ overlayBlur: event.target.checked })}
                 className="accent-ink"
               />
               後ろをぼかす

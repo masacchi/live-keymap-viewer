@@ -227,25 +227,29 @@ describe('WindowManager', () => {
     expect(fake.FakeWindow.all).toHaveLength(1)
   })
 
-  it('不透明度はオーバーレイのときだけウィンドウに効かせる(保存はする)', async () => {
-    const { windows, settings } = await loadMain()
-    windows.open()
-    windows.setOverlayOpacity(0.5)
-    expect(fake.FakeWindow.all[0].opacity).toBe(1)
-    expect(settings.loadSettings().overlayOpacity).toBe(0.5)
-  })
-
-  describe('後ろの画面のぼかし', () => {
+  describe('設定を変えたときにウィンドウへ効かせるもの', () => {
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
     const onPlatform = (value: string) => Object.defineProperty(process, 'platform', { value })
     afterEach(() => Object.defineProperty(process, 'platform', platform))
 
-    it('Windows のオーバーレイでは、入れればアクリルにし、薄くしているあいだは外す', async () => {
+    async function setup(settings: Record<string, unknown>) {
+      writeFileSync(settingsFile(), JSON.stringify(settings))
+      const main = await loadMain()
+      main.registerIpc(main.windows, main.hid)
+      main.windows.open()
+      return { ...main, win: fake.FakeWindow.all[0] }
+    }
+
+    it('不透明度はオーバーレイのときだけウィンドウに効かせる(保存はする)', async () => {
+      const { win, settings } = await setup({})
+      await invoke('settings:update', { overlayOpacity: 0.5 })
+      expect(win.opacity).toBe(1)
+      expect(settings.loadSettings().overlayOpacity).toBe(0.5)
+    })
+
+    it('Windows のオーバーレイでは、ぼかしを入れればアクリルにし、薄くしているあいだは外す', async () => {
       onPlatform('win32')
-      writeFileSync(settingsFile(), JSON.stringify({ mode: 'overlay', overlayBlur: true }))
-      const { windows, settings } = await loadMain()
-      windows.open()
-      const win = fake.FakeWindow.all[0]
+      const { win, windows, settings } = await setup({ mode: 'overlay', overlayBlur: true })
       expect(win.material).toBe('acrylic') // 保存した設定で開く
 
       windows.setOverlayBlurActive(false)
@@ -253,18 +257,16 @@ describe('WindowManager', () => {
       windows.setOverlayBlurActive(true)
       expect(win.material).toBe('acrylic')
 
-      windows.setOverlayBlur(false)
+      await invoke('settings:update', { overlayBlur: false })
       expect(win.material).toBe('none')
       expect(settings.loadSettings().overlayBlur).toBe(false)
     })
 
-    it('Windows 以外では何もしない(保存はする)', async () => {
+    it('Windows 以外ではぼかしに何もしない(保存はする)', async () => {
       onPlatform('linux')
-      writeFileSync(settingsFile(), JSON.stringify({ mode: 'overlay' }))
-      const { windows, settings } = await loadMain()
-      windows.open()
-      windows.setOverlayBlur(true)
-      expect(fake.FakeWindow.all[0].material).toBeNull()
+      const { win, settings } = await setup({ mode: 'overlay' })
+      await invoke('settings:update', { overlayBlur: true })
+      expect(win.material).toBeNull()
       expect(settings.loadSettings().overlayBlur).toBe(true)
     })
   })
@@ -285,26 +287,38 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     return main
   }
 
-  it('ラベルモードは jis / us 以外を受け付けない', async () => {
+  it('設定は変えてよい項目だけを受け付け、保存した設定をまるごと返す', async () => {
     const { settings } = await setup()
-    expect(await invoke('settings:set-label-mode', 'us')).toBe('us')
-    expect(await invoke('settings:set-label-mode', 'klingon')).toBe('jis')
-    expect(settings.loadSettings().labelMode).toBe('jis')
+    const saved = (await invoke('settings:update', {
+      labelMode: 'us',
+      encoderPlacement: 'top',
+      // renderer からは変えさせない項目
+      mode: 'overlay',
+      grantedDevices: [{ vendorId: 1, productId: 2 }],
+      evil: true
+    })) as Record<string, unknown>
+    expect(saved).toMatchObject({ labelMode: 'us', encoderPlacement: 'top', mode: 'normal' })
+    expect(saved).not.toHaveProperty('evil')
+    expect(settings.loadSettings().grantedDevices).toEqual([])
+    expect(await invoke('settings:update', 'garbage')).toMatchObject({ labelMode: 'us' })
   })
 
-  it('自動フェードは真偽値だけを受け付ける', async () => {
+  it('壊れた値は、手で直したファイルと同じく項目ごとに既定値へ戻し、範囲外は丸める', async () => {
     const { settings } = await setup()
-    expect(await invoke('settings:set-overlay-auto-fade', false)).toBe(false)
-    expect(await invoke('settings:set-overlay-auto-fade', 'true')).toBe(false) // 変えない
-    expect(settings.loadSettings().overlayAutoFade).toBe(false)
-  })
-
-  it('ノブの置き場所は top / bottom 以外を受け付けない', async () => {
-    const { settings } = await setup()
-    expect(await invoke('settings:set-encoder-placement', 'top')).toBe('top')
-    expect(settings.loadSettings().encoderPlacement).toBe('top')
-    expect(await invoke('settings:set-encoder-placement', 'left')).toBe('bottom')
-    expect(settings.loadSettings().encoderPlacement).toBe('bottom')
+    await invoke('settings:update', {
+      labelMode: 'klingon',
+      overlayAutoFade: 'no',
+      overlayFadedOpacity: 0.9,
+      overlayOpacity: 0,
+      overlayBlur: 'yes'
+    })
+    expect(settings.loadSettings()).toMatchObject({
+      labelMode: 'jis',
+      overlayAutoFade: true,
+      overlayFadedOpacity: 0.8,
+      overlayOpacity: 0.2,
+      overlayBlur: false
+    })
   })
 
   it('レイヤー名は UID とレイヤー番号を確かめてから保存する', async () => {
@@ -317,22 +331,6 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     expect(await invoke('settings:set-layer-name', uid, 99, 'x')).toEqual(['', '', '記号'])
     expect(await invoke('settings:set-layer-name', uid, 2, { evil: true })).toEqual([])
     expect(settings.loadSettings().layerNames).toEqual({})
-  })
-
-  it('薄くしたときの濃さは 0〜0.8 に丸め、ぼかしは真偽値だけを受け付ける', async () => {
-    const { settings } = await setup()
-    expect(await invoke('settings:set-overlay-faded-opacity', 0.9)).toBe(0.8)
-    expect(await invoke('settings:set-overlay-faded-opacity', 0.35)).toBe(0.35)
-    expect(settings.loadSettings().overlayFadedOpacity).toBe(0.35)
-    expect(await invoke('window:set-overlay-blur', 'yes')).toBe(false) // 変えない
-    expect(await invoke('window:set-overlay-blur', true)).toBe(true)
-    expect(settings.loadSettings().overlayBlur).toBe(true)
-  })
-
-  it('不透明度は範囲に丸め、数値でなければ既定値', async () => {
-    await setup()
-    expect(await invoke('window:set-overlay-opacity', 0)).toBe(0.2)
-    expect(await invoke('window:set-overlay-opacity', 'x')).toBe(0.82)
   })
 
   it('移動量が数値でなければ何もしない', async () => {

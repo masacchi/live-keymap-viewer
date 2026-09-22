@@ -9,10 +9,10 @@ import { join } from 'node:path'
 import { BrowserWindow, screen, shell } from 'electron'
 import {
   type Bounds,
-  clampOpacity,
   ensureOnScreen,
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
+  type Settings,
   type WindowMode
 } from '../shared/settings'
 import { loadSettings, saveSettings } from './settings'
@@ -94,32 +94,27 @@ export class WindowManager {
     this.setMode(this.currentMode === 'normal' ? 'overlay' : 'normal')
   }
 
-  /** オーバーレイの不透明度を変えて保存する。実際に使った値を返す。 */
-  setOverlayOpacity(value: number): number {
-    const opacity = clampOpacity(value)
-    saveSettings({ overlayOpacity: opacity })
-    if (this.currentMode === 'overlay') this.current?.setOpacity(opacity)
-    return opacity
-  }
-
-  /** 後ろの画面のぼかしを入れる / 切る。保存して、オーバーレイならすぐ反映する。 */
-  setOverlayBlur(on: boolean): boolean {
-    saveSettings({ overlayBlur: on })
-    this.applyBlur()
-    return on
+  /**
+   * 保存した設定のうち、ウィンドウに効くもの(濃さ・後ろのぼかし)を反映する。
+   * 設定を変えたあとに呼ぶ。通常ウィンドウでは何もしない(次にオーバーレイを作るときに使う)。
+   */
+  applySettings(settings: Settings): void {
+    if (this.currentMode !== 'overlay') return
+    this.current?.setOpacity(settings.overlayOpacity)
+    this.applyBlur(settings)
   }
 
   /** renderer から: いま図を濃く出しているか。薄くしているあいだはぼかしを外す。 */
   setOverlayBlurActive(active: boolean): void {
     if (active === this.blurActive) return
     this.blurActive = active
-    this.applyBlur()
+    this.applyBlur(loadSettings())
   }
 
-  private applyBlur(): void {
+  private applyBlur(settings: Settings): void {
     if (this.currentMode !== 'overlay') return
     const win = this.current
-    if (win) setBackdrop(win, loadSettings().overlayBlur && this.blurActive)
+    if (win) setBackdrop(win, settings.overlayBlur && this.blurActive)
   }
 
   /** オーバーレイのクリック透過を切り替える(操作パネルの上だけ切る)。 */

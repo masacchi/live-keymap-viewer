@@ -1,6 +1,6 @@
 /** main / preload / renderer で共有する型。electron には依存しない。 */
 
-import type { EncoderPlacement, LabelMode, Settings, WindowMode } from './settings'
+import type { Settings, SettingsPatch, WindowMode } from './settings'
 
 export type {
   Bounds,
@@ -8,6 +8,7 @@ export type {
   GrantedDevice,
   LabelMode,
   Settings,
+  SettingsPatch,
   WindowMode
 } from './settings'
 
@@ -17,15 +18,10 @@ export type {
  */
 export const IPC = {
   settingsGet: 'settings:get',
-  settingsSetLabelMode: 'settings:set-label-mode',
+  settingsUpdate: 'settings:update',
   settingsSetLayerName: 'settings:set-layer-name',
-  settingsSetEncoderPlacement: 'settings:set-encoder-placement',
   windowGetMode: 'window:get-mode',
   windowToggleMode: 'window:toggle-mode',
-  windowSetOverlayOpacity: 'window:set-overlay-opacity',
-  settingsSetOverlayAutoFade: 'settings:set-overlay-auto-fade',
-  settingsSetOverlayFadedOpacity: 'settings:set-overlay-faded-opacity',
-  windowSetOverlayBlur: 'window:set-overlay-blur',
   windowSetOverlayBlurActive: 'window:set-overlay-blur-active',
   windowSetIgnoreMouse: 'window:set-ignore-mouse',
   windowMoveBy: 'window:move-by',
@@ -45,25 +41,20 @@ export interface HidCandidate {
 /** preload が contextBridge で公開する API。renderer が使うものだけを置く。 */
 export interface RendererApi {
   getSettings(): Promise<Settings>
-  setLabelMode(mode: LabelMode): Promise<LabelMode>
+  /**
+   * 設定を変える。変えてよい項目(RENDERER_SETTINGS_KEYS)だけを受け付け、値は検証してから保存し、
+   * 保存した設定をまるごと返す(範囲外の値は丸められているので、返ってきた方を使う)。
+   * 濃さやぼかしのようにウィンドウに効くものは、main がその場で反映する。
+   */
+  updateSettings(patch: SettingsPatch): Promise<Settings>
   /**
    * キーボード(UID)のレイヤーに名前を付ける。空文字で名前を消す。
    * 長すぎる名前は切って保存し、そのキーボードの名前の並びを返す。
    */
   setLayerName(uid: string, layer: number, name: string): Promise<string[]>
-  /** ノブの割り当ての置き場所。保存した値を返す。 */
-  setEncoderPlacement(placement: EncoderPlacement): Promise<EncoderPlacement>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>
-  /** 範囲外は丸めて保存し、実際に使った値を返す。 */
-  setOverlayOpacity(value: number): Promise<number>
-  /** オーバーレイで、ベースレイヤーのあいだ図を薄くするか。保存した値を返す。 */
-  setOverlayAutoFade(on: boolean): Promise<boolean>
-  /** 薄くしたときに残す濃さ。範囲外は丸めて保存し、実際に使った値を返す。 */
-  setOverlayFadedOpacity(value: number): Promise<number>
-  /** オーバーレイの後ろの画面をぼかすか(Windows 11 のアクリル)。保存した値を返す。 */
-  setOverlayBlur(on: boolean): Promise<boolean>
   /**
    * いま図を濃く出しているか。薄くしているあいだは、ぼかしを外して後ろの画面を読めるようにする。
    * 薄くするかどうかは renderer が決めている(キーの押下を見ている)ので、renderer から伝える。

@@ -154,18 +154,21 @@ describe('オーバーレイの自動フェード', () => {
     expect(overlayFaded({ ...base, autoFade: false })).toBe(false)
   })
 
-  const controls = (props: Partial<Parameters<typeof OverlayControls>[0]> = {}) =>
+  const overlaySettings = {
+    overlayOpacity: 0.8,
+    overlayAutoFade: true,
+    overlayFadedOpacity: 0.35,
+    overlayBlur: false
+  }
+  const controls = (
+    settings: Partial<typeof overlaySettings> = {},
+    props: Partial<Parameters<typeof OverlayControls>[0]> = {}
+  ) =>
     renderToStaticMarkup(
       <OverlayControls
         displayLayer={0}
-        opacity={0.8}
-        onOpacity={noop}
-        autoFade={true}
-        onAutoFade={noop}
-        fadedOpacity={0.35}
-        onFadedOpacity={noop}
-        blur={false}
-        onBlur={noop}
+        settings={{ ...overlaySettings, ...settings }}
+        onChange={noop}
         blurSupported={true}
         onExit={noop}
         {...props}
@@ -183,12 +186,14 @@ describe('オーバーレイの自動フェード', () => {
 
   it('薄くしたときの濃さを選べる。薄くしないなら押せない', () => {
     expect(controls()).toMatch(/type="range"[^>]*value="35"/)
-    expect(controls({ autoFade: false })).toMatch(/type="range"[^>]*disabled=""[^>]*value="35"/)
+    expect(controls({ overlayAutoFade: false })).toMatch(
+      /type="range"[^>]*disabled=""[^>]*value="35"/
+    )
   })
 
   it('後ろのぼかしは、使えるときだけ欄を出す', () => {
     expect(controls()).toContain('後ろをぼかす')
-    expect(controls({ blurSupported: false })).not.toContain('後ろをぼかす')
+    expect(controls({}, { blurSupported: false })).not.toContain('後ろをぼかす')
   })
 })
 
@@ -254,16 +259,14 @@ describe('SettingsPanel', () => {
         ]}
         names={['', '', '記号']}
         onRename={noop}
-        encoderPlacement="top"
-        onEncoderPlacement={noop}
-        overlayOpacity={0.6}
-        onOverlayOpacity={noop}
-        overlayAutoFade={false}
-        onOverlayAutoFade={noop}
-        overlayFadedOpacity={0.2}
-        onOverlayFadedOpacity={noop}
-        overlayBlur={false}
-        onOverlayBlur={noop}
+        settings={{
+          encoderPlacement: 'top',
+          overlayOpacity: 0.6,
+          overlayAutoFade: false,
+          overlayFadedOpacity: 0.2,
+          overlayBlur: false
+        }}
+        onChange={noop}
         blurSupported={false}
         {...props}
       />
@@ -292,7 +295,7 @@ describe('SettingsPanel', () => {
   it('後ろのぼかしは、使えない OS では押せなくしてそう書く', () => {
     expect(panel()).toMatch(/type="checkbox"[^>]*disabled=""/)
     expect(panel()).toContain('Windows 11 でだけ使える')
-    expect(panel({ blurSupported: true, overlayBlur: true })).toContain('強さは OS が決める')
+    expect(panel({ blurSupported: true })).toContain('強さは OS が決める')
   })
 })
 
