@@ -9,3 +9,6 @@ dist-electron/
 
 # tsc --build の中間ファイル
 *.tsbuildinfo
+
+# npm run shots の出力
+.shots/

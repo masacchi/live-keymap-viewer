@@ -29,6 +29,7 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | `npm run package:win` | ビルドして `dist/win32-x64/` に Windows 版一式を作る |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
 | `npm run diag:hid` | Windows の HID API から Cornix のインターフェースを調べ、Vial が答えるか・往復時間を見る(Chromium を通さない) |
+| `npm run shots` | モックを動かして状態ごとに画面を撮る(下記)。`-- --compare <前の出力>` で画素比較 |
 | `npm run diag:webhid` | Electron(WebHID)の選択ダイアログに何が並ぶかを調べる(先に `package:win`) |
 
 ### ビルドの構成
@@ -142,6 +143,25 @@ tests/
 (`KeyboardConnection.toggleMockKey`)。マウスでは 1 つしか押さえられないので、押したままにできる
 ようにしてある。アンロックは Tab と Q を押したままにして 10 秒ほど待つ(モックは vial-qmk 流に
 200ms ごとに 50 から数える)。WSL で画面を確かめるときはこれを使う。
+
+### 画面を撮って確かめる(`npm run shots`)
+
+WSL では実機が見えないので、見た目は [`scripts/shots/`](../scripts/shots/) で撮って確かめる。
+モックに繋いでアンロックし、レイヤーの長押し・Shift・プレビュー・メニュー・記号の出し方・設定・
+狭い / 広いウィンドウ・オーバーレイを順に撮る(26 枚、1 分ほど)。画面は出さない。
+
+```bash
+npm run shots -- --out .shots/before          # 変える前に撮る
+# …変更…
+npm run shots -- --compare .shots/before      # .shots/latest に撮って、前と画素で比べる
+```
+
+- 撮るあいだはアニメーションと transition を止めるので、同じコードなら同じ絵になる。
+  アンロックの進み具合(`02-unlocking-progress`)だけは、撮った瞬間でバーが少しずれる
+- 保存の API は `scripts/shots/preload.cjs` の、設定をメモリに持つだけのものに差し替えてある
+- 撮る場面を足すなら `scripts/shots/electron.mjs` の `normalScenes` / `overlayScenes`。
+  キーは図の `<title>` の先頭(`Space /` など)で探す
+- 出力の `.shots/` はコミットしない
 
 ### 自動テストで確かめていないこと
 

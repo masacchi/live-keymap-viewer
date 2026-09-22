@@ -19,7 +19,8 @@
     "deploy:win": "npm run package:win && node scripts/deploy-win.mjs",
     "prepare": "husky",
     "diag:hid": "node scripts/diag/hid-probe.mjs",
-    "diag:webhid": "node scripts/diag/webhid-list.mjs"
+    "diag:webhid": "node scripts/diag/webhid-list.mjs",
+    "shots": "node scripts/shots/run.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
