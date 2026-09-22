@@ -30,6 +30,8 @@ export interface Settings {
   overlayBounds: Bounds
   /** オーバーレイの不透明度(OVERLAY_OPACITY_MIN〜1)。 */
   overlayOpacity: number
+  /** オーバーレイで、ベースレイヤーのあいだは図を薄くするか(ふだんの入力の邪魔にならないように)。 */
+  overlayAutoFade: boolean
   /** 一度許可した HID デバイス。次回から自動で繋ぐ。 */
   grantedDevices: GrantedDevice[]
   /**
@@ -56,6 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
   normalBounds: DEFAULT_BOUNDS,
   overlayBounds: DEFAULT_BOUNDS,
   overlayOpacity: 0.82,
+  overlayAutoFade: true,
   grantedDevices: [],
   layerNames: {}
 }
@@ -158,6 +161,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     normalBounds: sanitizeBounds(value.normalBounds) ?? DEFAULT_SETTINGS.normalBounds,
     overlayBounds: sanitizeBounds(value.overlayBounds) ?? DEFAULT_SETTINGS.overlayBounds,
     overlayOpacity: clampOpacity(value.overlayOpacity),
+    overlayAutoFade: value.overlayAutoFade !== false,
     grantedDevices: sanitizeDevices(value.grantedDevices),
     layerNames: sanitizeLayerNames(value.layerNames)
   }

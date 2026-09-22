@@ -50,6 +50,12 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
     return windows.mode
   })
 
+  ipcMain.handle(IPC.settingsSetOverlayAutoFade, (_event, value: unknown): boolean => {
+    if (typeof value !== 'boolean') return loadSettings().overlayAutoFade
+    saveSettings({ overlayAutoFade: value })
+    return value
+  })
+
   ipcMain.handle(IPC.windowSetOverlayOpacity, (_event, value: unknown) =>
     windows.setOverlayOpacity(isFiniteNumber(value) ? value : Number.NaN)
   )

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { LayerStrip } from '@/components/LayerStrip'
 import { LoadingPanel } from '@/components/LoadingPanel'
+import { OverlayControls, overlayFaded } from '@/components/OverlayControls'
 
 describe('LoadingPanel', () => {
   it('読み込み中は、段の名前と何往復目かを出す', () => {
@@ -68,5 +69,36 @@ describe('LayerStrip: 名前', () => {
     expect(html).toContain('L0<span class="ml-1 font-medium">基本</span>')
     expect(html).toContain('L2<span class="ml-1 font-medium">記号</span>')
     expect(html).toContain('ダブルクリックで名前を付ける')
+  })
+})
+
+describe('オーバーレイの自動フェード', () => {
+  const base = { autoFade: true, shownLayer: 0, shift: false, status: 'ready', error: null }
+
+  it('ベースレイヤーで何も押していなければ薄くする', () => {
+    expect(overlayFaded(base)).toBe(true)
+  })
+
+  it('ほかのレイヤー・Shift・案内が出ているとき・無効にしたときは薄くしない', () => {
+    expect(overlayFaded({ ...base, shownLayer: 2 })).toBe(false)
+    expect(overlayFaded({ ...base, shift: true })).toBe(false)
+    expect(overlayFaded({ ...base, status: 'unlocking' })).toBe(false)
+    expect(overlayFaded({ ...base, error: 'デバイスが応答しない' })).toBe(false)
+    expect(overlayFaded({ ...base, autoFade: false })).toBe(false)
+  })
+
+  it('操作パネルに切り替えのチェックボックスを出す', () => {
+    const html = renderToStaticMarkup(
+      <OverlayControls
+        displayLayer={0}
+        opacity={0.8}
+        onOpacity={() => undefined}
+        autoFade={true}
+        onAutoFade={() => undefined}
+        onExit={() => undefined}
+      />
+    )
+    expect(html).toContain('L0 で薄く')
+    expect(html).toMatch(/type="checkbox"[^>]*checked/)
   })
 })

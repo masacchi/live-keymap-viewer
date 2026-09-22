@@ -4,7 +4,7 @@ import { DevicePicker } from './components/DevicePicker'
 import { KeyboardView } from './components/KeyboardView'
 import { LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
-import { OverlayControls } from './components/OverlayControls'
+import { OVERLAY_FADED_OPACITY, OverlayControls, overlayFaded } from './components/OverlayControls'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
@@ -18,6 +18,7 @@ export default function App(): JSX.Element {
   const [labelMode, setLabelMode] = useState<LabelMode>('jis')
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [overlayOpacity, setOverlayOpacity] = useState(0.82)
+  const [overlayAutoFade, setOverlayAutoFade] = useState(true)
   /** キーボードの UID ごとのレイヤー名(設定の layerNames)。 */
   const [layerNames, setLayerNames] = useState<Record<string, string[]>>({})
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
@@ -28,6 +29,7 @@ export default function App(): JSX.Element {
       setLabelMode(settings.labelMode)
       setWindowMode(settings.mode)
       setOverlayOpacity(settings.overlayOpacity)
+      setOverlayAutoFade(settings.overlayAutoFade)
       setLayerNames(settings.layerNames)
     })
   }, [])
@@ -56,6 +58,11 @@ export default function App(): JSX.Element {
   const onOverlayOpacity = useCallback((value: number) => {
     setOverlayOpacity(value)
     void window.api?.setOverlayOpacity(value)
+  }, [])
+
+  const onOverlayAutoFade = useCallback((on: boolean) => {
+    setOverlayAutoFade(on)
+    void window.api?.setOverlayAutoFade(on)
   }, [])
 
   const onChooseDevice = useCallback((deviceId: string | null) => {
@@ -96,6 +103,17 @@ export default function App(): JSX.Element {
   const previewLayer = overlay ? null : preview
   const shownLayer = previewLayer ?? layers?.displayLayer ?? 0
 
+  const shift = ((layers?.mods ?? 0) & MOD_SHIFT) !== 0
+  const faded =
+    overlay &&
+    overlayFaded({
+      autoFade: overlayAutoFade,
+      shownLayer,
+      shift,
+      status: keyboard.status,
+      error: keyboard.error
+    })
+
   const uid = snapshot?.uid ?? null
   const names = (uid && layerNames[uid]) || []
   const onRename = useCallback(
@@ -109,13 +127,17 @@ export default function App(): JSX.Element {
   )
 
   return (
-    <div className="app-shell relative flex h-full flex-col overflow-hidden">
+    <div
+      className={`app-shell relative flex h-full flex-col overflow-hidden${faded ? ' faded' : ''}`}
+    >
       {overlay && (
         <OverlayControls
           displayLayer={layers?.displayLayer ?? 0}
           displayLayerName={names[layers?.displayLayer ?? 0]}
           opacity={overlayOpacity}
           onOpacity={onOverlayOpacity}
+          autoFade={overlayAutoFade}
+          onAutoFade={onOverlayAutoFade}
           onExit={onToggleWindowMode}
         />
       )}
@@ -126,7 +148,7 @@ export default function App(): JSX.Element {
           deviceLabel={keyboard.deviceLabel}
           displayLayer={ready ? layers.displayLayer : null}
           displayLayerName={ready ? names[layers.displayLayer] : undefined}
-          shift={((layers?.mods ?? 0) & MOD_SHIFT) !== 0}
+          shift={shift}
           labelMode={labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}
@@ -142,6 +164,15 @@ export default function App(): JSX.Element {
           overlay
             ? 'flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
             : 'flex min-h-0 flex-1 flex-col gap-3 p-4'
+        }
+        // 濃く戻すのはすぐ、薄くするのは少し待ってからゆっくり(レイヤーキーの短い押下でちらつかせない)
+        style={
+          overlay
+            ? {
+                opacity: faded ? OVERLAY_FADED_OPACITY : 1,
+                transition: faded ? 'opacity 400ms ease 300ms' : 'opacity 80ms ease'
+              }
+            : undefined
         }
       >
         {keyboard.error && (

@@ -10,12 +10,38 @@
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 
+/** 薄くしたときの濃さ(ウィンドウの不透明度に掛かる)。どこにあるかは分かる程度に残す。 */
+export const OVERLAY_FADED_OPACITY = 0.2
+
+/**
+ * オーバーレイの図を薄くするか。ベースレイヤーで、Shift も押しておらず、案内(アンロックや
+ * エラー)も出ていないときだけ。ほかのレイヤーに入った瞬間に濃く戻す。
+ */
+export function overlayFaded(state: {
+  autoFade: boolean
+  shownLayer: number
+  shift: boolean
+  status: string
+  error: string | null
+}): boolean {
+  return (
+    state.autoFade &&
+    state.status === 'ready' &&
+    state.error === null &&
+    state.shownLayer === 0 &&
+    !state.shift
+  )
+}
+
 export interface OverlayControlsProps {
   displayLayer: number
   /** そのレイヤーの名前。無ければ番号だけ。 */
   displayLayerName?: string
   opacity: number
   onOpacity: (value: number) => void
+  /** ベースレイヤーのあいだ図を薄くするか。 */
+  autoFade: boolean
+  onAutoFade: (on: boolean) => void
   onExit: () => void
 }
 
@@ -24,6 +50,8 @@ export function OverlayControls({
   displayLayerName,
   opacity,
   onOpacity,
+  autoFade,
+  onAutoFade,
   onExit
 }: OverlayControlsProps): JSX.Element {
   /** ドラッグ中は前回のポインタ位置(画面座標)。していなければ null。 */
@@ -121,6 +149,19 @@ export function OverlayControls({
           <span className="w-8 tabular-nums text-right text-[var(--ink)]">
             {Math.round(opacity * 100)}%
           </span>
+        </label>
+
+        <label
+          className="flex items-center gap-1 text-[11px] text-[var(--muted)]"
+          title="ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る"
+        >
+          <input
+            type="checkbox"
+            checked={autoFade}
+            onChange={(event) => onAutoFade(event.target.checked)}
+            className="accent-[var(--layer-2)]"
+          />
+          L0 で薄く
         </label>
 
         <button

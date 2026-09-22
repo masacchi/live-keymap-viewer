@@ -73,6 +73,13 @@ body.overlay {
 body.overlay .app-shell {
   background: color-mix(in srgb, var(--ground) 72%, transparent);
   border-radius: 14px;
+  transition: background-color 80ms ease;
+}
+
+/* ベースレイヤーのあいだは背景の板も消して、画面の邪魔にならないようにする(App.tsx) */
+body.overlay .app-shell.faded {
+  background: transparent;
+  transition: background-color 400ms ease 300ms;
 }
 
 /*

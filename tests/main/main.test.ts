@@ -253,6 +253,13 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     expect(settings.loadSettings().labelMode).toBe('jis')
   })
 
+  it('自動フェードは真偽値だけを受け付ける', async () => {
+    const { settings } = await setup()
+    expect(await invoke('settings:set-overlay-auto-fade', false)).toBe(false)
+    expect(await invoke('settings:set-overlay-auto-fade', 'true')).toBe(false) // 変えない
+    expect(settings.loadSettings().overlayAutoFade).toBe(false)
+  })
+
   it('レイヤー名は UID とレイヤー番号を確かめてから保存する', async () => {
     const { settings } = await setup()
     const uid = '16882930253541522617'

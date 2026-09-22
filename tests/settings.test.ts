@@ -25,6 +25,7 @@ describe('sanitizeSettings', () => {
       normalBounds: { x: 10, y: 20, width: 800, height: 400 },
       overlayBounds: { x: 30, y: 40, width: 900, height: 500 },
       overlayOpacity: 0.5,
+      overlayAutoFade: false,
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
       layerNames: { '16882930253541522617': ['基本', '', '記号'] }
     }
@@ -62,6 +63,14 @@ describe('sanitizeSettings', () => {
 
   it('余計な項目は落とす', () => {
     expect(sanitizeSettings({ evil: true })).not.toHaveProperty('evil')
+  })
+})
+
+describe('オーバーレイの自動フェード', () => {
+  it('既定は有効。false と書いてあるときだけ無効にする', () => {
+    expect(sanitizeSettings({}).overlayAutoFade).toBe(true)
+    expect(sanitizeSettings({ overlayAutoFade: 'no' }).overlayAutoFade).toBe(true)
+    expect(sanitizeSettings({ overlayAutoFade: false }).overlayAutoFade).toBe(false)
   })
 })
 

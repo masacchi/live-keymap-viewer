@@ -15,6 +15,7 @@ export const IPC = {
   windowGetMode: 'window:get-mode',
   windowToggleMode: 'window:toggle-mode',
   windowSetOverlayOpacity: 'window:set-overlay-opacity',
+  settingsSetOverlayAutoFade: 'settings:set-overlay-auto-fade',
   windowSetIgnoreMouse: 'window:set-ignore-mouse',
   windowMoveBy: 'window:move-by',
   windowResizeBy: 'window:resize-by',
@@ -44,6 +45,8 @@ export interface RendererApi {
   toggleMode(): Promise<WindowMode>
   /** 範囲外は丸めて保存し、実際に使った値を返す。 */
   setOverlayOpacity(value: number): Promise<number>
+  /** オーバーレイで、ベースレイヤーのあいだ図を薄くするか。保存した値を返す。 */
+  setOverlayAutoFade(on: boolean): Promise<boolean>
 
   /**
    * オーバーレイのクリック透過を切り替える。
