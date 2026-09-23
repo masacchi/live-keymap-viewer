@@ -1,9 +1,9 @@
 # Windows 版をビルドする。
 #
-#   main に push(マージ)   → ビルドして、この実行の Artifacts に置く
-#   v* のタグを push        → ビルドして、GitHub のリリースに載せる
+#   main に push(マージ)   → ビルドして、GitHub のリリース(dev-build)に置く
+#   v* のタグを push        → ビルドして、GitHub の正式リリースに載せる
 #   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
-#                              (タグが無ければ、ビルドした commit に付ける)
+#                              (タグが無ければ、dev-build リリースを更新)
 #
 # 作るもの: インストーラー(…-setup.exe)と、ポータブル版の zip。
 #
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      # リリースを作るため(最後の手順だけが使う)
+      # リリースを作るため
       contents: write
     env:
       # CI ではコミットしないので、husky のフックは入れない
@@ -77,7 +77,7 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
-          echo "版: $label / リリース: ${tag:-しない}"
+          echo "版: $label / リリース: ${tag:-しない(dev-buildを更新)}"
 
       - run: npm ci
 
@@ -103,39 +103,34 @@ jobs:
           (cd dist && zip -qr "release/LiveKeymapViewer-$LABEL-win-x64-portable.zip" LiveKeymapViewer)
           ls -l dist/release
 
-      # どちらも圧縮済みなので、zip に包まずそのまま置く(ダウンロードしたものがそのまま使える)
-      - name: Artifacts に置く(インストーラー)
-        uses: actions/upload-artifact@v7
-        with:
-          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-setup.exe
-          archive: false
-          if-no-files-found: error
-          # 1 回で 200MB ほどある。非公開リポジトリだと容量の枠があるので長くは置かない
-          retention-days: 14
-
-      - name: Artifacts に置く(ポータブル版)
-        uses: actions/upload-artifact@v7
-        with:
-          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-portable.zip
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: リリースに載せる
-        if: steps.meta.outputs.tag != ''
+      - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.meta.outputs.tag }}
+          LABEL: ${{ steps.meta.outputs.label }}
         run: |
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # 同じタグで流し直したときは、リリースを作り直さずに添付だけ差し替える
-            gh release upload "$TAG" dist/release/* --repo "$GITHUB_REPOSITORY" --clobber
+          # 正式なタグがない場合（main pushや手動実行）は、固定の「dev-build」をリリース名にする
+          RELEASE_TAG="${TAG:-dev-build}"
+          
+          # 生成された exe と zip の両方をアップロード対象にする
+          FILES=(dist/release/*)
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "既存のリリース（$RELEASE_TAG）が見つかりました。ファイルを最新版に差し替えます。"
+            # --clobber で同名ファイルがあっても上書き
+            gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           else
+            echo "新しいリリース（$RELEASE_TAG）を作成します。"
             flags=()
-            # v0.2.0-beta.1 のように - の付くものはプレリリースにする
-            if [[ "$TAG" == *-* ]]; then
+            
+            # 正式タグがない（開発用ビルド）、またはプレリリースタグ（v0.2.0-beta.1等）の場合はプレリリース設定にする
+            if [ -z "$TAG" ] || [[ "$TAG" == *-* ]]; then
               flags+=(--prerelease)
             fi
-            gh release create "$TAG" dist/release/* --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "$TAG" --generate-notes "${flags[@]}"
+            
+            # リリースのタイトルを決定
+            TITLE="${TAG:-Development Build ($LABEL)}"
+            
+            gh release create "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$TITLE" --generate-notes "${flags[@]}"
           fi
