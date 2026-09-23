@@ -16,6 +16,8 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 - `npm run check` … 型チェック + Biome + テスト。**husky の pre-commit で自動実行**され、落ちるとコミットできない。`--no-verify` で逃げずに直す
 - `npm test` / `npm run lint` / `npm run format`
 - `npm run deploy:win` … Windows 版を作ってデスクトップに置く
+- `npm run installer:win` … インストーラーを作る(要 `sudo apt install nsis`)。
+  GitHub Actions(`.github/workflows/build-windows.yml`)も同じ手順で作り、タグならリリースに載せる
 - `npm run diag:hid` / `npm run diag:webhid` … 実機の通信を OS / Chromium の段で切り分ける(アプリには触らない)。
   「繋がらない」「候補に出ない」ときはまずこれ(docs/BLUETOOTH.md §8)
 
