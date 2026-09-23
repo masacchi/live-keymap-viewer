@@ -7,7 +7,7 @@
  *   settings.ts … userData/settings.json の読み書き
  *   log.ts     … userData/log.txt(実機で何が起きたかを残す)
  */
-import { app, globalShortcut } from 'electron'
+import { app, globalShortcut, nativeTheme } from 'electron'
 import { HidPermissions } from './hid'
 import { registerIpc } from './ipc'
 import { installLogging, log } from './log'
@@ -22,6 +22,12 @@ const hid = new HidPermissions(windows)
 app.whenReady().then(() => {
   // いちばん先に入れる。これより前に転んだものは記録できない
   installLogging()
+
+  // 画面は暗い配色だけで作ってある(styles.css にライトのトークンは無い)。OS が
+  // ライトテーマだと、オーバーレイの後ろのぼかし(アクリル)まで**ライトの色味で描かれ**、
+  // 図を薄くしたときに白い板が残る ― ぼかしの色味は OS がウィンドウの配色から決めるため。
+  // アプリの配色を暗い方に固定して、ぼかしも暗い側で描いてもらう
+  nativeTheme.themeSource = 'dark'
   hid.install()
   registerIpc(windows, hid)
   windows.open()
