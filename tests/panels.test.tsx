@@ -277,6 +277,26 @@ describe('SettingsPanel', () => {
       />
     )
 
+  it('どのビルドが動いているかと、ログの置き場所を出す', () => {
+    // WSL で作って Windows に置くので、「直した版が動いているのか」が分からなくなる
+    const html = panel({
+      appInfo: {
+        version: '0.1.0',
+        electron: '44.4.3',
+        buildTime: '2026-09-23T10:48:00.000Z',
+        logPath: 'C:\\Users\\masato\\AppData\\Roaming\\live-keymap-viewer\\log.txt'
+      }
+    })
+    expect(html).toContain('このアプリ')
+    expect(html).toContain('v0.1.0')
+    expect(html).toContain('Electron 44.4.3')
+    expect(html).toContain('log.txt')
+  })
+
+  it('ビルドの情報が取れていなければ、その欄は出さない', () => {
+    expect(panel()).not.toContain('このアプリ')
+  })
+
   it('中身のあるレイヤーに名前の欄を出し、行き方を薄く添える', () => {
     const html = panel()
     expect(html).toContain('aria-label="L0 の名前"')

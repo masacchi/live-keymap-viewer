@@ -8,7 +8,7 @@
  *   useOverlayFade  … オーバーレイを薄くするかと、後ろのぼかし
  */
 import { type JSX, useCallback, useEffect, useMemo, useState } from 'react'
-import type { HidCandidate } from '../../shared/ipc'
+import type { AppInfo, HidCandidate } from '../../shared/ipc'
 import { DevicePicker } from './components/DevicePicker'
 import { KeyboardFrame } from './components/KeyboardFrame'
 import { KeyboardView } from './components/KeyboardView'
@@ -43,6 +43,8 @@ export default function App(): JSX.Element {
   const keyboard = useVialKeyboard(settings.tappingTerm)
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
+  /** どのビルドが動いているか(設定パネルの隅)。ブラウザで開いたときは null のまま。 */
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
 
   // オーバーレイなら body にクラスを付けて背景を透かす
   useEffect(() => {
@@ -54,6 +56,9 @@ export default function App(): JSX.Element {
     void window.api?.getMode().then(setWindowMode)
   }, [])
   useEffect(() => window.api?.onChooseDevice(setCandidates), [])
+  useEffect(() => {
+    void window.api?.getAppInfo().then(setAppInfo)
+  }, [])
 
   const onToggleWindowMode = useCallback(() => void window.api?.toggleMode(), [])
   const onChooseDevice = useCallback((deviceId: string | null) => {
@@ -172,6 +177,7 @@ export default function App(): JSX.Element {
               onChange={updateSettings}
               onForgetDevice={canSave ? forgetDevice : undefined}
               blurSupported={BLUR_SUPPORTED}
+              appInfo={appInfo}
             />
           }
           symbols={

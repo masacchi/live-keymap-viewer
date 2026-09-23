@@ -4,8 +4,8 @@
  * 読み込むのはローカルのファイルだけだが、renderer から来た値はここで型と範囲を
  * 確かめてから使う。preload の API に無いことは受け付けない。
  */
-import { ipcMain } from 'electron'
-import { IPC } from '../shared/ipc'
+import { app, ipcMain } from 'electron'
+import { type AppInfo, IPC } from '../shared/ipc'
 import {
   type GrantedDevice,
   isKeyboardUid,
@@ -15,8 +15,9 @@ import {
   withLayerName,
   withoutDevice
 } from '../shared/settings'
+import { BUILD_TIME } from './buildInfo'
 import type { HidPermissions } from './hid'
-import { log } from './log'
+import { log, logPath } from './log'
 import { loadSettings, saveSettings } from './settings'
 import type { WindowManager } from './windows'
 
@@ -29,6 +30,16 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
+  ipcMain.handle(
+    IPC.appGetInfo,
+    (): AppInfo => ({
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      buildTime: BUILD_TIME,
+      logPath: logPath()
+    })
+  )
+
   ipcMain.handle(IPC.settingsGet, () => loadSettings())
 
   // 変えてよい項目だけを取り出し、値は保存するときに sanitizeSettings が確かめる

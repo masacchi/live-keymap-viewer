@@ -19,6 +19,13 @@ const settings = {
 const noop = () => undefined
 
 window.api = {
+  // 撮った絵を毎回同じにするため、版とビルド時刻は決め打ちにする
+  getAppInfo: async () => ({
+    version: '0.0.0-shots',
+    electron: process.versions.electron,
+    buildTime: '2026-01-01T00:00:00.000Z',
+    logPath: 'C:\\Users\\shots\\AppData\\Roaming\\live-keymap-viewer\\log.txt'
+  }),
   getSettings: async () => ({ ...settings }),
   updateSettings: async (patch) => Object.assign(settings, patch) && { ...settings },
   setLayerName: async (uid, layer, name) => {
@@ -41,5 +48,8 @@ window.api = {
   moveBy: noop,
   resizeBy: noop,
   onChooseDevice: () => noop,
-  chooseDevice: noop
+  chooseDevice: noop,
+  onReleaseHid: () => noop,
+  hidReleased: noop,
+  reportError: noop
 }

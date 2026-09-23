@@ -17,6 +17,7 @@ export type {
  * 文字列を直に書くと、片方だけ直して食い違ったときに気づけないので。
  */
 export const IPC = {
+  appGetInfo: 'app:get-info',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsSetLayerName: 'settings:set-layer-name',
@@ -34,6 +35,16 @@ export const IPC = {
   logReport: 'log:report'
 } as const
 
+/** どのビルドが動いているか。設定パネルの隅に出す。 */
+export interface AppInfo {
+  version: string
+  electron: string
+  /** ビルドした時刻(ISO)。dev では空。 */
+  buildTime: string
+  /** 診断用のログの置き場所(userData/log.txt)。 */
+  logPath: string
+}
+
 /** select-hid-device で候補が複数あったときに renderer へ渡すもの。 */
 export interface HidCandidate {
   deviceId: string
@@ -44,6 +55,8 @@ export interface HidCandidate {
 
 /** preload が contextBridge で公開する API。renderer が使うものだけを置く。 */
 export interface RendererApi {
+  /** 版・ビルド時刻・ログの置き場所。設定パネルに出す。 */
+  getAppInfo(): Promise<AppInfo>
   getSettings(): Promise<Settings>
   /**
    * 設定を変える。変えてよい項目(RENDERER_SETTINGS_KEYS)だけを受け付け、値は検証してから保存し、

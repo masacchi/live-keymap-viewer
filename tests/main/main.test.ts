@@ -384,6 +384,15 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     return main
   }
 
+  it('どのビルドが動いているかを返す(版・Electron・ログの置き場所)', async () => {
+    await setup()
+    expect(await invoke('app:get-info')).toMatchObject({
+      version: '9.9.9-test',
+      electron: process.versions.electron,
+      logPath: join(fake.state.userData, 'log.txt')
+    })
+  })
+
   it('設定は変えてよい項目だけを受け付け、保存した設定をまるごと返す', async () => {
     const { settings } = await setup()
     const saved = (await invoke('settings:update', {

@@ -135,6 +135,14 @@ export const messages = {
     retry: '接続し直す'
   },
 
+  /** 画面そのものが落ちたとき(components/ErrorBoundary.tsx)。 */
+  crash: {
+    title: '画面でエラーが起きた',
+    hint: 'Ctrl+Alt+K でも通常ウィンドウとオーバーレイを行き来できる。詳しい記録は設定の「このアプリ」にあるログ',
+    reload: '画面を読み込み直す',
+    toNormal: '通常ウィンドウへ'
+  },
+
   devicePicker: {
     title: '接続するキーボードを選ぶ',
     unnamed: '(名前なし)',
@@ -169,7 +177,12 @@ export const messages = {
     noDevices: 'まだ無い。一度接続すると、次からは自動で繋ぐ',
     deviceId: (vendorId: number, productId: number) =>
       `${vendorId.toString(16).padStart(4, '0')}:${productId.toString(16).padStart(4, '0')}`,
-    forget: '忘れる'
+    forget: '忘れる',
+    about: 'このアプリ',
+    /** 置き直しても版は変わらないので、ビルドした時刻で見分ける。 */
+    build: (version: string, at: string) => (at ? `v${version}(${at} のビルド)` : `v${version}`),
+    electron: (version: string) => `Electron ${version}`,
+    logHint: '不具合のときは、この記録を見る(起動・警告・画面のエラーだけ)'
   },
 
   overlay: {

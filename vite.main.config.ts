@@ -9,6 +9,8 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  // どのビルドが動いているかを画面に出す(src/main/buildInfo.ts)
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   build: {
     ssr: resolve('src/main/index.ts'),
     outDir: resolve('out/main'),

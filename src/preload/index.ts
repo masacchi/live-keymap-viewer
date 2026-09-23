@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { type HidCandidate, IPC, type RendererApi, type SettingsPatch } from '../shared/ipc'
 
 const api: RendererApi = {
+  getAppInfo: () => ipcRenderer.invoke(IPC.appGetInfo),
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch: SettingsPatch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   setLayerName: (uid: string, layer: number, name: string) =>

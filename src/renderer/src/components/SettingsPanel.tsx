@@ -10,6 +10,7 @@
  * 表記(JIS / US)はよく切り替えるので、ここではなくツールバーに置いたまま。
  */
 import type { JSX, ReactNode } from 'react'
+import type { AppInfo } from '../../../shared/ipc'
 import {
   LAYER_NAME_MAX_LENGTH,
   OVERLAY_FADED_OPACITY_MAX,
@@ -45,6 +46,15 @@ export interface SettingsPanelProps {
   onForgetDevice?: (vendorId: number, productId: number) => void
   /** 後ろのぼかしが使えるか(Windows のときだけ)。 */
   blurSupported: boolean
+  /** どのビルドが動いているか。取れていなければ欄を出さない(ブラウザで開いたとき)。 */
+  appInfo?: AppInfo | null
+}
+
+/** ビルドした時刻(ISO)を「2026-09-23 19:48」の形にする。読めなければ空。 */
+function formatBuildTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
@@ -63,7 +73,8 @@ export function SettingsPanel({
   settings,
   onChange,
   onForgetDevice,
-  blurSupported
+  blurSupported,
+  appInfo
 }: SettingsPanelProps): JSX.Element {
   return (
     // 項目が増えて、既定のウィンドウの高さには収まらない。はみ出す分はパネルの中だけで流す
@@ -235,6 +246,17 @@ export function SettingsPanel({
           <p className="text-2xs text-muted">{messages.settings.noDevices}</p>
         )}
       </Section>
+
+      {appInfo && (
+        <Section title={messages.settings.about}>
+          <p className="text-xs text-ink">
+            {messages.settings.build(appInfo.version, formatBuildTime(appInfo.buildTime))}
+          </p>
+          <p className="text-2xs text-muted">{messages.settings.electron(appInfo.electron)}</p>
+          <p className="break-all font-mono text-2xs text-faint">{appInfo.logPath}</p>
+          <p className="text-2xs text-muted">{messages.settings.logHint}</p>
+        </Section>
+      )}
     </div>
   )
 }
