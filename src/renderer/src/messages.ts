@@ -179,8 +179,9 @@ export const messages = {
     opacity: '濃さ',
     autoFade: 'ベースレイヤー(L0)のあいだは薄くする',
     autoFadeHint: 'ほかのレイヤーに入るか Shift を押すと濃く戻ります',
-    fadedOpacity: '薄くしたとき',
-    fadedOpacityHint: '薄くしたときに残す濃さです。0% で消えます(左上のパネルは残ります)',
+    fadedOpacity: 'L0 の濃さ',
+    fadedOpacityHint:
+      'ベースレイヤー(L0)のあいだの濃さです。上の「濃さ」に掛かります。0% で見えなくなります(左上のパネルは残ります)',
     blur: '後ろの画面をぼかす',
     blurHint:
       'すりガラスのようにぼかします(Windows 11)。強さは OS が決めます。薄くしているあいだは外れます',
@@ -213,8 +214,9 @@ export const messages = {
     autoFade: 'L0 で薄く',
     autoFadeHint:
       'ベースレイヤーのあいだは図を薄くします。ほかのレイヤーや Shift を押すと濃く戻ります',
-    fadedOpacity: '残す',
-    fadedOpacityHint: '薄くしたときに残す濃さです。0% で消えます(このパネルは残ります)',
+    fadedOpacity: 'L0 の濃さ',
+    fadedOpacityHint:
+      'ベースレイヤー(L0)のあいだの濃さです。「濃さ」に掛かります。0% で見えなくなります(このパネルは残ります)',
     blur: '後ろをぼかす',
     blurHint: '後ろの画面をすりガラスのようにぼかします(Windows 11)。薄くしているあいだは外れます',
     exit: '通常ウィンドウに戻す'
