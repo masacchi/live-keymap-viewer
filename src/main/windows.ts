@@ -6,7 +6,7 @@
  */
 
 import { join } from 'node:path'
-import { BrowserWindow, screen, shell } from 'electron'
+import { app, BrowserWindow, screen, shell } from 'electron'
 import { IPC } from '../shared/ipc'
 import {
   type Bounds,
@@ -18,6 +18,16 @@ import {
 } from '../shared/settings'
 import { log } from './log'
 import { loadSettings, saveSettings } from './settings'
+
+/**
+ * ウィンドウ(タスクバー・Alt+Tab)のアイコン。assets/ は開発時はリポジトリ直下、配布版は
+ * resources/app に置かれる(scripts/package-win.mjs)。どちらも app.getAppPath() の下。
+ * Windows は大きさ違いを 1 つにまとめた .ico を渡すと、表示倍率に合うものを選んでくれる。
+ * exe ファイル自体のアイコンは書き換えていないので、エクスプローラーでは Electron のまま
+ */
+function appIcon(): string {
+  return join(app.getAppPath(), 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
+}
 
 /** 移動・リサイズの保存をまとめる間隔。つまみの操作は毎フレーム飛んでくる。 */
 const BOUNDS_SAVE_DELAY_MS = 400
@@ -231,6 +241,7 @@ export class WindowManager {
       ...bounds,
       show: false,
       title: 'Live Keymap Viewer',
+      icon: appIcon(),
       transparent: overlay,
       frame: !overlay,
       // オーバーレイは枠が無いので OS のリサイズ境界は出ない。

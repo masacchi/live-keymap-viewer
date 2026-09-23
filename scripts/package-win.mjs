@@ -53,6 +53,8 @@ await rm(join(OUT_DIR, 'resources/default_app.asar'), { force: true })
 const appDir = join(OUT_DIR, 'resources/app')
 await mkdir(appDir, { recursive: true })
 await cp(join(ROOT, 'out'), join(appDir, 'out'), { recursive: true })
+// アイコン。ウィンドウ(main/windows.ts の appIcon)とインストーラーのショートカットが使う
+await cp(join(ROOT, 'assets'), join(appDir, 'assets'), { recursive: true })
 await writeFile(
   join(appDir, 'package.json'),
   `${JSON.stringify(

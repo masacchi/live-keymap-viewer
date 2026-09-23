@@ -118,7 +118,11 @@ const fake = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  app: { getPath: () => fake.state.userData, getVersion: () => '9.9.9-test' },
+  app: {
+    getPath: () => fake.state.userData,
+    getVersion: () => '9.9.9-test',
+    getAppPath: () => '/app'
+  },
   BrowserWindow: fake.FakeWindow,
   screen: { getAllDisplays: () => fake.state.displays },
   shell: {

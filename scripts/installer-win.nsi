@@ -36,6 +36,9 @@ RequestExecutionLevel user
 !define EXE_NAME "LiveKeymapViewer.exe"
 !define INSTALL_DIR "$LOCALAPPDATA\Programs\${APP_ID}"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
+; アプリのアイコン(assets/icon.ico。package-win.mjs が resources/app に写す)。
+; exe 自体のアイコンは Electron のままなので、ショートカットと「設定 → アプリ」にはこちらを指定する
+!define ICON_FILE "resources\app\assets\icon.ico"
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
@@ -48,6 +51,11 @@ BrandingText "${APP_NAME} ${VERSION}"
 ; --- 画面 ---
 
 !define MUI_ABORTWARNING
+; セットアップ exe とアンインストーラーのアイコン。両方に同じものを使う
+; (NSIS はアンインストーラーのアイコンに、インストーラーと同じ大きさの組を求める)
+; (こちらは makensis が作るときに読むパス。Linux でも動くので / で書く)
+!define MUI_ICON "${SOURCE_DIR}/resources/app/assets/icon.ico"
+!define MUI_UNICON "${SOURCE_DIR}/resources/app/assets/icon.ico"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${EXE_NAME}"
 ; 「readme を開く」の欄を、デスクトップのショートカットを作るかの選択に使う(MUI2 の定番の手)
 !define MUI_FINISHPAGE_SHOWREADME ""
@@ -103,7 +111,7 @@ Function un.onInit
 FunctionEnd
 
 Function CreateDesktopShortcut
-  CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}"
+  CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}" "" "$INSTDIR\${ICON_FILE}"
 FunctionEnd
 
 ; --- インストール ---
@@ -115,12 +123,12 @@ Section
   File /r "${SOURCE_DIR}/*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-  CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}"
+  CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}" "" "$INSTDIR\${ICON_FILE}"
 
   ; 「設定 → アプリ」に出す
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\${EXE_NAME}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\${ICON_FILE}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
