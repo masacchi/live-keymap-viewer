@@ -13,7 +13,15 @@ Vial キーボード(まずは Cornix LP)の **押しているキー** と **い
 
 ## 使う
 
-WSL で作って Windows に置く:
+GitHub のリリース(または Actions の実行結果の Artifacts)から、どちらかを取ってくる(Windows x64 向け):
+
+- **インストーラー**(`…-win-x64-setup.exe`)… 実行するとスタートメニューに入る。管理者権限は要らない
+- **ポータブル版**(`…-win-x64-portable.zip`)… 展開した `LiveKeymapViewer/` の中の `LiveKeymapViewer.exe` を実行する
+
+署名していないので、初回は SmartScreen の警告が出る(「詳細情報」→「実行」)。
+ビルドの流れは [docs/DEVELOPMENT.md §5](docs/DEVELOPMENT.md#5-windows-に置く)。
+
+手元で作って Windows に置くなら(WSL):
 
 ```bash
 npm install

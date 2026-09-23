@@ -1,0 +1,141 @@
+# Windows 版をビルドする。
+#
+#   main に push(マージ)   → ビルドして、この実行の Artifacts に置く
+#   v* のタグを push        → ビルドして、GitHub のリリースに載せる
+#   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
+#                              (タグが無ければ、ビルドした commit に付ける)
+#
+# 作るもの: インストーラー(…-setup.exe)と、ポータブル版の zip。
+#
+# Ubuntu で作る。package-win.mjs も installer-win.mjs も Linux で Windows 版を作る作りで
+# (wine も Windows も要らない)、手元の WSL と同じ手順・同じ結果になるため。
+# 詳しくは docs/DEVELOPMENT.md「GitHub Actions でのビルド」。
+
+name: Windows 版のビルド
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'リリースにするタグ(例: v0.2.0)。package.json の版と合わせる。空ならビルドだけ'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # リリースを作るため(最後の手順だけが使う)
+      contents: write
+    env:
+      # CI ではコミットしないので、husky のフックは入れない
+      HUSKY: '0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # トークンを .git に残さない。npm の install スクリプトなど、後の手順から読めないように
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 版とリリースのタグを決める
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag=${INPUT_TAG:-}
+          if [ -z "$tag" ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag=$GITHUB_REF_NAME
+          fi
+
+          if [ -z "$tag" ]; then
+            # リリースしないビルドは、どの commit のものか分かるように名前に入れる
+            label="$version-${GITHUB_SHA::7}"
+          else
+            # アプリの画面・ログ・「設定 → アプリ」に出る版は package.json から来る。タグと食い違わないように
+            if [ "$tag" != "v$version" ]; then
+              echo "::error::タグ $tag と package.json の版($version)が合っていません。package.json の版を ${tag#v} にしてからリリースしてください(npm version ${tag#v} で版上げとタグ付けが一度にできます)"
+              exit 1
+            fi
+            # gh release create は既にあるタグをそのまま使う。別の commit のビルドを載せないように止める
+            if tagged=$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha 2>/dev/null) &&
+              [ "$tagged" != "$GITHUB_SHA" ]; then
+              echo "::error::タグ $tag は既に別の commit(${tagged::7})に付いています。Run workflow の「Use workflow from」でそのタグを選んで実行してください"
+              exit 1
+            fi
+            label=$version
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "label=$label" >> "$GITHUB_OUTPUT"
+          echo "版: $label / リリース: ${tag:-しない}"
+
+      - run: npm ci
+
+      - name: 検査(型チェック・lint・テスト)
+        run: npm run check
+
+      - name: Windows 版一式を作る(dist/win32-x64)
+        run: npm run package:win
+
+      - name: NSIS を入れる
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nsis
+
+      - name: インストーラーとポータブル版の zip を作る
+        env:
+          LABEL: ${{ steps.meta.outputs.label }}
+        run: |
+          node scripts/installer-win.mjs --out "dist/release/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
+          # 展開したときにフォルダが 1 つできるように、LiveKeymapViewer/ の下に入れる。
+          # exe 単体では動かないので、ばらばらに展開されると困る
+          mv dist/win32-x64 dist/LiveKeymapViewer
+          (cd dist && zip -qr "release/LiveKeymapViewer-$LABEL-win-x64-portable.zip" LiveKeymapViewer)
+          ls -l dist/release
+
+      # どちらも圧縮済みなので、zip に包まずそのまま置く(ダウンロードしたものがそのまま使える)
+      - name: Artifacts に置く(インストーラー)
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-setup.exe
+          archive: false
+          if-no-files-found: error
+          # 1 回で 200MB ほどある。非公開リポジトリだと容量の枠があるので長くは置かない
+          retention-days: 14
+
+      - name: Artifacts に置く(ポータブル版)
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-portable.zip
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: リリースに載せる
+        if: steps.meta.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # 同じタグで流し直したときは、リリースを作り直さずに添付だけ差し替える
+            gh release upload "$TAG" dist/release/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            flags=()
+            # v0.2.0-beta.1 のように - の付くものはプレリリースにする
+            if [[ "$TAG" == *-* ]]; then
+              flags+=(--prerelease)
+            fi
+            gh release create "$TAG" dist/release/* --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$TAG" --generate-notes "${flags[@]}"
+          fi
