@@ -25,3 +25,25 @@ export function SlidersIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
     </svg>
   )
 }
+
+/**
+ * 読み込み中の印。薄い輪の上を短い弧が回る。回すのは呼び出し側(animate-spin)、色は currentColor。
+ * ツールバーで状態の丸(8px)の代わりに出す。輪は線なので、丸と同じくらいに見えるよう 12px にしてある。
+ */
+export function SpinnerIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={12}
+      height={12}
+      fill="none"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      aria-hidden
+      {...props}
+    >
+      <circle cx={8} cy={8} r={6} stroke="currentColor" opacity={0.25} />
+      <path d="M8 2a6 6 0 0 1 6 6" stroke="currentColor" />
+    </svg>
+  )
+}

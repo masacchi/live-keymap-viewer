@@ -20,7 +20,7 @@ import { cn } from '../lib/cn'
 import { messages } from '../messages'
 import { ModifierBadges } from './ModifierBadges'
 import { Button, buttonVariants } from './ui/Button'
-import { SlidersIcon } from './ui/icons'
+import { SlidersIcon, SpinnerIcon } from './ui/icons'
 import { Menu, MenuItem } from './ui/Menu'
 import { Popover } from './ui/Popover'
 
@@ -79,15 +79,28 @@ export function Toolbar({
   const title = [statusText, stalled ? messages.status.stalledHint : null, deviceLabel]
     .filter(Boolean)
     .join(' ')
+  // 繋いでいる・読み込んでいる・読み直しているあいだは、丸の代わりに回る印にする。色は丸と同じで、
+  // 繋ぐ・読み込むあいだは黄、読み直しは繋がったままなので緑。以前は読み直し中も緑の丸のままで、
+  // 読んでいる最中だと分からなかった。応答待ちは詰まっている(読み進んでいない)ので、回さずに黄色の丸
+  const busy = !stalled && (status === 'connecting' || status === 'loading' || reloading)
   const statusLabel = (
     <>
-      <span
-        className={cn(
-          'inline-block size-2 shrink-0 rounded-full',
-          // 応答待ちのあいだは丸だけで知らせる(図は最後の表示のまま)
-          stalled ? 'bg-warn' : STATUS_COLOR[status]
-        )}
-      />
+      {busy ? (
+        <SpinnerIcon
+          className={cn(
+            'shrink-0 animate-spin motion-reduce:animate-none',
+            status === 'ready' ? 'text-ok' : 'text-warn'
+          )}
+        />
+      ) : (
+        <span
+          className={cn(
+            'inline-block size-2 shrink-0 rounded-full',
+            // 応答待ちのあいだは丸だけで知らせる(図は最後の表示のまま)
+            stalled ? 'bg-warn' : STATUS_COLOR[status]
+          )}
+        />
+      )}
       <span className="shrink-0 text-muted max-md:hidden">{statusText}</span>
       {deviceLabel && (
         <span className="max-w-40 truncate font-medium text-ink max-md:hidden">{deviceLabel}</span>

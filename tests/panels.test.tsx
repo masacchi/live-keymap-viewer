@@ -8,6 +8,7 @@ import { OverlayControls } from '@/components/OverlayControls'
 import { PreviewNotice } from '@/components/PreviewNotice'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { SymbolFinder } from '@/components/SymbolFinder'
+import { Toolbar, type ToolbarProps } from '@/components/Toolbar'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
 import { describeTrigger, type LayerSummary, type LayerTrigger } from '@/engine/layerSummary'
@@ -68,6 +69,50 @@ function strip(props: Partial<Parameters<typeof LayerStrip>[0]> = {}): string {
     />
   )
 }
+
+describe('Toolbar の接続の状態', () => {
+  const toolbar = (props: Partial<ToolbarProps>): string =>
+    renderToStaticMarkup(
+      <Toolbar
+        status="ready"
+        deviceLabel="Cornix"
+        settings={null}
+        mods={null}
+        stalled={false}
+        labelMode="jis"
+        windowMode="normal"
+        reloading={false}
+        onReload={() => undefined}
+        onDisconnect={() => undefined}
+        onLabelMode={() => undefined}
+        onToggleWindowMode={() => undefined}
+        {...props}
+      />
+    )
+  const spinning = (html: string): boolean => html.includes('animate-spin')
+
+  it('繋いでいる・読み込んでいる・読み直しているあいだは、丸ではなく回る印を出す', () => {
+    // 以前は読み直し中も緑の丸のままで、読んでいる最中だと分からなかった
+    expect(spinning(toolbar({ status: 'connecting' }))).toBe(true)
+    const loading = toolbar({ status: 'loading' })
+    expect(spinning(loading)).toBe(true)
+    expect(loading).toContain('text-warn') // 色は丸と同じ(読み込みは黄)
+    const reloading = toolbar({ reloading: true })
+    expect(spinning(reloading)).toBe(true)
+    expect(reloading).toContain('text-ok') // 読み直しは繋がったままなので緑
+    expect(reloading).not.toContain('bg-ok') // 丸は出さない
+  })
+
+  it('繋がっているだけ・応答待ち・アンロック中は丸のまま', () => {
+    expect(toolbar({})).toContain('bg-ok')
+    expect(spinning(toolbar({}))).toBe(false)
+    // 応答待ちは読み進んでいないので回さない(読み直しの途中で詰まっても)
+    const stalled = toolbar({ reloading: true, stalled: true })
+    expect(spinning(stalled)).toBe(false)
+    expect(stalled).toContain('bg-warn')
+    expect(spinning(toolbar({ status: 'unlocking' }))).toBe(false)
+  })
+})
 
 describe('LayerStrip', () => {
   it('出しているレイヤーは塗り、ほかに有効なものは薄く塗り、無効なものは枠だけにする', () => {
