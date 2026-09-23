@@ -57,12 +57,41 @@ export class RequestQueue {
   }
 }
 
+/**
+ * 時間切れで諦めた要求への応答が、あとから届くかもしれない窓(ms)。
+ * これを過ぎても届かなければ、要求ごと失われたと見なして数え直す。
+ */
+export const STALE_RESPONSE_WINDOW_MS = 2000
+
+export interface WebHidTransportOptions {
+  /** 諦めた応答を待つ窓。テストで縮める。 */
+  staleWindowMs?: number
+}
+
 /** WebHID 上の実デバイス。 */
 export class WebHidTransport implements Transport {
   private readonly queue = new RequestQueue()
   /** 受け取ったパケットを渡す。引き取ったら true、自分宛てでなければ false。 */
   private pending: ((data: Uint8Array) => boolean) | null = null
+  /**
+   * 時間切れで諦めた要求の数。この数だけ、届いた応答を捨てる。
+   *
+   * ファームは応答に要求 ID を持たない(docs/PROTOCOL.md §7)。諦めた要求への応答が遅れて
+   * 届くと、**投げ直した要求の応答として受け取ってしまい、以後ずっと 1 回ずつずれる**
+   * (docs/BLUETOOTH.md §3)。同じコマンドなので照合(validate)では弾けない。
+   * 応答は送った順に返るので、諦めた数だけ捨てれば並びが戻る。
+   */
+  private abandoned = 0
+  /** 諦めた時刻。窓を過ぎても届かなければ、要求ごと失われたとみなして数え直す。 */
+  private abandonedAt = 0
   private readonly onInputReport = (event: HIDInputReportEvent): void => {
+    if (this.abandoned > 0) {
+      if (Date.now() - this.abandonedAt <= this.staleWindowMs) {
+        this.abandoned-- // 諦めた要求への応答。捨てて並びを戻す
+        return
+      }
+      this.abandoned = 0 // 窓を過ぎた。応答ごと失われたのだろう
+    }
     const deliver = this.pending
     if (!deliver) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
     const data = new Uint8Array(
@@ -71,7 +100,14 @@ export class WebHidTransport implements Transport {
     if (deliver(data)) this.pending = null
   }
 
-  constructor(private readonly device: HIDDevice) {}
+  private readonly staleWindowMs: number
+
+  constructor(
+    private readonly device: HIDDevice,
+    options: WebHidTransportOptions = {}
+  ) {
+    this.staleWindowMs = options.staleWindowMs ?? STALE_RESPONSE_WINDOW_MS
+  }
 
   get label(): string {
     return this.device.productName || 'Vial keyboard'
@@ -82,6 +118,7 @@ export class WebHidTransport implements Transport {
   }
 
   async open(): Promise<void> {
+    this.abandoned = 0
     if (!this.device.opened) await this.device.open()
     // 二重に開かれてもリスナーが重ならないように、いったん外してから付ける
     this.device.removeEventListener('inputreport', this.onInputReport)
@@ -127,6 +164,9 @@ export class WebHidTransport implements Transport {
       }
       timer = setTimeout(() => {
         this.pending = null
+        // 諦めるだけで、応答はあとから届くかもしれない。届いたら捨てて並びを戻す
+        this.abandoned++
+        this.abandonedAt = Date.now()
         reject(new TransportError(`デバイスが応答しない(コマンド ${describeCommand(payload)})`))
       }, timeoutMs)
       // report ID を持たないデバイスなので 0 で送る

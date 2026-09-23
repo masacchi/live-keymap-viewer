@@ -20,6 +20,12 @@ class FirmwareBackedDevice extends EventTarget {
   readonly firmware: MockTransport
   /** 応答を返すまでの遅れ(ms)。 */
   latencyMs = 1
+  /** 次の 1 往復だけ、さらにこれだけ遅らせる(詰まりの再現)。 */
+  stallNextMs = 0
+  /** この数だけ、応答を握りつぶす(要求ごと失われた場合の再現)。 */
+  dropNext = 0
+  /** 応答は送った順に返す(実機と同じ)。詰まった応答を追い越さない。 */
+  private chain: Promise<void> = Promise.resolve()
 
   constructor(unlocked: boolean) {
     super()
@@ -39,12 +45,24 @@ class FirmwareBackedDevice extends EventTarget {
     const request = new Uint8Array(data as ArrayBuffer)
     if (request.length !== 32) throw new Error(`report must be 32 bytes, got ${request.length}`)
     const response = await this.firmware.send(request)
-    setTimeout(() => {
-      const event = new Event('inputreport')
-      Object.defineProperty(event, 'data', { value: new DataView(response.slice().buffer) })
-      Object.defineProperty(event, 'reportId', { value: 0 })
-      this.dispatchEvent(event)
-    }, this.latencyMs)
+    if (this.dropNext > 0) {
+      this.dropNext--
+      return
+    }
+    const delay = this.latencyMs + this.stallNextMs
+    this.stallNextMs = 0
+    this.chain = this.chain.then(
+      () =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            const event = new Event('inputreport')
+            Object.defineProperty(event, 'data', { value: new DataView(response.slice().buffer) })
+            Object.defineProperty(event, 'reportId', { value: 0 })
+            this.dispatchEvent(event)
+            resolve()
+          }, delay)
+        })
+    )
   }
 }
 
@@ -200,6 +218,41 @@ describe('時間切れのメッセージ', () => {
  * TODO(BLUETOOTH.md P2): 往復に合わせた時間切れと、取り残された応答の破棄を実装したら
  * `it.skip` を `it` に戻す。これが通れば P2 は完了。
  */
+describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => {
+  const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+  it('遅れて届いた応答は捨て、投げ直した方の応答を受け取る', async () => {
+    // ファームは応答に要求 ID を持たない。諦めた要求への応答をそのまま受け取ると、
+    // 同じコマンドなので照合も通ってしまい、以後ずっと 1 回ずつずれる
+    const device = new FirmwareBackedDevice(true)
+    device.latencyMs = 20
+    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    await transport.open()
+
+    device.stallNextMs = 300 // 1 往復目だけ、matrix の時間切れ(200ms)を超えて詰まる
+    // 投げ直すまでのあいだに押す。諦めた応答を受け取ると「離している」に見える
+    setTimeout(() => device.firmware.press(0, 1), 100)
+
+    const matrix = await getMatrixState(transport, 8, 7)
+    expect(matrix[0][1]).toBe(true)
+    await transport.close()
+  }, 10000)
+
+  it('応答ごと失われても、しばらくすれば元に戻る', async () => {
+    const device = new FirmwareBackedDevice(true)
+    const transport = new WebHidTransport(device as unknown as HIDDevice, { staleWindowMs: 20 })
+    await transport.open()
+
+    device.dropNext = 1 // 1 往復ぶん、応答が返ってこない
+    await getMatrixState(transport, 8, 7).catch(() => undefined)
+
+    await pause(40) // 窓を過ぎれば、諦めた数は数え直す
+    const matrix = await getMatrixState(transport, 8, 7)
+    expect(matrix[0][1]).toBe(false)
+    await transport.close()
+  }, 10000)
+})
+
 describe('BLE 並みの遅さ(docs/BLUETOOTH.md §3)', () => {
   it.skip('BLE 並みの往復でも、押したキーを正しい回に読む', async () => {
     const device = new FirmwareBackedDevice(true)
