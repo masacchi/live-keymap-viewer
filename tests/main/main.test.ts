@@ -99,7 +99,9 @@ const fake = vi.hoisted(() => {
     ipcHandlers: new Map<string, Handler>(),
     ipcListeners: new Map<string, Handler>(),
     sessionListeners: new Map<string, Handler>(),
-    devicePermissionHandler: null as null | Handler
+    devicePermissionHandler: null as null | Handler,
+    /** shell.openPath に渡されたパス。 */
+    opened: [] as string[]
   }
 
   return { FakeWindow, state }
@@ -109,7 +111,13 @@ vi.mock('electron', () => ({
   app: { getPath: () => fake.state.userData, getVersion: () => '9.9.9-test' },
   BrowserWindow: fake.FakeWindow,
   screen: { getAllDisplays: () => fake.state.displays },
-  shell: { openExternal: () => Promise.resolve() },
+  shell: {
+    openExternal: () => Promise.resolve(),
+    openPath: (path: string) => {
+      fake.state.opened.push(path)
+      return Promise.resolve('')
+    }
+  },
   ipcMain: {
     handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
       fake.state.ipcHandlers.set(channel, handler),
@@ -155,6 +163,7 @@ beforeEach(() => {
   fake.state.ipcHandlers.clear()
   fake.state.ipcListeners.clear()
   fake.state.sessionListeners.clear()
+  fake.state.opened = []
   fake.FakeWindow.all = []
 })
 
@@ -423,6 +432,12 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
       electron: process.versions.electron,
       logPath: join(fake.state.userData, 'log.txt')
     })
+  })
+
+  it('ログは OS の既定のアプリで開く(パスを出すだけでは辿る手間が残る)', async () => {
+    await setup()
+    emit('log:open')
+    expect(fake.state.opened).toEqual([join(fake.state.userData, 'log.txt')])
   })
 
   it('設定は変えてよい項目だけを受け付け、保存した設定をまるごと返す', async () => {

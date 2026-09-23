@@ -46,7 +46,8 @@ const api: RendererApi = {
   hidReleased: () => ipcRenderer.send(IPC.hidReleased),
 
   report: (level: ReportLevel, message: string, detail?: string) =>
-    ipcRenderer.send(IPC.logReport, level, message, detail)
+    ipcRenderer.send(IPC.logReport, level, message, detail),
+  openLog: () => ipcRenderer.send(IPC.logOpen)
 }
 
 contextBridge.exposeInMainWorld('api', api)

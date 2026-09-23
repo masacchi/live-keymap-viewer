@@ -98,6 +98,30 @@ function waitFor(
 
 const pause = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+describe('KeyboardConnection: ログ', () => {
+  it('どの相手に繋いだかを残す(名前・ID・往復時間・候補の数)', async () => {
+    // 実機で「繋がらない」ときの切り分けの初手。BT では名前が取れず、往復も桁が違う
+    const lines: string[] = []
+    const devices = [fakeDevice(), fakeDevice()]
+    const { hid, connection } = setup({
+      log: (_level, message) => lines.push(message),
+      pickDevice: async (candidates) => ({
+        device: candidates[1] ?? null,
+        results: [
+          { device: candidates[0], latencyMs: null },
+          { device: candidates[1], latencyMs: 3.4 }
+        ]
+      })
+    })
+    hid.devices = devices
+    connection.start()
+    await waitFor(connection, (s) => s.status === 'ready')
+
+    expect(lines[0]).toBe('接続: Cornix(e118:0001) 往復 3ms (候補 2 個中 1 個が応答)')
+    await connection.dispose()
+  })
+})
+
 describe('KeyboardConnection: 手放す', () => {
   it('release() はセッションを閉じるが、画面の表示はそのまま残す', async () => {
     // モード切替でウィンドウが壊される直前に呼ぶ。新しいウィンドウの renderer と同時に

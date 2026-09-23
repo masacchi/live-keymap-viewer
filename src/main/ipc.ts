@@ -4,7 +4,7 @@
  * 読み込むのはローカルのファイルだけだが、renderer から来た値はここで型と範囲を
  * 確かめてから使う。preload の API に無いことは受け付けない。
  */
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, shell } from 'electron'
 import { type AppInfo, IPC } from '../shared/ipc'
 import {
   type GrantedDevice,
@@ -108,6 +108,11 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
 
   // 「手放した」の返事。待っているモード切り替えがあれば、そこで先へ進む
   ipcMain.on(IPC.hidReleased, () => windows.noteHidReleased())
+
+  // 設定パネルからログを開く。パスを出すだけでは、エクスプローラーを辿る手間が残る
+  ipcMain.on(IPC.logOpen, () => {
+    void shell.openPath(logPath())
+  })
 
   // 画面側の出来事。長いスタックがそのまま来るので、ログが 1 件で埋まらないように切る
   ipcMain.on(IPC.logReport, (_event, level: unknown, message: unknown, detail: unknown) => {

@@ -32,7 +32,8 @@ export const IPC = {
   hidDeviceChosen: 'hid:device-chosen',
   hidRelease: 'hid:release',
   hidReleased: 'hid:released',
-  logReport: 'log:report'
+  logReport: 'log:report',
+  logOpen: 'log:open'
 } as const
 
 /** renderer がログに残せる段。警告は main だけが使う。 */
@@ -120,4 +121,6 @@ export interface RendererApi {
    * 残すのはまれにしか起きない区切りだけ(例外・接続が切れた理由・応答待ちからの復帰)。
    */
   report(level: ReportLevel, message: string, detail?: string): void
+  /** ログ(userData/log.txt)を OS の既定のアプリで開く。 */
+  openLog(): void
 }

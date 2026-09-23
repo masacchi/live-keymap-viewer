@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocalStorageDefinitionCache } from '../hid/definitionCache'
-import { reportError, reportInfo } from '../lib/report'
+import { report, reportError, reportInfo } from '../lib/report'
 import { type ConnectionState, IDLE, KeyboardConnection } from '../session/keyboardConnection'
 
 export type {
@@ -55,7 +55,11 @@ export function useVialKeyboard(tappingTerm?: number) {
   // 接続は effect の中で作って、片付けで捨てる。StrictMode では開発時に 2 回走るが、
   // 1 回目のものは dispose されるので、HID のイベントもタイマーも残らない
   useEffect(() => {
-    const connection = new KeyboardConnection({ hid: navigator.hid ?? null, definitionCache })
+    const connection = new KeyboardConnection({
+      hid: navigator.hid ?? null,
+      definitionCache,
+      log: report
+    })
     connectionRef.current = connection
     const unsubscribe = connection.subscribe(watchForLog(setState))
     connection.start()

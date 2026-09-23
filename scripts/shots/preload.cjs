@@ -51,5 +51,6 @@ window.api = {
   chooseDevice: noop,
   onReleaseHid: () => noop,
   hidReleased: noop,
-  report: noop
+  report: noop,
+  openLog: noop
 }

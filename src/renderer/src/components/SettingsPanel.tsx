@@ -254,7 +254,12 @@ export function SettingsPanel({
           </p>
           <p className="text-2xs text-muted">{messages.settings.electron(appInfo.electron)}</p>
           <p className="break-all font-mono text-2xs text-faint">{appInfo.logPath}</p>
-          <p className="text-2xs text-muted">{messages.settings.logHint}</p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => window.api?.openLog()}>
+              {messages.settings.openLog}
+            </Button>
+            <span className="min-w-0 flex-1 text-2xs text-muted">{messages.settings.logHint}</span>
+          </div>
         </Section>
       )}
     </div>

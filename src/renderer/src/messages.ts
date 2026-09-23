@@ -182,7 +182,8 @@ export const messages = {
     /** 置き直しても版は変わらないので、ビルドした時刻で見分ける。 */
     build: (version: string, at: string) => (at ? `v${version}(${at} のビルド)` : `v${version}`),
     electron: (version: string) => `Electron ${version}`,
-    logHint: '不具合のときは、この記録を見る(起動・警告・画面のエラーだけ)'
+    logHint: '不具合のときは、この記録を見る(起動・警告・接続が切れた理由・画面のエラー)',
+    openLog: 'ログを開く'
   },
 
   overlay: {

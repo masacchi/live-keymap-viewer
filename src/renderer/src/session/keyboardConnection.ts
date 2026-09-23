@@ -23,6 +23,7 @@
  * 繋ぎ直さない(挿し直しと手動の接続は受け付ける)。
  * 「切断」を押したとき、モックに切り替えたときは繋ぎ直さない。
  */
+import type { ReportLevel } from '../../../shared/ipc'
 import { type ProbeResult, pickResponsiveDevice } from '../hid/deviceProbe'
 import { MockTransport } from '../hid/mockTransport'
 import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
@@ -86,6 +87,19 @@ export interface ConnectionOptions {
   ) => Promise<{ device: HIDDevice | null; results: ProbeResult[] }>
   createMock?: () => Transport
   sessionOptions?: SessionOptions
+  /**
+   * 区切りをログに残す口(hooks/useVialKeyboard.ts が lib/report を渡す)。
+   * ここから window を触らないのは、この層を DOM 無しでテストできるようにしておくため。
+   */
+  log?: (level: ReportLevel, message: string) => void
+}
+
+/** ログに出すデバイスの呼び名。名前が取れない経路(Bluetooth)もあるので ID も添える。 */
+function describeDevice(device: HIDDevice): string {
+  const id = `${device.vendorId.toString(16).padStart(4, '0')}:${device.productId
+    .toString(16)
+    .padStart(4, '0')}`
+  return `${device.productName || '名前なし'}(${id})`
 }
 
 export type ConnectionListener = (state: ConnectionState) => void
@@ -287,6 +301,16 @@ export class KeyboardConnection {
       if (this.reconnecting) this.scheduleRetry()
       return
     }
+    // どの相手に繋いだかは、切り分けの初手になる(BT では名前が取れず、往復も桁が違う)
+    const picked = results.find((result) => result.device === device)
+    const answered = results.filter((result) => result.latencyMs !== null).length
+    this.options.log?.(
+      'info',
+      `接続: ${describeDevice(device)}` +
+        (picked?.latencyMs != null ? ` 往復 ${Math.round(picked.latencyMs)}ms` : '') +
+        (results.length > 1 ? ` (候補 ${results.length} 個中 ${answered} 個が応答)` : '')
+    )
+
     const open = this.options.openTransport ?? ((d: HIDDevice) => new WebHidTransport(d))
     await this.attach(open(device), true)
   }
