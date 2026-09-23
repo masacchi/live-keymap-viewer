@@ -41,6 +41,8 @@ export interface KeyCapProps {
 }
 
 const GAP = 0.08
+/** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.css の .key-body)より少し深く。 */
+const SKIRT = 3
 const BAND_HEIGHT = 17
 /** 色帯の文字の大きさ(px)。styles.css の .band-text と揃える。 */
 const BAND_FONT = 11
@@ -247,58 +249,69 @@ export function KeyCap({
       style={{ '--hold': holdColor } as React.CSSProperties}
       {...interactive}
     >
-      <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
+      {/* キーの厚み(下の縁)。押すと本体が沈んで隠れる */}
+      <rect className="skirt" x={x} y={y + SKIRT} width={width} height={height} rx={7} />
+      {/* 押した瞬間だけ縁から広がって消える輪(styles.css の press-ring) */}
+      <rect className="press-ring" x={x} y={y} width={width} height={height} rx={7} />
 
-      {holding && holdTitle ? (
-        <>
-          <text className="main" x={cx} y={cy - 9} fontSize={holdTitle.fontSize}>
-            <Lines lines={holdTitle.lines} x={cx} fontSize={holdTitle.fontSize} />
-          </text>
-          <text className="sub" x={cx} y={cy + 8}>
-            {holdingSub(label.main, width)}
-          </text>
-        </>
-      ) : (
-        <>
-          {mainText !== '' && (
-            <text className="main" x={cx} y={mainY} fontSize={fitted.fontSize}>
-              <Lines lines={fitted.lines} x={cx} fontSize={fitted.fontSize} />
+      {/*
+       * 本体。押したときに沈めるのはこの中だけ。外側の g には回転(transform 属性)があり、
+       * CSS の transform を掛けると属性ごと上書きされて親指キーの傾きが消えるため
+       */}
+      <g className="key-body">
+        <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
+
+        {holding && holdTitle ? (
+          <>
+            <text className="main" x={cx} y={cy - 9} fontSize={holdTitle.fontSize}>
+              <Lines lines={holdTitle.lines} x={cx} fontSize={holdTitle.fontSize} />
             </text>
-          )}
-          {hasShift && (
-            <text className="shift" x={cx} y={shiftY}>
-              {shiftText}
+            <text className="sub" x={cx} y={cy + 8}>
+              {holdingSub(label.main, width)}
             </text>
-          )}
-          {hasSub && label.sub && (
-            // .sub の font-size は CSS にあるので、属性ではなく style で上書きする(属性は CSS に負ける)
-            <text
-              className="sub"
-              x={cx}
-              y={subY}
-              style={{ fontSize: subFontSize(label.sub, width) }}
-            >
-              {label.sub}
-            </text>
-          )}
-          {showBand && (
-            <>
-              <rect
-                className="band"
-                x={x}
-                y={y + height - BAND_HEIGHT}
-                width={width}
-                height={BAND_HEIGHT}
-                rx={6}
-                fill={layerColor(holdLayer)}
-              />
-              <text className="band-text" x={cx} y={y + height - BAND_HEIGHT / 2}>
-                {bandText(holdLayer, holdLayerName, width)}
+          </>
+        ) : (
+          <>
+            {mainText !== '' && (
+              <text className="main" x={cx} y={mainY} fontSize={fitted.fontSize}>
+                <Lines lines={fitted.lines} x={cx} fontSize={fitted.fontSize} />
               </text>
-            </>
-          )}
-        </>
-      )}
+            )}
+            {hasShift && (
+              <text className="shift" x={cx} y={shiftY}>
+                {shiftText}
+              </text>
+            )}
+            {hasSub && label.sub && (
+              // .sub の font-size は CSS にあるので、属性ではなく style で上書きする(属性は CSS に負ける)
+              <text
+                className="sub"
+                x={cx}
+                y={subY}
+                style={{ fontSize: subFontSize(label.sub, width) }}
+              >
+                {label.sub}
+              </text>
+            )}
+            {showBand && (
+              <>
+                <rect
+                  className="band"
+                  x={x}
+                  y={y + height - BAND_HEIGHT}
+                  width={width}
+                  height={BAND_HEIGHT}
+                  rx={6}
+                  fill={layerColor(holdLayer)}
+                />
+                <text className="band-text" x={cx} y={y + height - BAND_HEIGHT / 2}>
+                  {bandText(holdLayer, holdLayerName, width)}
+                </text>
+              </>
+            )}
+          </>
+        )}
+      </g>
 
       <title>{describe(keycode, label, holdLayer, holdLayerName)}</title>
     </g>

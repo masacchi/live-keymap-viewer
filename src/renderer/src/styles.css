@@ -194,6 +194,32 @@ body.overlay .app-shell.faded {
   stroke-width: 1;
 }
 
+/*
+ * キーの厚み。上面より暗い縁を下に 3px 覗かせて、押せるものに見せる。影のフィルタを
+ * 全キーに掛けるより軽い。押すと本体が沈んでこれに重なり、「押し込まれた」と分かる
+ */
+.skirt {
+  fill: color-mix(in srgb, #000 55%, var(--color-surface));
+}
+
+/*
+ * 本体(面と文字)。押したら沈め、離したら戻す。回っている親指キーでも真下ではなく
+ * キーの向きに沈むよう、自分の箱を基準にする
+ */
+.key-body {
+  transform-box: fill-box;
+  transition: transform 90ms ease-out;
+}
+
+/* 押した瞬間だけ縁から広がって消える輪。ふだんは描かない(アニメーションは状態の節) */
+.press-ring {
+  fill: none;
+  stroke: var(--color-press);
+  stroke-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .main {
   fill: var(--color-ink);
   text-anchor: middle;
@@ -248,6 +274,10 @@ body.overlay .app-shell.faded {
   fill: none;
   stroke: var(--color-line-soft);
   stroke-dasharray: 3 3;
+}
+
+.key-none .skirt {
+  display: none;
 }
 
 /* --- 状態 --- */
@@ -320,6 +350,34 @@ body.overlay .app-shell.faded {
 .key-pressed .cap {
   fill: var(--color-press);
   stroke: var(--color-press);
+  /* 押しているあいだは淡く光らせる。色だけより、離れて見ても押下が拾いやすい */
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-press) 55%, transparent));
+}
+
+/* 押したら 2px 沈める(縁の 3px が 1px だけ残る)。戻りより速く */
+.key-pressed .key-body {
+  transform: translateY(2px);
+  transition-duration: 50ms;
+}
+
+/*
+ * 押した瞬間に 1 回だけ、縁から外へ輪を広げて消す(0.26 秒)。線の太さを 0 → 8 にすると
+ * 外側に 4px 出る(キーの隙間ぶん)。内側の半分は本体の後ろに隠れる。
+ * クラスが付くたびに最初から再生されるので、同じキーを連打しても毎回出る
+ */
+.key-pressed .press-ring {
+  animation: press-ring 260ms ease-out;
+}
+
+@keyframes press-ring {
+  from {
+    stroke-width: 0;
+    opacity: 0.9;
+  }
+  to {
+    stroke-width: 8;
+    opacity: 0;
+  }
 }
 
 .key-pressed .main,
@@ -339,6 +397,7 @@ body.overlay .app-shell.faded {
   stroke: var(--hold);
   stroke-width: 3;
   paint-order: stroke;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--hold) 55%, transparent));
 }
 
 .key-holding .main,
@@ -370,8 +429,13 @@ body.overlay .app-shell.faded {
 
 @media (prefers-reduced-motion: reduce) {
   .key-unlock .cap,
-  .key-flash .cap {
+  .key-flash .cap,
+  .key-pressed .press-ring {
     animation: none;
+  }
+
+  .key-body {
+    transition: none;
   }
 }
 
