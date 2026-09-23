@@ -439,7 +439,9 @@ body.overlay .app-shell.faded {
 
 /*
  * ===== ノブ =====
- * 図の上下どちらかに横一列でまとめる(KLE 上の座標では描かない)。
+ * 回したときの割り当ては、右回り(↻)を上、左回り(↺)を下に挟んで出す(音量なら「音量+」が上)。
+ * 押し込みキーが分かるノブ(layout/knobButtons.ts)はそのキーを円く描いて上下に(KeyCap の .key-knob)、
+ * 分からないノブは図の下に破線の丸を並べて上下に(layout/encoderStrip.ts)。
  */
 .encoder {
   fill: none;
@@ -451,6 +453,7 @@ body.overlay .app-shell.faded {
 .encoder-label {
   fill: var(--color-ink);
   font-size: 13px;
-  text-anchor: start;
+  text-anchor: middle;
   dominant-baseline: middle;
+  pointer-events: none;
 }

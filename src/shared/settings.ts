@@ -8,8 +8,6 @@
 
 export type WindowMode = 'normal' | 'overlay'
 export type LabelMode = 'jis' | 'us'
-/** ノブの割り当てを、キーの図の上と下のどちらに並べるか。 */
-export type EncoderPlacement = 'top' | 'bottom'
 
 export interface Bounds {
   x: number
@@ -41,8 +39,6 @@ export interface Settings {
    * ぼかしの強さは OS が決めるので、入り切りだけ。薄くしているあいだは外す。
    */
   overlayBlur: boolean
-  /** ノブの割り当ての置き場所。ノブが左上にあるキーボードなら上の方が見比べやすい。 */
-  encoderPlacement: EncoderPlacement
   /**
    * ツールバーのレイヤー一覧で、番号の横に行き方(「BS 長押し」など)を出すか。
    * 既定では出さない ― 常に並べるとツールバーが詰まり、狭いウィンドウでは横に流れてしまう。
@@ -78,7 +74,6 @@ export const RENDERER_SETTINGS_KEYS = [
   'overlayAutoFade',
   'overlayFadedOpacity',
   'overlayBlur',
-  'encoderPlacement',
   'showLayerTriggers'
 ] as const satisfies ReadonlyArray<keyof Settings>
 
@@ -131,7 +126,6 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayAutoFade: true,
   overlayFadedOpacity: 0.2,
   overlayBlur: false,
-  encoderPlacement: 'bottom',
   showLayerTriggers: false,
   // QMK の TAPPING_TERM の既定値(engine/layerState.ts の DEFAULT_TAPPING_TERM と同じ)
   tappingTerm: 200,
@@ -259,7 +253,6 @@ export function sanitizeSettings(raw: unknown): Settings {
     overlayAutoFade: value.overlayAutoFade !== false,
     overlayFadedOpacity: clampFadedOpacity(value.overlayFadedOpacity),
     overlayBlur: value.overlayBlur === true,
-    encoderPlacement: value.encoderPlacement === 'top' ? 'top' : 'bottom',
     showLayerTriggers: value.showLayerTriggers === true,
     tappingTerm: clampTappingTerm(value.tappingTerm),
     grantedDevices: sanitizeDevices(value.grantedDevices),

@@ -4,7 +4,6 @@ import type { GrantedDevice, Settings, SettingsPatch, WindowMode } from './setti
 
 export type {
   Bounds,
-  EncoderPlacement,
   GrantedDevice,
   LabelMode,
   Settings,

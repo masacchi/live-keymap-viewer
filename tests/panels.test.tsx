@@ -303,7 +303,6 @@ describe('UnlockPanel', () => {
 
 describe('SettingsPanel', () => {
   const panelSettings = {
-    encoderPlacement: 'top',
     tappingTerm: 250,
     grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
     overlayOpacity: 0.6,
@@ -370,9 +369,8 @@ describe('SettingsPanel', () => {
     expect(html).toContain('キーボードに繋ぐと付けられます')
   })
 
-  it('ノブの位置とオーバーレイの設定は、いまの値を選んだ状態で出す', () => {
+  it('オーバーレイの設定は、いまの値で出す', () => {
     const html = panel()
-    expect(html).toMatch(/aria-pressed="true"[^>]*>図の上</)
     expect(html).toContain('value="60"')
     expect(html).not.toMatch(/type="checkbox"[^>]*checked/)
   })

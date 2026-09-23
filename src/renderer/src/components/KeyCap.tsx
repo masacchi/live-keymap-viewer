@@ -36,6 +36,13 @@ export interface KeyCapProps {
   flash?: boolean
   /** Shift が効いているか。Shift で入る文字が変わるキーは、そちらを主にして目立たせる。 */
   shifted?: boolean
+  /**
+   * ノブの押し込みキーなら、回したときの割り当て(「↺ 音量−」「↻ 音量+」)。
+   * キーを円く描き、右回りを上、左回りを下に挟んで出す(layout/knobButtons.ts)。
+   * 右回りが上なのは、音量なら「音量+」が上に来るように(上げる向きが上)
+   * inward は図の中央がどちらにあるか。キーの幅に収まらない文字はそちらへ伸ばす
+   */
+  knob?: { ccw: string; cw: string; inward: 'left' | 'right' }
   unit: number
   onClick?: () => void
 }
@@ -44,6 +51,12 @@ const GAP = 0.08
 /** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.css の .key-body)より少し深く。 */
 const SKIRT = 3
 const BAND_HEIGHT = 17
+/** ノブの割り当ての文字の縦中心を、キーの縁(下は厚みの縁)からどれだけ離すか(px)。 */
+const KNOB_LABEL_OFFSET = 11
+/** 円いキーで文字を置ける幅の割合。四隅が無いぶん狭い。 */
+const KNOB_TEXT_ROOM = 0.78
+/** ノブの割り当ての文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
+const KNOB_FONT = 13
 /** 色帯の文字の大きさ(px)。styles.css の .band-text と揃える。 */
 const BAND_FONT = 11
 
@@ -169,6 +182,7 @@ export function KeyCap({
   highlight = false,
   flash = false,
   shifted = false,
+  knob,
   unit,
   onClick
 }: KeyCapProps): JSX.Element {
@@ -195,6 +209,7 @@ export function KeyCap({
     'key-trigger': highlight,
     'key-flash': flash,
     'key-shifted': swapShift,
+    'key-knob': knob !== undefined,
     'key-clickable': onClick !== undefined
   })
   const mainText = swapShift ? (label.shift ?? '') : label.main
@@ -221,7 +236,21 @@ export function KeyCap({
       ? `rotate(${physical.rotationAngle} ${physical.rotationX * unit} ${physical.rotationY * unit})`
       : undefined
 
-  const showBand = holdLayer !== null && !transparent
+  // 円いキー(ノブ)には下端の色帯が収まらないので出さない。長押しの行き先はツールチップにある
+  const showBand = holdLayer !== null && !transparent && !knob
+  // 文字を置ける幅。円いキーは四隅が無いぶん狭い
+  const room = knob ? width * KNOB_TEXT_ROOM : width
+  // 角の丸み。ノブは円にする(ふつうのキーと見分けが付くように)
+  const radius = knob ? Math.min(width, height) / 2 : 7
+  // ノブの割り当ての文字は、キーの幅に収まればキーの真上・真下に中央揃えで置く
+  // (キーどうしの隙間のぶんまでは、はみ出してよい)。収まらなければ図の中央の側へ伸ばす。
+  // 外側は隣のキーとぶつかりやすい(Cornix の右手のホイールの割り当てが、隣の H・N にかかっていた)
+  const knobLabel = (text: string): { x: number; style: React.CSSProperties } => {
+    if (!knob || textWidth(text, KNOB_FONT) <= width + GAP * unit) return { x: cx, style: {} }
+    return knob.inward === 'left'
+      ? { x: x + width, style: { textAnchor: 'end' } }
+      : { x, style: { textAnchor: 'start' } }
+  }
   const hasSub = Boolean(label.sub) && !showBand
   const hasShift = Boolean(shiftText)
 
@@ -231,16 +260,16 @@ export function KeyCap({
   // Shift 側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
   // 左上に小さく出していたときは見落としやすかった。
   const shiftY = y + 13
-  const fitted = fitMain(mainText, width)
+  const fitted = fitMain(mainText, room)
   // 2 行に割ったときは、補足行を 2 行目の下まで下げる
   const extraLines = (fitted.lines.length - 1) * fitted.fontSize * 1.15
   const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 + extraLines / 2 : 0)
   const subY = mainY + 15 + extraLines / 2
 
   // 長押し中の表示。レイヤー名が収まらなければ番号に戻す(色でどのレイヤーかは分かる)
-  const namedTitle = holdLayerName ? fitMain(holdLayerName, width, 13) : null
+  const namedTitle = holdLayerName ? fitMain(holdLayerName, room, 13) : null
   const holdTitle =
-    holdLayer === null ? null : namedTitle?.fits ? namedTitle : fitMain(`L${holdLayer}`, width, 13)
+    holdLayer === null ? null : namedTitle?.fits ? namedTitle : fitMain(`L${holdLayer}`, room, 13)
 
   return (
     <g
@@ -250,14 +279,14 @@ export function KeyCap({
       {...interactive}
     >
       {/* キーの厚み(下の縁)。押すと本体が沈んで隠れる */}
-      <rect className="skirt" x={x} y={y + SKIRT} width={width} height={height} rx={7} />
+      <rect className="skirt" x={x} y={y + SKIRT} width={width} height={height} rx={radius} />
 
       {/*
        * 本体。押したときに沈めるのはこの中だけ。外側の g には回転(transform 属性)があり、
        * CSS の transform を掛けると属性ごと上書きされて親指キーの傾きが消えるため
        */}
       <g className="key-body">
-        <rect className="cap" x={x} y={y} width={width} height={height} rx={7} />
+        <rect className="cap" x={x} y={y} width={width} height={height} rx={radius} />
 
         {holding && holdTitle ? (
           <>
@@ -265,7 +294,7 @@ export function KeyCap({
               <Lines lines={holdTitle.lines} x={cx} fontSize={holdTitle.fontSize} />
             </text>
             <text className="sub" x={cx} y={cy + 8}>
-              {holdingSub(label.main, width)}
+              {holdingSub(label.main, room)}
             </text>
           </>
         ) : (
@@ -286,7 +315,7 @@ export function KeyCap({
                 className="sub"
                 x={cx}
                 y={subY}
-                style={{ fontSize: subFontSize(label.sub, width) }}
+                style={{ fontSize: subFontSize(label.sub, room) }}
               >
                 {label.sub}
               </text>
@@ -310,6 +339,23 @@ export function KeyCap({
           </>
         )}
       </g>
+
+      {knob && (
+        // 回したときの割り当て。押しても沈まないよう本体の外に置く
+        <>
+          {/* 文字の揃え方は CSS(中央揃え)に勝たせるため style で渡す */}
+          <text className="encoder-label" y={y - KNOB_LABEL_OFFSET} {...knobLabel(knob.cw)}>
+            {knob.cw}
+          </text>
+          <text
+            className="encoder-label"
+            y={y + height + SKIRT + KNOB_LABEL_OFFSET}
+            {...knobLabel(knob.ccw)}
+          >
+            {knob.ccw}
+          </text>
+        </>
+      )}
 
       <title>{describe(keycode, label, holdLayer, holdLayerName)}</title>
     </g>

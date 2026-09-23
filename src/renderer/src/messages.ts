@@ -172,9 +172,6 @@ export const messages = {
     showLayerTriggers: 'レイヤーの行き方を添える',
     showLayerTriggersHint:
       '「L1 BS 長押し」のように番号の横に出します。オフのときも、レイヤーにポインタを乗せると出ます',
-    knobs: 'ノブの割り当て',
-    knobsTop: '図の上',
-    knobsBottom: '図の下',
     overlay: 'オーバーレイ',
     opacity: '濃さ',
     autoFade: 'ベースレイヤー(L0)のあいだは薄くする',

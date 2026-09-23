@@ -11,7 +11,6 @@ const settings = {
   overlayAutoFade: true,
   overlayFadedOpacity: 0.2,
   overlayBlur: false,
-  encoderPlacement: 'bottom',
   showLayerTriggers: false,
   tappingTerm: 200,
   grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],

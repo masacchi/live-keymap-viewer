@@ -265,7 +265,6 @@ export default function App(): JSX.Element {
               layerNames={names}
               highlightKeys={triggerKeys}
               flashKeys={flashKeys}
-              encoderPlacement={settings.encoderPlacement}
             />
           </KeyboardFrame>
         ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (

@@ -1,5 +1,11 @@
 /**
- * ノブ(エンコーダー)の割り当てを、キーの上か下に横一列で並べる配置計算。
+ * 押し込みキーが分からないノブ(エンコーダー)の割り当てを、キーの下に横一列で並べる配置計算。
+ * 押し込みキーが分かるノブ(layout/knobButtons.ts。Cornix LP)は、そのキーに付けて描くので
+ * ここには来ない。
+ *
+ * 1 つずつ、右回り(↻)の割り当てを丸の上、左回り(↺)を丸の下に挟んで置く(音量なら「音量+」が上)。押し込みキーに
+ * 付けるときと同じ形にそろえるため。以前は丸の右に 2 つを横に並べ、図の上か下かを設定で
+ * 選べたが、横に長くなるうえ、形が 2 通りあると見比べにくかった。
  *
  * ノブは KLE 上の座標では描かない。Cornix LP の定義はエンコーダーを図の右端
  * (x=15.25〜)にまとめて置いてあり、そのまま描くと横幅が 1.3 倍ほどに間延びする。
@@ -10,19 +16,16 @@
  */
 import type { Bounds } from './geometry'
 
-export type EncoderPlacement = 'top' | 'bottom'
-
-/** 帯の高さ(1u 単位)。 */
-export const ENCODER_STRIP_HEIGHT = 0.8
+/** 帯の高さ(1u 単位)。上の文字・丸・下の文字が収まり、キーの下の縁とくっつかない高さ。 */
+export const ENCODER_STRIP_HEIGHT = 1.4
 
 export interface EncoderStripInput {
   /** 並べる順(エンコーダー番号の昇順を想定)。 */
   items: ReadonlyArray<{ index: number; ccw: string; cw: string }>
   keyBounds: Bounds
-  placement: EncoderPlacement
   /** 1u の px。 */
   unit: number
-  /** 文字の大きさ(px)。幅の見積もりに使う。 */
+  /** 文字の大きさ(px)。幅と上下の位置の見積もりに使う。 */
   fontSize: number
 }
 
@@ -30,18 +33,17 @@ export interface PlacedEncoder {
   index: number
   ccw: string
   cw: string
-  /** 丸の中心。 */
-  dotX: number
-  /** 反時計回りの文字の左端。 */
-  ccwX: number
-  /** 時計回りの文字の左端。 */
-  cwX: number
+  /** 丸と、上下の文字の中心(文字は中央揃えで置く)。 */
+  x: number
 }
 
 export interface EncoderStrip {
   items: PlacedEncoder[]
-  /** 帯の縦中心(px)。 */
+  /** 丸の中心の高さ(px)。 */
   y: number
+  /** 右回り(上)と左回り(下)の文字の縦中心(px)。 */
+  cwY: number
+  ccwY: number
   dotRadius: number
   /** 帯の左右端(px)。viewBox を広げるのに使う。 */
   minX: number
@@ -62,47 +64,41 @@ export function estimateTextWidth(text: string, fontSize: number): number {
 
 /** 並べる。ノブが無ければ null。 */
 export function layoutEncoderStrip(input: EncoderStripInput): EncoderStrip | null {
-  const { items, keyBounds, placement, unit, fontSize } = input
+  const { items, keyBounds, unit, fontSize } = input
   if (items.length === 0) return null
 
-  const dotRadius = 0.16 * unit
-  const innerGap = 0.16 * unit
-  const itemGap = 0.5 * unit
+  const dotRadius = 0.22 * unit
+  /** 丸の縁と文字のあいだ。 */
+  const labelGap = 0.14 * unit
+  const itemGap = 0.4 * unit
 
-  const sized = items.map((item) => {
-    const ccwWidth = estimateTextWidth(item.ccw, fontSize)
-    const cwWidth = estimateTextWidth(item.cw, fontSize)
-    return {
-      ...item,
-      ccwWidth,
-      width: dotRadius * 2 + innerGap + ccwWidth + innerGap * 2 + cwWidth
-    }
-  })
+  // 1 つぶんの幅は、上下の文字と丸のうち広いもの
+  const sized = items.map((item) => ({
+    ...item,
+    width: Math.max(
+      estimateTextWidth(item.ccw, fontSize),
+      estimateTextWidth(item.cw, fontSize),
+      dotRadius * 2
+    )
+  }))
 
   const total = sized.reduce((sum, item) => sum + item.width, 0) + itemGap * (sized.length - 1)
   const centerX = ((keyBounds.minX + keyBounds.maxX) / 2) * unit
-  const y =
-    (placement === 'top'
-      ? keyBounds.minY - ENCODER_STRIP_HEIGHT / 2
-      : keyBounds.maxY + ENCODER_STRIP_HEIGHT / 2) * unit
+  const y = (keyBounds.maxY + ENCODER_STRIP_HEIGHT / 2) * unit
+  const labelOffset = dotRadius + labelGap + fontSize / 2
 
   let cursor = centerX - total / 2
   const placed = sized.map((item): PlacedEncoder => {
-    const x = cursor
+    const x = cursor + item.width / 2
     cursor += item.width + itemGap
-    return {
-      index: item.index,
-      ccw: item.ccw,
-      cw: item.cw,
-      dotX: x + dotRadius,
-      ccwX: x + dotRadius * 2 + innerGap,
-      cwX: x + dotRadius * 2 + innerGap + item.ccwWidth + innerGap * 2
-    }
+    return { index: item.index, ccw: item.ccw, cw: item.cw, x }
   })
 
   return {
     items: placed,
     y,
+    cwY: y - labelOffset,
+    ccwY: y + labelOffset,
     dotRadius,
     minX: centerX - total / 2,
     maxX: centerX + total / 2
@@ -110,20 +106,19 @@ export function layoutEncoderStrip(input: EncoderStripInput): EncoderStrip | nul
 }
 
 /**
- * キーとノブの帯をまとめて収める viewBox(px)。
+ * キーとノブの帯をまとめて収める viewBox(px)。帯はいつもキーの下。
  * `pad` は周りの余白(1u 単位)。
  */
 export function viewBoxFor(
   keyBounds: Bounds,
   strip: EncoderStrip | null,
-  placement: EncoderPlacement,
   unit: number,
   pad = 0.2
 ): string {
   const minX = Math.min(keyBounds.minX, strip ? strip.minX / unit : Infinity)
   const maxX = Math.max(keyBounds.maxX, strip ? strip.maxX / unit : -Infinity)
-  const minY = keyBounds.minY - (strip && placement === 'top' ? ENCODER_STRIP_HEIGHT : 0)
-  const maxY = keyBounds.maxY + (strip && placement === 'bottom' ? ENCODER_STRIP_HEIGHT : 0)
+  const minY = keyBounds.minY
+  const maxY = keyBounds.maxY + (strip ? ENCODER_STRIP_HEIGHT : 0)
   return [
     (minX - pad) * unit,
     (minY - pad) * unit,

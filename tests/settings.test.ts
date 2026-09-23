@@ -28,7 +28,6 @@ describe('sanitizeSettings', () => {
       overlayAutoFade: false,
       overlayFadedOpacity: 0.35,
       overlayBlur: true,
-      encoderPlacement: 'top',
       showLayerTriggers: true,
       tappingTerm: 250,
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
@@ -111,11 +110,9 @@ describe('長押しの判定時間', () => {
   })
 })
 
-describe('ノブの置き場所', () => {
-  it('既定は下。top と書いてあるときだけ上にする', () => {
-    expect(sanitizeSettings({}).encoderPlacement).toBe('bottom')
-    expect(sanitizeSettings({ encoderPlacement: 'left' }).encoderPlacement).toBe('bottom')
-    expect(sanitizeSettings({ encoderPlacement: 'top' }).encoderPlacement).toBe('top')
+describe('なくした項目', () => {
+  it('ノブの置き場所(encoderPlacement)は読み捨てる(ノブの割り当ては上下に挟む形に一本化した)', () => {
+    expect(sanitizeSettings({ encoderPlacement: 'top' })).not.toHaveProperty('encoderPlacement')
   })
 })
 

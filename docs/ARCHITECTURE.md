@@ -53,7 +53,7 @@ main と preload の間の約束は [src/shared/ipc.ts](../src/shared/ipc.ts) �
 ```mermaid
 flowchart BT
   keycodes["keycodes/<br/>u16 ⇄ 構造体、JIS / US の文字、Tap Dance の規則"]
-  layout["layout/<br/>KLE → 物理配置、ノブの帯、レイアウトオプション"]
+  layout["layout/<br/>KLE → 物理配置、ノブ、レイアウトオプション"]
   engine["engine/<br/>押下 → 有効なレイヤー"]
   hid["hid/<br/>transport、Vial プロトコル、モック"]
   session["session/<br/>1 接続のライフサイクル"]
@@ -86,7 +86,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `table.generated.ts` | vial-gui の `keycodes_v6.py` から生成した名前表 |
 | `layout/` | `kle.ts` | KLE のパース。vial-gui の `kle_serial.py` と同じ挙動 |
 | | `geometry.ts` | KLE → 物理キー / エンコーダー / 外接矩形 |
-| | `encoderStrip.ts` | ノブの割り当てを横一列に並べる配置計算と viewBox |
+| | `knobButtons.ts` / `encoderStrip.ts` | ノブの押し込みがどのキーか(分かっているキーボードだけ) / 押し込みが分からないノブを図の下に並べる配置計算と viewBox |
 | | `layoutOptions.ts` | VIA のレイアウトオプション(ビット詰め)をほどく |
 | `engine/` | `layerState.ts` | `LayerEngine`。押下の列からアクティブなレイヤーを出す(HANDOFF §6) |
 | | `symbolRoutes.ts` | 記号ごとの打ち方(どのレイヤーの、どのキーを、Shift 付きか)を手数の少ない順に |
@@ -109,7 +109,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方はツールチップ、設定で番号の横にも。空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
 | | `KeyboardFrame.tsx` / `StatusViews.tsx` | 図の枠(レイヤー色の縁・プレビューの破線) / エラーの帯と未接続の画面 |
 | | `SymbolFinder.tsx` | 記号の出し方の一覧。押すと App がそのレイヤーをプレビューし、押すキーを光らせる |
-| | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・ノブの位置・オーバーレイ) / Ctrl・Shift・Alt・Win の印 |
+| | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・オーバーレイ・長押しの判定) / Ctrl・Shift・Alt・Win の印 |
 | | `ui/` | 共通の部品(`Button` / `Popover` / `Menu` / アイコン)。ボタンはすべて `Button` を使う |
 | | `Toolbar.tsx` / `OverlayControls.tsx` | 通常ウィンドウの操作 / オーバーレイの操作パネルと自動フェード |
 | | `LoadingPanel.tsx` / `UnlockPanel.tsx` | 読み込みの進み具合 / アンロックの案内 |
@@ -191,7 +191,7 @@ stateDiagram-v2
 | **切れたら繋ぎ直す。ただし読み込み途中の失敗は繰り返さない** | 抜き差しやスリープ復帰で止まったままだと、使うたびに「接続」を押すことになる。未対応のファームなど読み込みで失敗するものは、何度やっても同じなのでタイマーでは試さない |
 | **隠れていてもタイマーを間引かせない**(`backgroundThrottling: false`) | Electron の既定では、最小化や完全に隠れたときにタイマーが 1 秒に 1 回になり、20ms のポーリングが止まる。その間の TG / DF を取りこぼす |
 | **ロックを見つけたら自動でアンロックを始める** | 押下を読むには他に道が無く、確認ボタンは答えが 1 つしかない。オーバーレイはクリックが透過するのでボタンは押せない |
-| **ノブは KLE の座標ではなく、キーの下に横一列** | Cornix の定義はエンコーダーを図の右端に並べて置いてある。回転は matrix に出ない(PROTOCOL.md §6)ので位置に意味が無い |
+| **ノブは押し込みキーを円く描き、回したときの割り当てを上下に挟む** | Cornix の定義はエンコーダーを図の右端に並べて置いてあり、KLE の座標には意味が無い。以前は図の上か下に横一列でまとめていたが、横に長いうえ、どのノブの話か図から離れていた。押し込みキー(Cornix なら消音・中クリック)は上下が空いているので、そこに挟めば場所も要らない。ただ押し込みがどのキーかは Vial の定義に無いので、分かっているキーボードだけ `layout/knobButtons.ts` に持ち、ほかは図の下に同じ上下の形で並べる。上を右回りにするのは、音量なら「音量+」が上に来るように |
 | **モードを変えるたびにウィンドウを作り直す** | 透明ウィンドウは作った後から切り替えられない |
 | **オーバーレイの操作パネルの上だけクリック透過を切る** | `setIgnoreMouseEvents(true, { forward: true })` なら透過中でも mousemove は届く。ポインタが `data-interactive` の上に来たときだけ透過を解く |
 | **Windows 版は公式 zip を展開して `out/` を置くだけ** | electron-builder などは exe の情報書き換えに rcedit を使い、Linux からだと wine が要る。このアプリはネイティブモジュールが無いので不要 |

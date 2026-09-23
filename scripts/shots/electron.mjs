@@ -131,11 +131,6 @@ async function normalScenes(page) {
   await page.shot('14-settings')
   await page.js(`document.querySelector('[role=dialog] > div').scrollTop = 10000`)
   await page.shot('14b-settings-bottom')
-  await page.click('図の上')
-  await page.closePopover()
-  await page.shot('15-knob-top')
-  await page.clickSelector('[title="設定"]')
-  await page.click('図の下')
   await page.closePopover()
 
   await page.click('US')

@@ -94,7 +94,6 @@
 | 出力先の切り替え(`SWITCH`)への追従を実機で確かめる | Bluetooth 対応と一緒に | 抜き差し・スリープ復帰での繋ぎ直しは入った(`KeyboardConnection`)。BT への切り替えは P3 が入るまで遅さで失敗するはず。BLUETOOTH.md P4 |
 | 本番ビルドに CSP を付ける | いつでも | 起動時に Electron の警告が出ている。xz の展開に WebAssembly を使うので `script-src` に `'wasm-unsafe-eval'` が要る。dev は Vite の都合で緩めたまま、build のときだけ付けるのが良い |
 | オーバーレイ中の読み直し | 要望があれば | オーバーレイには「キーマップを読み直す」が無い。左上のパネルにボタンを足す、など |
-| ノブの位置(上 / 下)を設定で選べるようにする | 要望があれば | `KeyboardView` の `encoderPlacement` は既に `'top'` に対応している |
 | アイコン・署名 | 配布するとき | インストーラーは入った(NSIS)。exe のアイコンとバージョン情報の書き換えは rcedit が要り、Linux からだと wine が要る ― CI なら Windows のランナーで rcedit だけ流すのが軽い。署名は証明書が要る。無いあいだは SmartScreen の警告が出る |
 | ノブの回転を光らせる | ファームを触れるなら | ファームに独自の raw HID コマンドを足してエンコーダーのイベントを返させる |
 | Combo / Key Override の表示 | 要望があれば | Vial の dynamic entry で読める(`[0xFE, 0x0D, 0x03, idx]` / `[0xFE, 0x0D, 0x05, idx]`) |

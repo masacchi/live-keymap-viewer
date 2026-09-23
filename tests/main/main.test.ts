@@ -475,13 +475,13 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     const { settings } = await setup()
     const saved = (await invoke('settings:update', {
       labelMode: 'us',
-      encoderPlacement: 'top',
+      showLayerTriggers: true,
       // renderer からは変えさせない項目
       mode: 'overlay',
       grantedDevices: [{ vendorId: 1, productId: 2 }],
       evil: true
     })) as Record<string, unknown>
-    expect(saved).toMatchObject({ labelMode: 'us', encoderPlacement: 'top', mode: 'normal' })
+    expect(saved).toMatchObject({ labelMode: 'us', showLayerTriggers: true, mode: 'normal' })
     expect(saved).not.toHaveProperty('evil')
     expect(settings.loadSettings().grantedDevices).toEqual([])
     expect(await invoke('settings:update', 'garbage')).toMatchObject({ labelMode: 'us' })

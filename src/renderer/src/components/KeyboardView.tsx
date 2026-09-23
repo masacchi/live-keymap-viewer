@@ -5,8 +5,9 @@ import type { KeyboardSnapshot } from '../hid/vial'
 import { decodeKeycode, MOD_SHIFT } from '../keycodes/decode'
 import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
 import { holdLayerOf } from '../keycodes/tapDance'
-import { type EncoderPlacement, layoutEncoderStrip, viewBoxFor } from '../layout/encoderStrip'
+import { layoutEncoderStrip, viewBoxFor } from '../layout/encoderStrip'
 import { type KeyboardGeometry, keyId, visibleKeys } from '../layout/geometry'
+import { knobButtonsFor } from '../layout/knobButtons'
 import { decodeLayoutOptions } from '../layout/layoutOptions'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
@@ -20,8 +21,6 @@ export interface KeyboardViewProps {
   labelMode: LabelMode
   /** アンロックのために押すべきキー。ロック中だけ渡す。 */
   unlockKeys?: Array<{ row: number; col: number }>
-  /** ノブの割り当てを並べる位置。 */
-  encoderPlacement?: EncoderPlacement
   unit?: number
   /** キーをクリックしたとき。モックでキーを押す/離すのに使う(実機では渡さない)。 */
   onKeyClick?: (row: number, col: number) => void
@@ -51,7 +50,6 @@ export function KeyboardView({
   layers,
   labelMode,
   unlockKeys = [],
-  encoderPlacement = 'bottom',
   unit = 58,
   onKeyClick,
   previewLayer = null,
@@ -104,36 +102,54 @@ export function KeyboardView({
     [highlightKeys]
   )
 
-  const strip = useMemo(() => {
-    const items = geometry.encoders
+  /**
+   * ノブの割り当て(図に出しているレイヤーの)。押し込みキーが分かるノブはそのキーに付けて、
+   * キーを円く描き、上下に挟んで出す。分からないものは図の下にまとめる(同じ上下の形で)
+   */
+  const knobs = useMemo(() => {
+    const buttons = knobButtonsFor(snapshot.definition)
+    const onKeys = new Map<string, { ccw: string; cw: string; inward: 'left' | 'right' }>()
+    const centerX = (geometry.keyBounds.minX + geometry.keyBounds.maxX) / 2
+    const rest: Array<{ index: number; ccw: string; cw: string }> = []
+    for (const knob of geometry.encoders
       .filter((encoder) => encoder.direction === 0)
-      .sort((a, b) => a.index - b.index)
-      .map((knob) => {
-        const assigned = snapshot.encoders[view.displayLayer]?.[knob.index]
-        return {
-          index: knob.index,
-          ccw: assigned?.[0] !== undefined ? `↺ ${labelOf(assigned[0])}` : '',
-          cw: assigned?.[1] !== undefined ? `↻ ${labelOf(assigned[1])}` : ''
-        }
-      })
-    return layoutEncoderStrip({
-      items,
+      .sort((a, b) => a.index - b.index)) {
+      const assigned = snapshot.encoders[view.displayLayer]?.[knob.index]
+      const labels = {
+        index: knob.index,
+        ccw: assigned?.[0] !== undefined ? `↺ ${labelOf(assigned[0])}` : '',
+        cw: assigned?.[1] !== undefined ? `↻ ${labelOf(assigned[1])}` : ''
+      }
+      const button = buttons.find((b) => b.index === knob.index)
+      const id = button && keyId(button.row, button.col)
+      // 押し込みキーが図に出ていなければ(レイアウトの選択で隠れているなど)、下にまとめる
+      const key = id ? keys.find((k) => keyId(k.row, k.col) === id) : undefined
+      if (id && key) {
+        // 図の中央がキーのどちら側か。キーの幅に収まらない割り当ての文字は、そちらへ伸ばす
+        const inward = key.x + key.width / 2 > centerX ? 'left' : 'right'
+        onKeys.set(id, { ccw: labels.ccw, cw: labels.cw, inward })
+      } else rest.push(labels)
+    }
+    const strip = layoutEncoderStrip({
+      items: rest,
       keyBounds: geometry.keyBounds,
-      placement: encoderPlacement,
       unit,
       fontSize: ENCODER_FONT
     })
+    return { onKeys, strip }
   }, [
+    snapshot.definition,
+    snapshot.encoders,
+    keys,
     geometry.encoders,
     geometry.keyBounds,
-    snapshot.encoders,
     view.displayLayer,
     labelOf,
-    encoderPlacement,
     unit
   ])
+  const { strip } = knobs
 
-  const viewBox = viewBoxFor(geometry.keyBounds, strip, encoderPlacement, unit)
+  const viewBox = viewBoxFor(geometry.keyBounds, strip, unit)
 
   return (
     <svg
@@ -146,12 +162,12 @@ export function KeyboardView({
       {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
       {strip?.items.map((item) => (
         <g key={`enc-${item.index}`} className="encoder-item">
-          <circle className="encoder" cx={item.dotX} cy={strip.y} r={strip.dotRadius} />
-          <text className="encoder-label" x={item.ccwX} y={strip.y}>
-            {item.ccw}
-          </text>
-          <text className="encoder-label" x={item.cwX} y={strip.y}>
+          <text className="encoder-label" x={item.x} y={strip.cwY}>
             {item.cw}
+          </text>
+          <circle className="encoder" cx={item.x} cy={strip.y} r={strip.dotRadius} />
+          <text className="encoder-label" x={item.x} y={strip.ccwY}>
+            {item.ccw}
           </text>
         </g>
       ))}
@@ -183,6 +199,7 @@ export function KeyboardView({
             highlight={highlightSet.has(id)}
             flash={flashSet.has(id)}
             shifted={shifted}
+            knob={knobs.onKeys.get(id)}
             unit={unit}
             onClick={onKeyClick && (() => onKeyClick(physical.row, physical.col))}
           />

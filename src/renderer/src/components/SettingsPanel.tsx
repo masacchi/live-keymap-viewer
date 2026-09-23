@@ -41,11 +41,7 @@ export interface SettingsPanelProps {
   /** 名前を付けた(空なら消した)とき。渡さなければ名前の欄は出さない。 */
   onRename?: (layer: number, name: string) => void
   /** いまの設定(このパネルで変える項目)。 */
-  settings: Pick<
-    Settings,
-    'encoderPlacement' | 'tappingTerm' | 'grantedDevices' | 'showLayerTriggers'
-  > &
-    OverlaySettings
+  settings: Pick<Settings, 'tappingTerm' | 'grantedDevices' | 'showLayerTriggers'> & OverlaySettings
   onChange: (patch: SettingsPatch) => void
   /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
   onForgetDevice?: (vendorId: number, productId: number) => void
@@ -143,27 +139,6 @@ export function SettingsPanel({
             </span>
           </span>
         </label>
-      </Section>
-
-      <Section title={messages.settings.knobs}>
-        <div className="flex overflow-hidden rounded-md border border-line-soft">
-          {(
-            [
-              ['top', messages.settings.knobsTop],
-              ['bottom', messages.settings.knobsBottom]
-            ] as const
-          ).map(([placement, text]) => (
-            <Button
-              key={placement}
-              selected={settings.encoderPlacement === placement}
-              aria-pressed={settings.encoderPlacement === placement}
-              onClick={() => onChange({ encoderPlacement: placement })}
-              className="flex-1 rounded-none"
-            >
-              {text}
-            </Button>
-          ))}
-        </div>
       </Section>
 
       <Section title={messages.settings.keys}>

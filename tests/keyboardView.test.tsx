@@ -268,7 +268,7 @@ describe('KeyboardView', () => {
     expect(html).toContain('↻ ↓ ホイール')
   })
 
-  it('ノブは KLE 上の位置ではなく、キーの下に横一列でまとめる', () => {
+  it('ノブは KLE 上の位置には描かない(図の幅はキーの範囲で決まる)', () => {
     // Cornix の定義はエンコーダーを図の右端(x=15.25〜)に並べて置いてある。
     // そのまま描くと横に間延びするので、キーだけの幅に合わせる。
     expect(geometry.bounds.maxX).toBeCloseTo(19.75)
@@ -282,43 +282,94 @@ describe('KeyboardView', () => {
     expect(viewBox[2]).toBeCloseTo((geometry.keyBounds.maxX + 0.4) * 58, 0)
   })
 
-  it('ノブの一列はキーの中央に揃え、下に置く', () => {
+  it('押し込みキーが分かるノブ(Cornix)は、そのキーを円く描き、割り当てを上下に挟む', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
 
-    const circles = [...html.matchAll(/<circle class="encoder" cx="([\d.]+)" cy="([\d.]+)"/g)]
-    expect(circles).toHaveLength(2)
+    // 押し込みキーは 2,6(消音)と 5,6(中クリック)。下の帯は出さない
+    const knobs = [...html.matchAll(/<g class="key[^"]*key-knob[^"]*"[^>]*>([\s\S]*?)<title>/g)]
+    expect(knobs).toHaveLength(2)
+    expect(html).not.toContain('class="encoder"')
 
-    // 2 つとも同じ高さ = 横一列
-    expect(circles[0][2]).toBe(circles[1][2])
-    // キーの下端より下にある
-    expect(Number(circles[0][2])).toBeGreaterThan(geometry.keyBounds.maxY * 58)
+    const attr = (tag: string, name: string): number =>
+      Number(new RegExp(`${name}="([-\\d.]+)"`).exec(tag)![1])
+    const placed = knobs.map(([, body]) => {
+      const cap = /<rect class="cap"[^>]*>/.exec(body)![0]
+      const labels = [...body.matchAll(/<text class="encoder-label"([^>]*)>([^<]*)</g)].map(
+        ([, attrs, text]) => ({ attrs, text, x: attr(attrs, 'x'), y: attr(attrs, 'y') })
+      )
+      return {
+        x: attr(cap, 'x'),
+        y: attr(cap, 'y'),
+        width: attr(cap, 'width'),
+        height: attr(cap, 'height'),
+        rx: attr(cap, 'rx'),
+        labels
+      }
+    })
 
-    // 左端の丸と右端の文字の中点が、キー範囲の中央に来る
-    const labelXs = [...html.matchAll(/<text class="encoder-label" x="([\d.]+)"/g)].map((m) =>
-      Number(m[1])
-    )
-    const keyCenter = ((geometry.keyBounds.minX + geometry.keyBounds.maxX) / 2) * 58
-    expect(Number(circles[0][1])).toBeLessThan(keyCenter)
-    expect(Math.max(...labelXs)).toBeGreaterThan(keyCenter)
+    for (const knob of placed) {
+      expect(knob.rx).toBeCloseTo(knob.width / 2) // 円: 角の丸みが幅の半分
+      const [cw, ccw] = knob.labels
+      expect(cw.text).toMatch(/^↻/)
+      expect(cw.y).toBeLessThan(knob.y) // 右回りはキーの上
+      expect(ccw.text).toMatch(/^↺/)
+      expect(ccw.y).toBeGreaterThan(knob.y + knob.height) // 左回りはキーの下
+    }
+
+    // 左手は音量。「音量+」が上。キーの幅に収まるので、キーの真上に中央揃え
+    const [left, right] = placed
+    expect(left.labels[0].text).toBe('↻ 音量+')
+    expect(left.labels[1].text).toBe('↺ 音量−')
+    expect(left.labels[0].x).toBeCloseTo(left.x + left.width / 2)
+    expect(left.labels[0].attrs).not.toContain('text-anchor')
+    // 右手はホイール。「↻ ↓ ホイール」はキーより長いので、右端で揃えて図の中央側(左)へ伸ばす。
+    // 中央揃えだと右隣の H・N にかかっていた
+    expect(right.labels[0].text).toBe('↻ ↓ ホイール')
+    for (const label of right.labels) {
+      expect(label.attrs).toContain('text-anchor:end')
+      expect(label.x).toBeCloseTo(right.x + right.width)
+    }
   })
 
-  it('ノブを上に置くこともできる', () => {
+  it('押し込みキーが分からないノブは、図の下に丸を並べて上下に挟む', () => {
+    // 対応表(layout/knobButtons.ts)に無いキーボードの体にする
+    const unknown: KeyboardSnapshot = {
+      ...snapshot,
+      definition: { ...snapshot.definition, vendorId: '0x1234' }
+    }
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = renderToStaticMarkup(
       <KeyboardView
         geometry={geometry}
-        snapshot={snapshot}
+        snapshot={unknown}
         engine={engine}
         layers={layers}
         labelMode="jis"
-        encoderPlacement="top"
       />
     )
-    const cy = Number(/<circle class="encoder" cx="[-\d.]+" cy="([-\d.]+)"/.exec(html)![1])
-    expect(cy).toBeLessThan(geometry.keyBounds.minY * 58)
+    expect(html).not.toContain('key-knob')
+
+    // エンコーダー 1 個につき丸を 1 つ。キーの下端より下に横一列
+    const circles = [...html.matchAll(/<circle class="encoder" cx="([\d.]+)" cy="([\d.]+)"/g)]
+    expect(circles).toHaveLength(2)
+    expect(circles[0][2]).toBe(circles[1][2])
+    const cy = Number(circles[0][2])
+    expect(cy).toBeGreaterThan(geometry.keyBounds.maxY * 58)
+
+    // 丸と同じ x に、右回りを上・左回りを下
+    const labels = [
+      ...html.matchAll(/<text class="encoder-label" x="([\d.]+)" y="([\d.]+)">([^<]*)</g)
+    ]
+    expect(labels).toHaveLength(4)
+    const [cw, ccw] = labels
+    expect(cw[1]).toBe(circles[0][1])
+    expect(cw[3]).toMatch(/^↻/)
+    expect(Number(cw[2])).toBeLessThan(cy)
+    expect(ccw[3]).toMatch(/^↺/)
+    expect(Number(ccw[2])).toBeGreaterThan(cy)
   })
 
   it('アンロック対象のキーを目立たせる', () => {
@@ -326,12 +377,5 @@ describe('KeyboardView', () => {
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers, 'jis', [{ row: 0, col: 0 }])
     expect(html.match(/key-unlock/g) ?? []).toHaveLength(1)
-  })
-
-  it('エンコーダーを 1 個につき 1 つ描く', () => {
-    const engine = newEngine()
-    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
-    const html = render(engine, layers)
-    expect(html.match(/class="encoder"/g) ?? []).toHaveLength(2)
   })
 })
