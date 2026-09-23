@@ -85,7 +85,12 @@ export class LayerEngine {
   private held = new Map<string, HeldKey>()
 
   constructor(config: LayerEngineConfig) {
-    this.config = { tappingTerm: DEFAULT_TAPPING_TERM, ...config }
+    // tappingTerm を「渡さない」と「undefined を渡す」を同じに扱う。
+    // 以前は既定値に config をそのまま重ねていたので、undefined を渡されると既定値が
+    // **上書きされて undefined になり**、`now - pressedAt >= undefined` が常に偽 ―
+    // つまり LT / Tap Dance の長押しが永遠に確定しなかった。
+    // セッションは設定を受け取る前 `tappingTerm: undefined` で作られることがある
+    this.config = { ...config, tappingTerm: config.tappingTerm ?? DEFAULT_TAPPING_TERM }
   }
 
   /**

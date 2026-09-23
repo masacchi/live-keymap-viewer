@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { emptyMatrix, LayerEngine } from '@/engine/layerState'
+import { DEFAULT_TAPPING_TERM, emptyMatrix, LayerEngine } from '@/engine/layerState'
 import { decodeKeycode, formatKeycode, MOD_CTRL, MOD_SHIFT } from '@/keycodes/decode'
 import { labelForKeycode } from '@/keycodes/labels'
 import type { TapDanceEntry } from '@/keycodes/tapDance'
@@ -73,6 +73,26 @@ class Board {
     return this.engine.update(this.matrix, this.now)
   }
 }
+
+describe('LayerEngine の作り方', () => {
+  it('tappingTerm に undefined を渡しても、既定値で長押しが確定する', () => {
+    // セッションは、設定を受け取る前は tappingTerm: undefined でエンジンを作る。
+    // 以前は既定値を config で上書きしていたので undefined になり、
+    // `now - pressedAt >= undefined` が常に偽 ― LT / TD の長押しが永遠に確定しなかった
+    const engine = new LayerEngine({
+      layers: MOCK_LAYERS,
+      rows: MOCK_ROWS,
+      cols: MOCK_COLS,
+      keymap: mockKeymap(),
+      tapDance,
+      tappingTerm: undefined
+    })
+    const matrix = emptyMatrix(MOCK_ROWS, MOCK_COLS)
+    matrix[SPACE.row][SPACE.col] = true
+    engine.update(matrix, 1000)
+    expect(engine.update(matrix, 1000 + DEFAULT_TAPPING_TERM).displayLayer).toBe(2)
+  })
+})
 
 describe('Layer-Tap', () => {
   let board: Board
