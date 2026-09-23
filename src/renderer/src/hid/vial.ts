@@ -683,7 +683,7 @@ export async function reloadKeymap(
 
 /**
  * 読み直した結果が前と同じか(Vial で編集され得るところだけを比べる)。
- * 読み直しはウィンドウにフォーカスが戻るたびに走るが、たいていは何も変わっていない。
+ * 読み直しても(接続直後の確かめ・手動の読み直し)、たいていは何も変わっていない。
  */
 export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
   const editable = (s: KeyboardSnapshot) =>

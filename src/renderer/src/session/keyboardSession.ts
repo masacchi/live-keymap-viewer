@@ -314,9 +314,9 @@ export class KeyboardSession {
     } catch (error) {
       if (!this.alive(gen)) return
       // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま続ける
-      // (ポーリングは止めていないので表示もそのまま。次のフォーカスや手動でまた読み直せる)。
-      // 以前はここで error にしていたので、ウィンドウに戻った拍子に 1 回詰まっただけで
-      // 接続が切れ、繋ぎ直しで丸ごと読み直していた
+      // (ポーリングは止めていないので表示もそのまま。また手動で読み直せる)。
+      // 以前はここで error にしていたので、1 回詰まっただけで接続が切れ、
+      // 繋ぎ直しで丸ごと読み直していた
       if (isTimeout(error)) {
         this.update({ reloading: false })
         return
@@ -451,7 +451,7 @@ export class KeyboardSession {
    * あいだは matrix の間隔が延びるだけで、押下の表示は生きたままになる。
    * 違っていたら新しいキーマップでエンジンを作り直し、ポーリングを入れ替える。
    *
-   * 失敗しても表示は壊さない ― キャッシュのまま使い続け、次のフォーカスか手動の読み直しに任せる。
+   * 失敗しても表示は壊さない ― キャッシュのまま使い続け、手動の読み直しに任せる。
    */
   private async verifyCached(gen: number, cached: KeyboardSnapshot): Promise<void> {
     this.update({ reloading: true })

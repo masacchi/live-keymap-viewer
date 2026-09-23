@@ -2,7 +2,12 @@
  * キーボードとの接続(session/keyboardConnection.ts)を React につなぐ薄いフック。
  *
  * デバイスの選び方・セッションの差し替え・切れたときの繋ぎ直しは KeyboardConnection が持つ。
- * ここでやるのは、状態を React に渡すことと、ウィンドウのフォーカス復帰で読み直すことだけ。
+ * ここでやるのは、状態を React に渡すことだけ。
+ *
+ * キーマップの読み直しは手動(「キーマップを読み直す」)だけにしてある。以前はウィンドウに
+ * フォーカスが戻るたびに読み直していたが、BT では 1 回 30 秒以上かかり、そのあいだ
+ * 「読み直し中…」が出続ける。繋いだときに読んでいる(キャッシュなら裏で確かめている)ので、
+ * 戻るたびに読む必要は無い、と判断した。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocalStorageDefinitionCache } from '../hid/definitionCache'
@@ -91,18 +96,6 @@ export function useVialKeyboard(tappingTerm?: number) {
       }),
     []
   )
-
-  /**
-   * ウィンドウにフォーカスが戻ったら読み直す。
-   * Vial で編集 → このアプリに切り替える、という流れがそのまま反映される。
-   * オーバーレイはクリック透過でフォーカスを取らないので、そちらでは発火しない。
-   * こちらはキーマップだけ。フォーカスのたびに定義まで読むのは重い。
-   */
-  useEffect(() => {
-    const onFocus = (): void => void connectionRef.current?.reload()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [])
 
   const connect = useCallback(async () => {
     await connectionRef.current?.connect()
