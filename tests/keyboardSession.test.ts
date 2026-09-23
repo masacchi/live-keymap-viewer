@@ -392,6 +392,31 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
+  it('読み直しのあいだもポーリングを止めず、押下を出し続ける', async () => {
+    // 以前は読み終わるまで止めていた。BT(68 往復 × 約 470ms)ではウィンドウに戻るたびに
+    // 30 秒ほど押下が出なくなり、繋ぎ直しているように見えた
+    const { session, mock } = await readySession()
+    let resume!: () => void
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve
+    })
+    const original = mock.send.bind(mock)
+    mock.send = async (request, opts) => {
+      if (request[0] === 0x12) await gate // キーマップの読み出しを途中で止めておく
+      return original(request, opts)
+    }
+
+    const reloading = session.reload()
+    mock.press(0, 1)
+    const pressed = await waitFor(session, (s) => s.layers?.held.has('0,1') === true)
+    expect(pressed.reloading).toBe(true) // 読み直しが終わる前に出ている
+
+    resume()
+    await reloading
+    expect(session.state.reloading).toBe(false)
+    await session.dispose()
+  })
+
   it('何も変わっていなければ、エンジンも画面もそのまま使う', async () => {
     const { session } = await readySession()
     const { engine, snapshot, geometry } = session.state
@@ -458,7 +483,9 @@ describe('KeyboardSession: 読み直し', () => {
     let maxInFlight = 0
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
-      if (request[0] !== 0x02) return original(request, opts)
+      // matrix(0x02 0x03)だけを数える。読み直しはポーリングと並んで走り、レイアウトオプション
+      // (0x02 0x02)も 0x02 で始まる。モックはキューを持たないので、それとは重なって見える
+      if (request[0] !== 0x02 || request[1] !== 0x03) return original(request, opts)
       inFlight++
       maxInFlight = Math.max(maxInFlight, inFlight)
       try {

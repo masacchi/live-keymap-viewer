@@ -2,8 +2,8 @@
  * 1 台のキーボードとの接続 1 回分。
  *
  *   open → 読み込み → (ロックなら)アンロック → matrix ポーリング
- *                                          ↑           │
- *                                          └─ reload ──┘
+ *                                                  ‖ 止めずに並べて読む
+ *                                              reload(変わっていたらポーリングを入れ替える)
  *
  * React から切り離してあるのは、非同期の後始末を確実にするため。
  * 以前はフックの中で setInterval と ref を組み合わせていて、
@@ -273,10 +273,16 @@ export class KeyboardSession {
   /**
    * キーマップを読み直す。Vial で編集したあとに呼ぶ。
    *
+   * **ポーリングは止めない。** 裏の確かめ(verifyCached)と同じく、要求は 1 本のキューに並ぶので、
+   * 読んでいるあいだは matrix の間隔が延びるだけで、押下の表示は生きたままになる。
+   * 以前は読み終わるまでポーリングを止めていた。読み直しは 68 往復かかり、BT(1 往復 約 470ms)
+   * では 30 秒ほどになる。ウィンドウに戻るたびにそのあいだ押下が出ず「読み直し中…」が続くので、
+   * 繋ぎ直しているように見えていた。
+   *
    * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
    * 中身が変わっていなければ、エンジンも画面もそのまま使う。変わっていれば新しいキーマップで
-   * エンジンを作り直し、TG の固定や押しているキーは前のエンジンから引き継ぐ(キーボード側は
-   * 覚えたままなので、捨てると表示がずれる)。
+   * エンジンを作り直してポーリングを入れ替え、TG の固定や押しているキーは前のエンジンから
+   * 引き継ぐ(キーボード側は覚えたままなので、捨てると表示がずれる)。
    * ポーリング中でなければ何もしない(アンロック中は VIA コマンドが通らない)。
    *
    * full のときは定義もキャッシュを使わずに読み直し、変わっていれば物理配置も組み直す。
@@ -286,7 +292,8 @@ export class KeyboardSession {
     if (this.disposed || !previous) return
     if (this.current.status !== 'ready' || this.current.reloading) return
 
-    const gen = ++this.generation // ポーリングを止める
+    // 動いているポーリングの世代。読んでいるあいだに止まったら(切れた・破棄した)結果は使わない
+    const gen = this.generation
     this.update({ reloading: true })
     try {
       const next = full
@@ -299,25 +306,19 @@ export class KeyboardSession {
       const sameDefinition =
         next.definition === previous.definition ||
         JSON.stringify(next.definition) === JSON.stringify(previous.definition)
-      const current = this.current.engine
-      if (current && sameDefinition && keymapUnchanged(previous, next)) {
+      if (sameDefinition && keymapUnchanged(previous, next)) {
         this.update({ reloading: false })
-        void this.runPolling(gen, previous, current)
         return
       }
-      const engine = this.install(next, sameDefinition, current)
-      this.update({ reloading: false })
-      void this.runPolling(gen, next, engine)
+      this.replaceKeymap(next, sameDefinition)
     } catch (error) {
       if (!this.alive(gen)) return
-      // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま
-      // ポーリングに戻す(表示は続けられるし、次のフォーカスや手動でまた読み直せる)。
+      // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま続ける
+      // (ポーリングは止めていないので表示もそのまま。次のフォーカスや手動でまた読み直せる)。
       // 以前はここで error にしていたので、ウィンドウに戻った拍子に 1 回詰まっただけで
       // 接続が切れ、繋ぎ直しで丸ごと読み直していた
-      const engine = this.current.engine
-      if (isTimeout(error) && engine) {
+      if (isTimeout(error)) {
         this.update({ reloading: false })
-        void this.runPolling(gen, previous, engine)
         return
       }
       this.fail(error)
@@ -461,13 +462,21 @@ export class KeyboardSession {
         this.update({ reloading: false })
         return
       }
-      const engine = this.install(next, true, this.current.engine)
-      this.update({ reloading: false })
-      const replaced = ++this.generation // 動いているポーリングを止めて入れ替える
-      void this.runPolling(replaced, next, engine)
+      this.replaceKeymap(next, true)
     } catch {
       if (this.alive(gen)) this.update({ reloading: false })
     }
+  }
+
+  /**
+   * 裏で読み直したキーマップに差し替え、ポーリングを入れ替える(読み直し・裏の確かめ)。
+   * レイヤーの状態は、それまで動いていたエンジンから引き継ぐ。
+   */
+  private replaceKeymap(next: KeyboardSnapshot, reuseGeometry: boolean): void {
+    const engine = this.install(next, reuseGeometry, this.current.engine)
+    this.update({ reloading: false })
+    const replaced = ++this.generation // 動いているポーリングを止めて入れ替える
+    void this.runPolling(replaced, next, engine)
   }
 
   /**
