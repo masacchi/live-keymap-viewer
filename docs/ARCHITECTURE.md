@@ -195,6 +195,7 @@ stateDiagram-v2
 | **モードを変えるたびにウィンドウを作り直す** | 透明ウィンドウは作った後から切り替えられない |
 | **オーバーレイの操作パネルの上だけクリック透過を切る** | `setIgnoreMouseEvents(true, { forward: true })` なら透過中でも mousemove は届く。ポインタが `data-interactive` の上に来たときだけ透過を解く |
 | **Windows 版は公式 zip を展開して `out/` を置くだけ** | electron-builder などは exe の情報書き換えに rcedit を使い、Linux からだと wine が要る。このアプリはネイティブモジュールが無いので不要 |
+| **インストーラーは NSIS を直接使う。CI は Ubuntu で作る** | Linux の makensis は Windows のインストーラーをそのまま作れるので、上と同じく wine も Windows も要らず、npm の依存も増えない(electron-builder の NSIS も中身は同じ)。手元の WSL と CI が同じ手順になる。入る場所は固定(上書き時に前の版を丸ごと消すため) |
 | **ビルドは Vite を直接使う(electron-vite を使わない)** | electron-vite の安定版(5.0.0)が Vite 8 に対応していなかった。任せていたのは「main / preload / renderer を別々にビルドする」「dev で Electron を起動・再起動する」だけなので、Vite の設定 3 つと `scripts/dev.mjs`(Vite の公開 API だけを使う)で足りる |
 | **Shift 中は、Shift で入る文字を主文字にする** | エンジンがモディファイアも追う(`LayerSnapshot.mods`)。単独の Shift は押しているあいだ、MT / Tap Dance の Shift は長押しが確定してから(LT と同じ規則)。時間だけで確定したときも画面が変わるよう、通知の指紋に mods を入れている |
 | **プレビューは、キーを押したら実際の表示に戻す** | 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違う。縁を破線にして実際の状態ではないと示す |

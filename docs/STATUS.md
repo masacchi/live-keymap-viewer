@@ -31,7 +31,7 @@
 | ビルド | electron-vite | **Vite を直接**使う(設定 3 つ + `scripts/dev.mjs`) | electron-vite の安定版が Vite 8 に対応していなかった(ARCHITECTURE.md §6) |
 | 画面(2026-09-22) | (記述なし) | Shift 中は Shift で入る文字を強調、レイヤーの一覧とプレビュー、レイヤー名、オーバーレイの自動フェード、読み込みの進み具合、狭いウィンドウ向けの詰め | 使ってみての要望と、BT で読み込みが数十秒かかることへの備え |
 | 画面(2026-09-22 その 2) | (記述なし) | 色の意味を 1 色 1 つに(色相はレイヤーだけ)、ボタンを `Button` に一本化、レイヤーの一覧をツールバーに入れて行き方(`Space 長押し`)と空レイヤーの畳みを付ける、乗せてプレビュー、Ctrl/Shift/Alt/Win の印、アンロックをキーの名前で案内、記号の出し方、設定パネル、オーバーレイのパネルを畳む・薄くしたときの濃さ・後ろのぼかし | 見やすさ・分かりやすさの見直し。Tailwind は `@theme` のトークンと `cn()`(clsx + tailwind-merge)、variant は cva |
-| 配布 | 後回し | インストーラーは無し。`npm run deploy:win` でポータブル一式を置く | wine を使わずに Windows 版を作るため |
+| 配布 | 後回し | NSIS のインストーラーとポータブル版の zip。GitHub Actions が main への push・`v*` のタグ・手動でビルドし、タグならリリースに載せる。手元の確認は `npm run deploy:win` でポータブル一式を置く | wine を使わずに Linux で Windows 版を作るため(NSIS も Linux の makensis で作れる)。DEVELOPMENT.md §5 |
 
 ## 3. 分かっている制約
 
@@ -95,7 +95,7 @@
 | 本番ビルドに CSP を付ける | いつでも | 起動時に Electron の警告が出ている。xz の展開に WebAssembly を使うので `script-src` に `'wasm-unsafe-eval'` が要る。dev は Vite の都合で緩めたまま、build のときだけ付けるのが良い |
 | オーバーレイ中の読み直し | 要望があれば | オーバーレイには「キーマップを読み直す」が無い。左上のパネルにボタンを足す、など |
 | ノブの位置(上 / 下)を設定で選べるようにする | 要望があれば | `KeyboardView` の `encoderPlacement` は既に `'top'` に対応している |
-| アイコン・インストーラー・署名 | 配布するとき | electron-builder を入れる。Linux から作るなら wine、または Windows 上でビルド |
+| アイコン・署名 | 配布するとき | インストーラーは入った(NSIS)。exe のアイコンとバージョン情報の書き換えは rcedit が要り、Linux からだと wine が要る ― CI なら Windows のランナーで rcedit だけ流すのが軽い。署名は証明書が要る。無いあいだは SmartScreen の警告が出る |
 | ノブの回転を光らせる | ファームを触れるなら | ファームに独自の raw HID コマンドを足してエンコーダーのイベントを返させる |
 | Combo / Key Override の表示 | 要望があれば | Vial の dynamic entry で読める(`[0xFE, 0x0D, 0x03, idx]` / `[0xFE, 0x0D, 0x05, idx]`) |
 | ほかのキーボード | 持っている人がいれば | **モックでは確認済み**(tests/otherKeyboard.test.tsx)。行列・レイヤー数が違う / ノブ無し / レイアウトオプション無し / カスタムキーコード無し / Tap Dance 無しでも、読み込みから押下まで通る。残るのは実機での確認。DEVELOPMENT.md §6 |

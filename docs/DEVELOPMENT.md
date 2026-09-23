@@ -28,6 +28,7 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | **`npm run check`** | **型チェック + lint + テスト。コミット時に自動で走る(下記)** |
 | `npm run package:win` | ビルドして `dist/win32-x64/` に Windows 版一式を作る |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
+| `npm run installer:win` | `package:win` に加えて、`dist/` にインストーラー(セットアップ exe)を作る。NSIS が要る([§5](#インストーラー)) |
 | `npm run diag:hid` | Windows の HID API から Cornix のインターフェースを調べ、Vial が答えるか・往復時間を見る(Chromium を通さない) |
 | `npm run shots` | モックを動かして状態ごとに画面を撮る(下記)。`-- --compare <前の出力>` で画素比較 |
 | `npm run diag:webhid` | Electron(WebHID)の選択ダイアログに何が並ぶかを調べる(先に `package:win`) |
@@ -191,8 +192,55 @@ npm run deploy:win
 `locales/` / `resources/app/` を読む。exe だけを持っていくと起動時に
 `Invalid file descriptor to ICU data received.` で落ちる。
 
-インストーラーは作っていない(HANDOFF §2 で配布は後回し)。wine を使わずに済むよう、
-公式の win32 zip を展開して `out/` を置くだけにしてある(理由は ARCHITECTURE.md §6)。
+一式は、wine を使わずに済むよう、公式の win32 zip を展開して `out/` を置くだけで作っている
+(理由は ARCHITECTURE.md §6)。
+
+### インストーラー
+
+```bash
+sudo apt install nsis     # 初回だけ
+npm run installer:win
+```
+
+`dist/LiveKeymapViewer-<版>-win-x64-setup.exe` ができる。中身は
+[scripts/installer-win.nsi](../scripts/installer-win.nsi)。Linux の makensis が Windows のインストーラーを
+そのまま作るので、ここでも wine は要らない。圧縮に 1〜2 分かかる。
+
+- 入る場所は `%LOCALAPPDATA%\Programs\LiveKeymapViewer`(ユーザーごと。管理者権限は要らない)。
+  **場所は選ばせない。** 上書きのときに前の版を丸ごと消してから置く(Electron を上げたときに古い DLL や
+  locales が残らないように)ので、任意の場所を選べると、そこを丸ごと消すことになる
+- スタートメニューにショートカットを作る。デスクトップのショートカットは最後の画面で選べる
+- 「設定 → アプリ」から消せる。設定とログ(`%APPDATA%\Live Keymap Viewer`)は消さずに残す
+- 起動中なら、閉じるまで先に進まない(勝手に終了させない。`deploy:win` と同じ)
+- 署名していないので、初回は SmartScreen の「Windows によって PC が保護されました」が出る。
+  「詳細情報」→「実行」で進む
+
+### GitHub Actions でのビルド
+
+[.github/workflows/build-windows.yml](../.github/workflows/build-windows.yml)。Ubuntu のランナーで、
+手元と同じ `npm run check` → `package:win` → `installer-win.mjs` を流し、ポータブル版の zip も作る。
+
+| きっかけ | やること |
+|---|---|
+| main への push(PR のマージを含む) | ビルドして、その実行の Artifacts にインストーラーと zip を置く(14 日で消える) |
+| `v*` のタグの push | ビルドして、GitHub のリリースを作って載せる |
+| 手動(Actions → 「Windows 版のビルド」→ Run workflow) | 選んだブランチでビルドする。「タグ」を書けばリリースも作る(無いタグなら、ビルドした commit に付ける) |
+
+リリースするとき:
+
+```bash
+npm version 0.2.0 -m "chore: 版を %s に上げる"   # package.json を上げ、コミットと v0.2.0 のタグを作る
+git push --follow-tags                          # タグの push でリリースまで走る
+```
+
+- **タグは `v` + package.json の版にする。** 合わないと最初の手順で止まる。アプリの画面・ログ・
+  「設定 → アプリ」に出る版は package.json から来るので、リリースの名前と食い違わないように
+- 手動で既にあるタグを書くと、そのタグの commit をビルドしているときだけ進む。別の commit なら止まる
+  (既にあるタグでやり直すなら、「Use workflow from」でそのタグを選ぶ)
+- `v0.2.0-beta.1` のように `-` の付くタグはプレリリースになる
+- 同じタグでもう一度流すと、リリースは作り直さずに添付だけ差し替える
+- リリースしないビルドは、ファイル名に commit の先頭 7 文字が付く
+  (`LiveKeymapViewer-0.1.0-abc1234-win-x64-setup.exe`)
 
 ## 6. よくある変更
 
