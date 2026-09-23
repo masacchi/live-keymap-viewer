@@ -119,7 +119,7 @@ describe('describeTrigger', () => {
   it('LT はタップ側の文字、TG はキーの名前で言い、ベース以外にあるキーはレイヤーを先に書く', () => {
     expect(at(0, QK_LAYER_TAP | (1 << 8) | 0x2a, 'hold')).toBe('BS 長押し')
     expect(at(0, QK_TOGGLE_LAYER | 3, 'toggle')).toBe('TG3 で固定')
-    expect(at(1, QK_MOMENTARY | 4, 'momentary')).toBe('L1 → MO4 押す間')
+    expect(at(1, QK_MOMENTARY | 4, 'momentary')).toBe('L1 → MO4 押している間')
   })
 })
 
