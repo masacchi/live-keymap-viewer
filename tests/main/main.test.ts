@@ -388,8 +388,10 @@ describe('WindowManager', () => {
       return { ...main, win: fake.FakeWindow.all[0] }
     }
 
-    it('不透明度はオーバーレイのときだけウィンドウに効かせる(保存はする)', async () => {
-      const { win, settings } = await setup({})
+    it('濃さはウィンドウに掛けない(renderer が中身に掛ける。保存はする)', async () => {
+      // setOpacity はぼかしごと薄くし、ぼけていない後ろの画面が透けてしまう
+      const { win, settings } = await setup({ mode: 'overlay', overlayOpacity: 0.7 })
+      expect(win.opacity).toBe(1)
       await invoke('settings:update', { overlayOpacity: 0.5 })
       expect(win.opacity).toBe(1)
       expect(settings.loadSettings().overlayOpacity).toBe(0.5)

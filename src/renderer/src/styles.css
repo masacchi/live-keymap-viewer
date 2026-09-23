@@ -126,6 +126,15 @@ body.overlay .app-shell {
   transition: background-color 80ms ease;
 }
 
+/*
+ * 後ろをぼかしているあいだは板を薄くする。ぼかし(OS のアクリル)は板の下に描かれるので、
+ * 72% のままだと 3 割弱しか見えず、ぼかしが効いていないように見えていた。アクリル自体に
+ * 暗い色味が乗るので、薄くしても字は読める
+ */
+body.overlay .app-shell.blurred {
+  background: color-mix(in srgb, var(--color-ground) 35%, transparent);
+}
+
 /* ベースレイヤーのあいだは背景の板も消して、画面の邪魔にならないようにする(App.tsx) */
 body.overlay .app-shell.faded {
   background: transparent;

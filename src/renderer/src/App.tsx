@@ -133,7 +133,14 @@ export default function App(): JSX.Element {
 
   return (
     <div
-      className={cn('app-shell relative flex h-full flex-col overflow-hidden', faded && 'faded')}
+      className={cn(
+        'app-shell relative flex h-full flex-col overflow-hidden',
+        overlay && settings.overlayBlur && BLUR_SUPPORTED && 'blurred',
+        faded && 'faded'
+      )}
+      // オーバーレイの濃さは、ウィンドウ(setOpacity)ではなく中身に掛ける。ウィンドウに掛けると
+      // 後ろのぼかしごと薄くなり、ぼけていない後ろの画面が透けてしまう(main/windows.ts)
+      style={overlay ? { opacity: settings.overlayOpacity } : undefined}
     >
       {overlay && (
         <OverlayControls

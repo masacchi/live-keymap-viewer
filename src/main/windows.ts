@@ -154,12 +154,16 @@ export class WindowManager {
   }
 
   /**
-   * 保存した設定のうち、ウィンドウに効くもの(濃さ・後ろのぼかし)を反映する。
+   * 保存した設定のうち、ウィンドウに効くもの(後ろのぼかし)を反映する。
    * 設定を変えたあとに呼ぶ。通常ウィンドウでは何もしない(次にオーバーレイを作るときに使う)。
+   *
+   * 濃さ(overlayOpacity)はウィンドウには掛けず、renderer が中身に掛ける(App.tsx)。
+   * setOpacity はぼかしも含めたウィンドウ全体を薄くするので、濃さ 90% なら残りの 10% に
+   * ぼけていない後ろの画面がそのまま透け、ぼかしが効いていないように見えていた
+   * (2026-09-23、実機で縞模様の上に並べて確かめた)。
    */
   applySettings(settings: Settings): void {
     if (this.currentMode !== 'overlay') return
-    this.current?.setOpacity(settings.overlayOpacity)
     this.applyBlur(settings)
   }
 
@@ -255,7 +259,7 @@ export class WindowManager {
       win.setIgnoreMouseEvents(true, { forward: true })
       win.setAlwaysOnTop(true, 'screen-saver')
       win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      win.setOpacity(settings.overlayOpacity)
+      // 濃さはここでは掛けない(applySettings のコメント)
       // 作り直したウィンドウの renderer は、読み込むまで図を濃く出している(薄くするのは接続後)
       this.blurActive = true
       this.blurOn = settings.overlayBlur
