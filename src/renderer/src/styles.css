@@ -121,9 +121,26 @@ body.overlay {
 }
 
 body.overlay .app-shell {
-  background: color-mix(in srgb, var(--color-ground) 72%, transparent);
   border-radius: 14px;
-  transition: background-color 80ms ease;
+  /* 板(::before)を中身の後ろ、かつこの中に留める */
+  isolation: isolate;
+}
+
+/*
+ * 背景の板。背景色ではなく別の層にしてあるのは、L0 で薄くするときに図と同じだけ
+ * opacity を掛けるため(左上のパネルは薄くしないので、.app-shell ごとは薄くできない)
+ */
+body.overlay .app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-ground) 72%, transparent);
+  pointer-events: none;
+  transition:
+    opacity 80ms ease,
+    background-color 80ms ease;
 }
 
 /*
@@ -131,14 +148,20 @@ body.overlay .app-shell {
  * 72% のままだと 3 割弱しか見えず、ぼかしが効いていないように見えていた。アクリル自体に
  * 暗い色味が乗るので、薄くしても字は読める
  */
-body.overlay .app-shell.blurred {
+body.overlay .app-shell.blurred::before {
   background: color-mix(in srgb, var(--color-ground) 35%, transparent);
 }
 
-/* ベースレイヤーのあいだは背景の板も消して、画面の邪魔にならないようにする(App.tsx) */
-body.overlay .app-shell.faded {
-  background: transparent;
-  transition: background-color 400ms ease 300ms;
+/*
+ * ベースレイヤーのあいだは、板も図と同じだけ薄くする(濃さは App.tsx が --faded-opacity で渡す)。
+ * 以前は板だけ消していたので、薄い図が壁紙の上にじかに乗り、どこまでが図か分かりにくかった。
+ * 図と同じく、薄くするのは少し待ってからゆっくり
+ */
+body.overlay .app-shell.faded::before {
+  opacity: var(--faded-opacity, 1);
+  transition:
+    opacity 400ms ease 300ms,
+    background-color 400ms ease 300ms;
 }
 
 /*
