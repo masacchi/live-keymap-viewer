@@ -155,7 +155,7 @@ npm run check    # 型チェック + lint + テスト(コミット時に husky �
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | Vial / VIA のプロトコル(一次ソースで確かめた結果) |
 | [docs/STATUS.md](docs/STATUS.md) | 受け入れ基準の状況、制約、今後の候補 |
 | [docs/BLUETOOTH.md](docs/BLUETOOTH.md) | Bluetooth 対応の調査結果と実装計画 |
-| [HANDOFF.md](HANDOFF.md) | 当初の引き継ぎ仕様 |
+| [docs/archive/HANDOFF.md](docs/archive/HANDOFF.md) | 当初の引き継ぎ仕様(歴史。各所から §番号で参照している) |
 
 ## ライセンスについて
 
