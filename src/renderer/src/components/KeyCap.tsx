@@ -51,6 +51,11 @@ const GAP = 0.08
 /** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.css の .key-body)より少し深く。 */
 const SKIRT = 3
 const BAND_HEIGHT = 17
+/**
+ * 色帯をキーの縁から内側へ寄せる幅(px)。以前はキーの外枠いっぱいに描いていて、
+ * 帯がキーからはみ出しそうに見えた。少し寄せると、キーキャップの中にある札に見える
+ */
+const BAND_INSET = 2
 /** ノブの割り当ての文字の縦中心を、キーの縁(下は厚みの縁)からどれだけ離すか(px)。 */
 const KNOB_LABEL_OFFSET = 11
 /** 円いキーで文字を置ける幅の割合。四隅が無いぶん狭い。 */
@@ -255,7 +260,7 @@ export function KeyCap({
   const hasShift = Boolean(shiftText)
 
   // 色帯を除いた、文字を置ける範囲の真ん中
-  const contentBottom = y + height - (showBand ? BAND_HEIGHT : 0)
+  const contentBottom = y + height - (showBand ? BAND_HEIGHT + BAND_INSET : 0)
   const contentCenter = (y + contentBottom) / 2
   // Shift 側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
   // 左上に小さく出していたときは見落としやすかった。
@@ -324,15 +329,16 @@ export function KeyCap({
               <>
                 <rect
                   className="band"
-                  x={x}
-                  y={y + height - BAND_HEIGHT}
-                  width={width}
+                  x={x + BAND_INSET}
+                  y={y + height - BAND_INSET - BAND_HEIGHT}
+                  width={width - BAND_INSET * 2}
                   height={BAND_HEIGHT}
-                  rx={6}
+                  // キーの角(7)と同心になるよう、寄せたぶん丸みを小さくする
+                  rx={7 - BAND_INSET}
                   fill={layerColor(holdLayer)}
                 />
-                <text className="band-text" x={cx} y={y + height - BAND_HEIGHT / 2}>
-                  {bandText(holdLayer, holdLayerName, width)}
+                <text className="band-text" x={cx} y={y + height - BAND_INSET - BAND_HEIGHT / 2}>
+                  {bandText(holdLayer, holdLayerName, width - BAND_INSET * 2)}
                 </text>
               </>
             )}

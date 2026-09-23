@@ -372,6 +372,32 @@ describe('KeyboardView', () => {
     expect(Number(ccw[2])).toBeGreaterThan(cy)
   })
 
+  it('長押しの色帯は、キーの縁から少し内側に描く(キーキャップの中の札に見えるように)', () => {
+    // 以前はキーの外枠いっぱいで、帯がキーからはみ出しそうに見えた
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = render(engine, layers)
+    const attr = (tag: string, name: string): number =>
+      Number(new RegExp(`${name}="([-\\d.]+)"`).exec(tag)![1])
+    // キーごとに区切る(1 つのキーは <title> で終わる)
+    const keysWithBand = html
+      .split('<title>')
+      .filter((segment) => segment.includes('class="band"'))
+      .map((segment) => ({
+        cap: /<rect class="cap"[^>]*>/.exec(segment)![0],
+        band: /<rect class="band"[^>]*>/.exec(segment)![0]
+      }))
+    expect(keysWithBand.length).toBeGreaterThan(0)
+    for (const { cap, band } of keysWithBand) {
+      expect(attr(band, 'x')).toBeCloseTo(attr(cap, 'x') + 2)
+      expect(attr(band, 'width')).toBeCloseTo(attr(cap, 'width') - 4)
+      // 下端も 2px 上
+      expect(attr(band, 'y') + attr(band, 'height')).toBeCloseTo(
+        attr(cap, 'y') + attr(cap, 'height') - 2
+      )
+    }
+  })
+
   it('アンロック対象のキーを目立たせる', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
