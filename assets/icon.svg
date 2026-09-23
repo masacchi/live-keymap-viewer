@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Live Keymap Viewer</title>
+  <!--
+    Live Keymap Viewer のアイコン。icon.png / icon.ico はこれから scripts/gen-icon.mjs で作る。
+
+    オレンジの角丸に、キーを 3 列 x 2 行。中央の列を上げて(縦ずらし)、Cornix のような
+    分割キーボードに寄せる。1 つだけ暗く沈んだキーが「いま押されているキー」。
+    16px まで縮めても形が崩れないよう、輪や文字は入れない。
+    キーの下の濃いオレンジは厚み(アプリのキーの縁と同じ考え)。
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFA048"/>
+      <stop offset="1" stop-color="#F2641C"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#tile)"/>
+
+  <!-- 左の列 -->
+  <rect x="33" y="79" width="54" height="54" rx="12" fill="#C0501A"/>
+  <rect x="33" y="73" width="54" height="54" rx="12" fill="#FFF7EE"/>
+  <rect x="33" y="147" width="54" height="54" rx="12" fill="#C0501A"/>
+  <rect x="33" y="141" width="54" height="54" rx="12" fill="#FFF7EE"/>
+
+  <!-- 中央の列(12 上げる)。下のキーが押されている: 厚みが隠れるぶん 4 沈める -->
+  <rect x="101" y="67" width="54" height="54" rx="12" fill="#C0501A"/>
+  <rect x="101" y="61" width="54" height="54" rx="12" fill="#FFF7EE"/>
+  <rect x="101" y="133" width="54" height="54" rx="12" fill="#3A2216"/>
+
+  <!-- 右の列 -->
+  <rect x="169" y="79" width="54" height="54" rx="12" fill="#C0501A"/>
+  <rect x="169" y="73" width="54" height="54" rx="12" fill="#FFF7EE"/>
+  <rect x="169" y="147" width="54" height="54" rx="12" fill="#C0501A"/>
+  <rect x="169" y="141" width="54" height="54" rx="12" fill="#FFF7EE"/>
+</svg>

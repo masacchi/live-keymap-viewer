@@ -32,6 +32,7 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | `npm run diag:hid` | Windows の HID API から Cornix のインターフェースを調べ、Vial が答えるか・往復時間を見る(Chromium を通さない) |
 | `npm run shots` | モックを動かして状態ごとに画面を撮る(下記)。`-- --compare <前の出力>` で画素比較 |
 | `npm run diag:webhid` | Electron(WebHID)の選択ダイアログに何が並ぶかを調べる(先に `package:win`) |
+| `npm run gen:icon` | `assets/icon.svg` から `icon.png` と `icon.ico` を作り直す([§6](#生成ファイルを作り直す)) |
 
 ### ビルドの構成
 
@@ -342,6 +343,15 @@ python3 scripts/gen-mock.py       # .vil + 定義 JSON → mock/cornix.generated
 ```
 
 `gen-keycodes.py` は vial-gui の `main` ブランチから取ってくるので、ネットワークが要る。
+
+アイコンは `assets/icon.svg` が元で、`icon.png`(256px)と `icon.ico`(16〜256px)はそこから作る。
+こちらも手で直さず、SVG を直して `npm run gen:icon` で作り直し、3 つともコミットする。
+SVG を描くのに Electron の画面を使うので、依存は増えない。
+
+- ウィンドウ(タスクバー・Alt+Tab)とインストーラー・ショートカットのアイコンはこれになる
+- **exe ファイル自体のアイコンは Electron のまま**。書き換えるには rcedit(Linux では wine が要る)
+  などで exe のリソースを直す必要があり、依存を増やさない方針なのでしていない。エクスプローラーで
+  exe を直接見たとき・exe を直接ピン留めしたときは Electron のアイコンが出る
 
 ## 7. 決まりごと
 

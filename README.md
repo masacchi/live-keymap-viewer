@@ -1,5 +1,7 @@
 # Live Keymap Viewer
 
+<img src="assets/icon.svg" width="96" height="96" alt="">
+
 Vial キーボード(まずは Cornix LP)の **押しているキー** と **いまのレイヤー** を、
 リアルタイムに表示する Windows 向けのデスクトップアプリ。
 

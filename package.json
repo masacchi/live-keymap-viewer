@@ -21,7 +21,8 @@
     "prepare": "husky",
     "diag:hid": "node scripts/diag/hid-probe.mjs",
     "diag:webhid": "node scripts/diag/webhid-list.mjs",
-    "shots": "node scripts/shots/run.mjs"
+    "shots": "node scripts/shots/run.mjs",
+    "gen:icon": "node scripts/gen-icon.mjs"
   },
   "dependencies": {
     "xz-decompress": "^0.2.3"
