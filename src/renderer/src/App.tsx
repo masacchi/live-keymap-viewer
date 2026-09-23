@@ -189,6 +189,7 @@ export default function App(): JSX.Element {
               : undefined
           }
           mods={live ? layers.mods : null}
+          stalled={keyboard.stalled}
           labelMode={settings.labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}

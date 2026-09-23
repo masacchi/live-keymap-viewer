@@ -35,6 +35,8 @@ export interface ToolbarProps {
   symbols?: (close: () => void) => ReactNode
   /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
   mods: number | null
+  /** 応答が途切れているが、まだ切れたとは見なしていない。 */
+  stalled: boolean
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
@@ -60,6 +62,7 @@ export function Toolbar({
   settings,
   symbols,
   mods,
+  stalled,
   labelMode,
   windowMode,
   reloading,
@@ -68,11 +71,23 @@ export function Toolbar({
   onLabelMode,
   onToggleWindowMode
 }: ToolbarProps): JSX.Element {
-  const statusText = reloading ? messages.status.reloading : messages.status[status]
-  const title = [statusText, deviceLabel].filter(Boolean).join(' ')
+  const statusText = stalled
+    ? messages.status.stalled
+    : reloading
+      ? messages.status.reloading
+      : messages.status[status]
+  const title = [statusText, stalled ? messages.status.stalledHint : null, deviceLabel]
+    .filter(Boolean)
+    .join(' ')
   const statusLabel = (
     <>
-      <span className={cn('inline-block size-2 shrink-0 rounded-full', STATUS_COLOR[status])} />
+      <span
+        className={cn(
+          'inline-block size-2 shrink-0 rounded-full',
+          // 応答待ちのあいだは丸だけで知らせる(図は最後の表示のまま)
+          stalled ? 'bg-warn' : STATUS_COLOR[status]
+        )}
+      />
       <span className="shrink-0 text-muted max-md:hidden">{statusText}</span>
       {deviceLabel && (
         <span className="max-w-40 truncate font-medium text-ink max-md:hidden">{deviceLabel}</span>

@@ -25,7 +25,9 @@ export const messages = {
     unlocking: 'アンロック中…',
     ready: '接続済み',
     error: 'エラー',
-    reloading: '読み直し中…'
+    reloading: '読み直し中…',
+    stalled: '応答待ち…',
+    stalledHint: '応答が途切れている。省電力で一瞬詰まることがあるので、しばらく待つ'
   },
 
   deviceMenu: {

@@ -183,6 +183,31 @@ describe('KeyboardSession: ポーリング', () => {
     await session.dispose()
   })
 
+  it('単発の取りこぼしでは落とさず、応答が戻れば黙って続ける', async () => {
+    // OS やファームの省電力で応答が一瞬詰まることがある。以前はこれで切断していた
+    const { session, mock } = await readySession()
+    const original = mock.send.bind(mock)
+    let failuresLeft = 3
+    mock.send = async (request, opts) => {
+      if (request[0] === 0x02 && failuresLeft > 0) {
+        failuresLeft--
+        throw new Error('応答しない')
+      }
+      return original(request, opts)
+    }
+
+    await waitFor(session, (s) => s.stalled)
+    expect(session.state.status).toBe('ready') // 図は最後の表示のまま
+    await waitFor(session, (s) => !s.stalled)
+    expect(session.state.status).toBe('ready')
+    expect(session.state.error).toBeNull()
+
+    // 読み続けている
+    mock.press(0, 1)
+    await waitFor(session, (s) => (s.layers?.held.size ?? 0) > 0)
+    await session.dispose()
+  })
+
   it('通信が失敗したら error にして止まる', async () => {
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
@@ -192,6 +217,7 @@ describe('KeyboardSession: ポーリング', () => {
     }
     const state = await waitFor(session, (s) => s.status === 'error')
     expect(state.error).toBe('ケーブルが抜けた')
+    expect(state.stalled).toBe(false)
 
     // 止まっている: 以後 matrix を読みに行かない
     const before = mock.requests.length

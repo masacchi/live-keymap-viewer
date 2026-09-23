@@ -43,6 +43,18 @@ import { messages } from '../messages'
 export const MATRIX_POLL_MS = 20
 /** アンロックのポーリング間隔。vial-gui と同じ。 */
 export const UNLOCK_POLL_MS = 200
+/**
+ * matrix の読み取りが連続でこれだけ失敗したら、切れたと見なす。
+ *
+ * 1 回の読み取りは 200ms × 3 回まで投げ直す(hid/vial.ts)。以前はその 1 回が失敗しただけで
+ * セッションを落としていたので、USB でも「少し放置すると切断される」ことがあった ―
+ * OS の省電力(触っていないときのプロセスの間引き)やファームの省電力で、応答が一瞬詰まるだけで
+ * 落ちていた。連続で失敗したときだけ切り、そのあいだは最後の表示のまま読み続ける。
+ * ケーブルが抜けたときは即座に失敗が返るので、これだけ数えてもすぐ切断に至る。
+ */
+export const POLL_FAIL_LIMIT = 5
+/** 読み取りに失敗したあと、次を投げるまでの待ち。詰まっている相手に間を置く。 */
+export const POLL_RETRY_MS = 100
 
 export type SessionStatus = 'connecting' | 'loading' | 'unlocking' | 'ready' | 'error'
 
@@ -65,6 +77,11 @@ export interface SessionState {
   unlock: UnlockState | null
   /** キーマップを読み直している最中か。 */
   reloading: boolean
+  /**
+   * 応答が途切れているが、まだ切れたとは見なしていない(省電力で一瞬詰まることがある)。
+   * 画面は最後の状態のままにして、状態の丸だけで知らせる。
+   */
+  stalled: boolean
   /** 最初の読み込みの進み具合。読み込み中だけ入る。 */
   loading: LoadProgress | null
 }
@@ -148,6 +165,7 @@ export class KeyboardSession {
       layers: null,
       unlock: null,
       reloading: false,
+      stalled: false,
       loading: null
     }
   }
@@ -288,7 +306,13 @@ export class KeyboardSession {
 
   private fail(error: unknown): void {
     this.generation++ // 動いているループを止める
-    this.update({ status: 'error', reloading: false, loading: null, error: describeError(error) })
+    this.update({
+      status: 'error',
+      reloading: false,
+      stalled: false,
+      loading: null,
+      error: describeError(error)
+    })
   }
 
   /**
@@ -378,12 +402,27 @@ export class KeyboardSession {
     engine: LayerEngine
   ): Promise<void> {
     this.lastSignature = ''
-    this.update({ status: 'ready', unlock: null })
+    this.update({ status: 'ready', unlock: null, stalled: false })
+    /** 連続で失敗した回数。1 回でも読めたら 0 に戻る。 */
+    let failures = 0
     try {
       while (this.alive(gen)) {
         const started = this.now()
-        const matrix = await getMatrixState(this.transport, snapshot.rows, snapshot.cols)
+        let matrix: boolean[][]
+        try {
+          matrix = await getMatrixState(this.transport, snapshot.rows, snapshot.cols)
+        } catch (error) {
+          if (!this.alive(gen)) return
+          if (++failures >= POLL_FAIL_LIMIT) throw error
+          if (!this.current.stalled) this.update({ stalled: true })
+          await this.sleep(POLL_RETRY_MS)
+          continue
+        }
         if (!this.alive(gen)) return
+        if (failures > 0) {
+          failures = 0
+          this.update({ stalled: false })
+        }
 
         const layers = engine.update(matrix, this.now())
         const signature = signatureOf(layers)
