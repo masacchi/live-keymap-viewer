@@ -90,6 +90,15 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /*
+   * 日本語は単語の区切りに空白が無いので、既定では文字の切れ目ならどこでも折り返す。
+   * 「キーボード / 側の設定」「表示 / がずれません」のように文節の途中で切れて読みにくかった。
+   * auto-phrase は Chromium が文節の区切りで折り返してくれる(Chrome 119 以降。Electron 44 は満たす)。
+   * 効くのは日本語などの区切りの無い言語だけで、英数字の折り返しは変わらない。
+   */
+  word-break: auto-phrase;
+  /* 最後の行に 1 語だけ残るのを避ける(見出しや短い説明で効く) */
+  text-wrap: pretty;
 }
 
 /*
