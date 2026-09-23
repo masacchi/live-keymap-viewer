@@ -55,6 +55,8 @@ export class WindowManager {
   private handover: { timer: ReturnType<typeof setTimeout>; finish: () => void } | null = null
   /** renderer が図を濃く出しているか(薄くしているあいだは後ろをぼかさない)。 */
   private blurActive = true
+  /** いまウィンドウに掛けているぼかし。掛けていない(通常ウィンドウ)なら null。 */
+  private blurOn: boolean | null = null
 
   get mode(): WindowMode {
     return this.currentMode
@@ -166,7 +168,13 @@ export class WindowManager {
   private applyBlur(settings: Settings): void {
     if (this.currentMode !== 'overlay') return
     const win = this.current
-    if (win) setBackdrop(win, settings.overlayBlur && this.blurActive)
+    if (!win) return
+    const on = settings.overlayBlur && this.blurActive
+    // 同じ材質を掛け直さない。濃さのスライダーを動かすと設定の更新が毎回ここに来るが、
+    // OS 側の切り替えは安くない(main が詰まると WebHID の往復も返らない)
+    if (on === this.blurOn) return
+    this.blurOn = on
+    setBackdrop(win, on)
   }
 
   /** オーバーレイのクリック透過を切り替える(操作パネルの上だけ切る)。 */
@@ -202,6 +210,7 @@ export class WindowManager {
   private create(mode: WindowMode, requested: Bounds): BrowserWindow {
     const overlay = mode === 'overlay'
     this.liveMode = mode
+    this.blurOn = null // 作り直したウィンドウにはまだ何も掛けていない
     const settings = loadSettings()
     // 外したモニターの上に復元されて見えなくなるのを防ぐ
     const bounds = ensureOnScreen(
@@ -244,6 +253,7 @@ export class WindowManager {
       win.setOpacity(settings.overlayOpacity)
       // 作り直したウィンドウの renderer は、読み込むまで図を濃く出している(薄くするのは接続後)
       this.blurActive = true
+      this.blurOn = settings.overlayBlur
       setBackdrop(win, settings.overlayBlur)
     }
 

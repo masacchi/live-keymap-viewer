@@ -227,7 +227,39 @@ describe('settings.ts', () => {
   it('保存したものが読める(一時ファイル経由で書く)', async () => {
     const { settings } = await loadMain()
     settings.saveSettings({ labelMode: 'us' })
+    settings.flushSettings()
     expect(JSON.parse(readFileSync(settingsFile(), 'utf8')).labelMode).toBe('us')
+  })
+
+  it('続けて変えてもディスクへの書き込みは 1 回にまとめる(値はその場で読める)', async () => {
+    // スライダーはつまみを 1 回動かすだけで十数回飛んでくる。そのたびに同期で書いていたので、
+    // main が細かく詰まり、WebHID の往復まで返らなくなっていた
+    const { settings } = await loadMain()
+    vi.useFakeTimers()
+    try {
+      for (let percent = 20; percent <= 100; percent += 5) {
+        settings.saveSettings({ overlayOpacity: percent / 100 })
+      }
+      expect(settings.loadSettings().overlayOpacity).toBe(1) // 値はもう見えている
+      expect(existsSync(settingsFile())).toBe(false) // まだ書いていない
+
+      vi.advanceTimersByTime(400)
+      expect(JSON.parse(readFileSync(settingsFile(), 'utf8')).overlayOpacity).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('溜めたまま終わらないよう、終了時に書き出せる', async () => {
+    const { settings } = await loadMain()
+    vi.useFakeTimers()
+    try {
+      settings.saveSettings({ labelMode: 'us' })
+      settings.flushSettings()
+      expect(JSON.parse(readFileSync(settingsFile(), 'utf8')).labelMode).toBe('us')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

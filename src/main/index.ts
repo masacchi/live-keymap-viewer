@@ -11,6 +11,7 @@ import { app, globalShortcut, nativeTheme } from 'electron'
 import { HidPermissions } from './hid'
 import { registerIpc } from './ipc'
 import { installLogging, log } from './log'
+import { flushSettings } from './settings'
 import { WindowManager } from './windows'
 
 /** 通常ウィンドウ ⇄ オーバーレイの切り替え。オーバーレイ中の最後の逃げ道でもある。 */
@@ -39,7 +40,11 @@ app.whenReady().then(() => {
   app.on('activate', () => windows.reopenIfClosed())
 })
 
-app.on('will-quit', () => globalShortcut.unregisterAll())
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+  // 設定の書き込みはまとめてあるので、最後のぶんをここで落とさずに書く
+  flushSettings()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
