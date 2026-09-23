@@ -168,6 +168,10 @@ export const messages = {
     layerNamesHint:
       'キーの色帯とツールバーに出ます。キーボードごとに覚えていて、空にすると消えます',
     connectToName: 'キーボードに繋ぐと付けられます',
+    toolbar: 'ツールバー',
+    showLayerTriggers: 'レイヤーの行き方を添える',
+    showLayerTriggersHint:
+      '「L1 BS 長押し」のように番号の横に出します。オフのときも、レイヤーにポインタを乗せると出ます',
     knobs: 'ノブの割り当て',
     knobsTop: '図の上',
     knobsBottom: '図の下',

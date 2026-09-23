@@ -3,7 +3,9 @@
  *
  * - いま図に出しているレイヤーはその色で塗り、輪を付ける。ほかに有効なレイヤー(L2 の下の L0 など)は
  *   薄く塗る。以前は有効なものをすべて同じに塗っていて、どれが出ているのか輪でしか分からなかった
- * - 番号の横に「Space 長押し」のような**そのレイヤーへの行き方**を出す(engine/layerSummary.ts)
+ * - **そのレイヤーへの行き方**(「Space 長押し」など、engine/layerSummary.ts)はツールチップに出す。
+ *   番号の横にも並べられるが、既定では出さない(設定の showLayerTriggers)。常に並べると
+ *   ツールバーが詰まり、狭いウィンドウでは横に流れて肝心のレイヤーが見切れていた
  * - 中身の無いレイヤー(Cornix の L5〜L9)は「+5」に畳む。有効になったら畳んでいても出す
  * - ポインタを乗せているあいだ、そのレイヤーを図に出す(プレビュー)。押すとプレビューのまま固定し、
  *   もう一度押すか、キーを押すか Esc で戻る(App.tsx)。キーマップを覚えるときに、レイヤーキーを
@@ -36,6 +38,8 @@ export interface LayerStripProps {
   onHover: (layer: number | null) => void
   /** 名前を付けた(空なら消した)とき。渡さなければ名前は付けられない。 */
   onRename?: (layer: number, name: string) => void
+  /** 番号の横に行き方を並べるか。出さなくてもツールチップには入る。 */
+  showTriggers?: boolean
 }
 
 export function LayerStrip({
@@ -48,7 +52,8 @@ export function LayerStrip({
   labelContext,
   onPreview,
   onHover,
-  onRename
+  onRename,
+  showTriggers = false
 }: LayerStripProps): JSX.Element {
   const active = new Set(activeLayers)
   /** 名前を編集しているレイヤー。 */
@@ -125,7 +130,7 @@ export function LayerStrip({
           >
             <span>L{layer}</span>
             {names[layer] && <span className="font-medium max-md:hidden">{names[layer]}</span>}
-            {how && (
+            {showTriggers && how && (
               <span
                 className={cn(
                   'text-2xs font-normal max-lg:hidden',

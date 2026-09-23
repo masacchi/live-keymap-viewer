@@ -2,6 +2,7 @@
  * 設定パネル(ツールバーの「設定」から開く)。
  *
  * - レイヤー名 … 以前はツールバーのレイヤーをダブルクリックするしかなく、気づけなかった
+ * - ツールバー … レイヤーの行き方を番号の横に並べるか(既定は出さない。ツールチップには出る)
  * - ノブの割り当ての位置 … 図の上 / 下
  * - 長押しの判定時間 … キーボードの設定と合わせる(ずれると表示だけ早く / 遅く切り替わる)
  * - オーバーレイの濃さと自動フェード … 以前はオーバーレイに入ってからでないと変えられなかった
@@ -40,7 +41,11 @@ export interface SettingsPanelProps {
   /** 名前を付けた(空なら消した)とき。渡さなければ名前の欄は出さない。 */
   onRename?: (layer: number, name: string) => void
   /** いまの設定(このパネルで変える項目)。 */
-  settings: Pick<Settings, 'encoderPlacement' | 'tappingTerm' | 'grantedDevices'> & OverlaySettings
+  settings: Pick<
+    Settings,
+    'encoderPlacement' | 'tappingTerm' | 'grantedDevices' | 'showLayerTriggers'
+  > &
+    OverlaySettings
   onChange: (patch: SettingsPatch) => void
   /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
   onForgetDevice?: (vendorId: number, productId: number) => void
@@ -121,6 +126,23 @@ export function SettingsPanel({
         ) : (
           <p className="text-2xs text-muted">{messages.settings.connectToName}</p>
         )}
+      </Section>
+
+      <Section title={messages.settings.toolbar}>
+        <label className="flex items-start gap-2 text-xs text-ink">
+          <input
+            type="checkbox"
+            checked={settings.showLayerTriggers}
+            onChange={(event) => onChange({ showLayerTriggers: event.target.checked })}
+            className="mt-0.5 accent-ink"
+          />
+          <span>
+            {messages.settings.showLayerTriggers}
+            <span className="block text-2xs text-muted">
+              {messages.settings.showLayerTriggersHint}
+            </span>
+          </span>
+        </label>
       </Section>
 
       <Section title={messages.settings.knobs}>

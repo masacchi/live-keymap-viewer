@@ -91,7 +91,8 @@ describe('LayerStrip', () => {
     expect(html).toContain('+4 空')
   })
 
-  it('そのレイヤーへの行き方を添える', () => {
+  it('行き方は既定ではツールチップだけに出し、設定で番号の横にも並べられる', () => {
+    // 常に並べるとツールバーが詰まり、狭いウィンドウではレイヤーが横に流れて見切れていた
     const space: LayerTrigger = {
       fromLayer: 0,
       row: 7,
@@ -99,9 +100,13 @@ describe('LayerStrip', () => {
       kind: 'hold',
       keycode: decodeKeycode(QK_LAYER_TAP | (2 << 8) | 0x2c) // LT2(KC_SPACE)
     }
-    const html = strip({ summaries: cornixLike({ 2: [space] }) })
-    expect(html).toContain('>Space 長押し<')
-    expect(html).toContain('title="L2: Space 長押し。')
+    const hidden = strip({ summaries: cornixLike({ 2: [space] }) })
+    expect(hidden).not.toContain('>Space 長押し<')
+    expect(hidden).toContain('title="L2: Space 長押し。')
+
+    const shown = strip({ summaries: cornixLike({ 2: [space] }), showTriggers: true })
+    expect(shown).toContain('>Space 長押し<')
+    expect(shown).toContain('title="L2: Space 長押し。')
   })
 
   it('名前があれば番号の横に出す', () => {
@@ -259,7 +264,8 @@ describe('SettingsPanel', () => {
     overlayOpacity: 0.6,
     overlayAutoFade: false,
     overlayFadedOpacity: 0.2,
-    overlayBlur: false
+    overlayBlur: false,
+    showLayerTriggers: false
   } as const
   const panel = (props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) =>
     renderToStaticMarkup(
@@ -276,6 +282,15 @@ describe('SettingsPanel', () => {
         {...props}
       />
     )
+
+  it('ツールバーの節に、レイヤーの行き方を添えるかのチェックを出す', () => {
+    const html = panel()
+    expect(html).toContain('ツールバー')
+    expect(html).toContain('レイヤーの行き方を添える')
+    expect(html).toMatch(
+      /<input type="checkbox"(?![^>]*checked)[^>]*>[^<]*<span>レイヤーの行き方を添える/
+    )
+  })
 
   it('どのビルドが動いているかと、ログの置き場所を出す', () => {
     // WSL で作って Windows に置くので、「直した版が動いているのか」が分からなくなる

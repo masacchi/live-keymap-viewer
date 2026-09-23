@@ -29,6 +29,7 @@ describe('sanitizeSettings', () => {
       overlayFadedOpacity: 0.35,
       overlayBlur: true,
       encoderPlacement: 'top',
+      showLayerTriggers: true,
       tappingTerm: 250,
       grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix' }],
       layerNames: { '16882930253541522617': ['基本', '', '記号'] }
@@ -90,6 +91,13 @@ describe('オーバーレイの薄さとぼかし', () => {
     expect(sanitizeSettings({}).overlayBlur).toBe(false)
     expect(sanitizeSettings({ overlayBlur: 'yes' }).overlayBlur).toBe(false)
     expect(sanitizeSettings({ overlayBlur: true }).overlayBlur).toBe(true)
+  })
+
+  it('レイヤーの行き方は既定で出さず、true と書いてあるときだけ出す', () => {
+    // 常に並べるとツールバーが詰まるので、既定はツールチップだけ
+    expect(sanitizeSettings({}).showLayerTriggers).toBe(false)
+    expect(sanitizeSettings({ showLayerTriggers: 'yes' }).showLayerTriggers).toBe(false)
+    expect(sanitizeSettings({ showLayerTriggers: true }).showLayerTriggers).toBe(true)
   })
 })
 

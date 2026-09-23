@@ -106,7 +106,7 @@ DOM にも HID にも触らない純粋なロジックで、そのぶん単体�
 | | `useKeymapGuide.ts` | キーマップから読む案内(行き方・記号の打ち方・キーの名前) |
 | | `useOverlayFade.ts` | オーバーレイを薄くするか(`overlayFaded`)と、後ろのぼかしの入り切り |
 | `components/` | `KeyboardView.tsx` / `KeyCap.tsx` | SVG の描画。プレビュー・Shift の強調・レイヤー名の色帯 |
-| | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方つき、空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
+| | `LayerStrip.tsx` / `PreviewNotice.tsx` | ツールバーのレイヤー一覧(行き方はツールチップ、設定で番号の横にも。空は畳む)。乗せる・押すとプレビュー、ダブルクリックで名前 / プレビュー中の札 |
 | | `KeyboardFrame.tsx` / `StatusViews.tsx` | 図の枠(レイヤー色の縁・プレビューの破線) / エラーの帯と未接続の画面 |
 | | `SymbolFinder.tsx` | 記号の出し方の一覧。押すと App がそのレイヤーをプレビューし、押すキーを光らせる |
 | | `SettingsPanel.tsx` / `ModifierBadges.tsx` | 設定パネル(レイヤー名・ノブの位置・オーバーレイ) / Ctrl・Shift・Alt・Win の印 |

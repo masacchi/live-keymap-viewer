@@ -44,6 +44,12 @@ export interface Settings {
   /** ノブの割り当ての置き場所。ノブが左上にあるキーボードなら上の方が見比べやすい。 */
   encoderPlacement: EncoderPlacement
   /**
+   * ツールバーのレイヤー一覧で、番号の横に行き方(「BS 長押し」など)を出すか。
+   * 既定では出さない ― 常に並べるとツールバーが詰まり、狭いウィンドウでは横に流れてしまう。
+   * 出さなくても、チップにポインタを乗せればツールチップで分かる。
+   */
+  showLayerTriggers: boolean
+  /**
    * 長押しと見なすまでの時間(ms)。LT のレイヤーが出るのを表示するのに使う(アプリの推定)。
    * キーボードのファームの設定(tapping term / hold timeout)と合わせる。ずれると、表示だけ
    * 早く / 遅くレイヤーが切り替わる。Tap Dance はキーボードに設定された時間を使う。
@@ -72,7 +78,8 @@ export const RENDERER_SETTINGS_KEYS = [
   'overlayAutoFade',
   'overlayFadedOpacity',
   'overlayBlur',
-  'encoderPlacement'
+  'encoderPlacement',
+  'showLayerTriggers'
 ] as const satisfies ReadonlyArray<keyof Settings>
 
 export type RendererSettingsKey = (typeof RENDERER_SETTINGS_KEYS)[number]
@@ -125,6 +132,7 @@ export const DEFAULT_SETTINGS: Settings = {
   overlayFadedOpacity: 0.2,
   overlayBlur: false,
   encoderPlacement: 'bottom',
+  showLayerTriggers: false,
   // QMK の TAPPING_TERM の既定値(engine/layerState.ts の DEFAULT_TAPPING_TERM と同じ)
   tappingTerm: 200,
   grantedDevices: [],
@@ -252,6 +260,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     overlayFadedOpacity: clampFadedOpacity(value.overlayFadedOpacity),
     overlayBlur: value.overlayBlur === true,
     encoderPlacement: value.encoderPlacement === 'top' ? 'top' : 'bottom',
+    showLayerTriggers: value.showLayerTriggers === true,
     tappingTerm: clampTappingTerm(value.tappingTerm),
     grantedDevices: sanitizeDevices(value.grantedDevices),
     layerNames: sanitizeLayerNames(value.layerNames)

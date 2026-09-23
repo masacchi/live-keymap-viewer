@@ -163,6 +163,7 @@ export default function App(): JSX.Element {
                 onPreview={preview.pin}
                 onHover={preview.hover}
                 onRename={canSave ? onRename : undefined}
+                showTriggers={settings.showLayerTriggers}
               />
             )
           }
