@@ -98,6 +98,27 @@ function waitFor(
 
 const pause = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+describe('KeyboardConnection: 手放す', () => {
+  it('release() はセッションを閉じるが、画面の表示はそのまま残す', async () => {
+    // モード切替でウィンドウが壊される直前に呼ぶ。新しいウィンドウの renderer と同時に
+    // 同じ HID を開いていると、応答が混ざって読み込みが壊れる
+    const { hid, connection, opened } = setup()
+    hid.devices = [fakeDevice()]
+    connection.start()
+    await waitFor(connection, (s) => s.status === 'ready')
+
+    await connection.release()
+    expect(opened[0].opened).toBe(false) // HID は閉じた
+    expect(connection.state.status).toBe('ready') // 表示は残す(「未接続」に戻さない)
+
+    // 以後は読みに行かない
+    const before = opened[0].requests.length
+    await pause(20)
+    expect(opened[0].requests.length).toBe(before)
+    await connection.dispose()
+  })
+})
+
 describe('KeyboardConnection: 繋ぐ', () => {
   it('起動時に、前に許可したデバイスへ自動で繋ぐ', async () => {
     const { hid, connection, opened } = setup()

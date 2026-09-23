@@ -29,6 +29,8 @@ export const IPC = {
   windowResizeBy: 'window:resize-by',
   hidChooseDevice: 'hid:choose-device',
   hidDeviceChosen: 'hid:device-chosen',
+  hidRelease: 'hid:release',
+  hidReleased: 'hid:released',
   logReport: 'log:report'
 } as const
 
@@ -84,6 +86,17 @@ export interface RendererApi {
   /** 候補が飛んできたときのハンドラを登録する。戻り値を呼ぶと解除。 */
   onChooseDevice(handler: (devices: HidCandidate[]) => void): () => void
   chooseDevice(deviceId: string | null): void
+
+  /**
+   * 「キーボードを手放して」と言われたときのハンドラを登録する。戻り値を呼ぶと解除。
+   *
+   * モードを切り替えるとウィンドウごと作り直すので、新しいウィンドウの renderer が
+   * 同じキーボードを開きに来る。raw HID の応答は同じデバイスを開いている全員に配られ、
+   * Vial コマンド(0xFE)は応答を照合できないので、両方が話していると新しい方の
+   * 読み込みが壊れる。手放したら hidReleased() で返事をする(main はそれを待って作る)。
+   */
+  onReleaseHid(handler: () => void): () => void
+  hidReleased(): void
 
   /**
    * 画面で起きたエラーを main のログ(userData/log.txt)に残す。

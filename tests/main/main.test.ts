@@ -165,6 +165,14 @@ afterEach(() => {
 describe('log.ts', () => {
   const logFile = (): string => join(fake.state.userData, 'log.txt')
 
+  // log() は端末にも出す(開発中はそちらを見る)。テストではファイルだけを見るので黙らせる
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
   it('起動の印に版が入る(どのビルドが動いていたかが分かる)', async () => {
     const { logging } = await loadMain()
     // process のハンドラはテストの環境に残さない
@@ -252,6 +260,7 @@ describe('WindowManager', () => {
     first.setPosition(200, 150)
 
     windows.toggleMode()
+    windows.noteHidReleased() // 古い方がキーボードを手放してから作る
     const second = fake.FakeWindow.all[1]
     expect(windows.mode).toBe('overlay')
     expect(second.bounds).toMatchObject({ x: 200, y: 150 })
@@ -267,6 +276,52 @@ describe('WindowManager', () => {
     windows.open()
     windows.setMode('normal')
     expect(fake.FakeWindow.all).toHaveLength(1)
+  })
+
+  describe('モードの切り替えでは、古いウィンドウにキーボードを手放させてから作る', () => {
+    // 作り直した renderer は、できた瞬間から同じキーボードに話しかける。古い方がまだ
+    // matrix を読んでいると応答が混ざり(0xFE は照合できない)、新しい方の読み込みが壊れる
+
+    it('手放したと返事が来るまで、新しいウィンドウを作らない', async () => {
+      const { windows } = await loadMain()
+      windows.open()
+      const first = fake.FakeWindow.all[0]
+
+      windows.toggleMode()
+      expect(windows.mode).toBe('overlay') // モードはすぐ変わる(表示だけ後)
+      expect(fake.FakeWindow.all).toHaveLength(1)
+      expect(first.sent.map(([channel]) => channel)).toContain('hid:release')
+
+      windows.noteHidReleased()
+      expect(fake.FakeWindow.all).toHaveLength(2)
+      expect(fake.FakeWindow.all[1].options.transparent).toBe(true)
+    })
+
+    it('返事が来なくても、待ちすぎずに切り替える', async () => {
+      const { windows } = await loadMain()
+      windows.open()
+      vi.useFakeTimers()
+      try {
+        windows.toggleMode()
+        expect(fake.FakeWindow.all).toHaveLength(1)
+        vi.advanceTimersByTime(600)
+        expect(fake.FakeWindow.all).toHaveLength(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('連打で元のモードに戻ったら、作り直さない', async () => {
+      const { windows } = await loadMain()
+      windows.open()
+      windows.toggleMode()
+      windows.toggleMode()
+      expect(windows.mode).toBe('normal')
+      expect(fake.FakeWindow.all).toHaveLength(1)
+      // 宙に浮いた返事が来ても、取り消した切り替えは進まない
+      windows.noteHidReleased()
+      expect(fake.FakeWindow.all).toHaveLength(1)
+    })
   })
 
   describe('設定を変えたときにウィンドウへ効かせるもの', () => {
@@ -412,6 +467,7 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
   })
 
   it('画面から報告されたエラーはログに残す。文字列でないものは捨て、長すぎるものは切る', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
     await setup()
     const logFile = join(fake.state.userData, 'log.txt')
     emit('log:report', { evil: true })
@@ -424,6 +480,7 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     // 見出しは 300 文字、詳細は 2000 文字まで
     expect(text.match(/あ+/)?.[0]).toHaveLength(300)
     expect(text.match(/ス+/)?.[0]).toHaveLength(2000)
+    vi.restoreAllMocks()
   })
 })
 

@@ -43,6 +43,21 @@ export function useVialKeyboard(tappingTerm?: number) {
   }, [tappingTerm])
 
   /**
+   * main から「キーボードを手放して」と言われたら、セッションを閉じて返事をする。
+   * モードの切り替えでこのウィンドウが作り直される直前に来る。新しいウィンドウの renderer と
+   * 同時に同じ HID を開いていると、応答が混ざって新しい方の読み込みが壊れる
+   * (session/keyboardConnection.ts の release)。
+   */
+  useEffect(
+    () =>
+      window.api?.onReleaseHid(() => {
+        const release = connectionRef.current?.release() ?? Promise.resolve()
+        void release.finally(() => window.api?.hidReleased())
+      }),
+    []
+  )
+
+  /**
    * ウィンドウにフォーカスが戻ったら読み直す。
    * Vial で編集 → このアプリに切り替える、という流れがそのまま反映される。
    * オーバーレイはクリック透過でフォーカスを取らないので、そちらでは発火しない。

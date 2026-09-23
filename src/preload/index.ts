@@ -29,6 +29,15 @@ const api: RendererApi = {
   },
   chooseDevice: (deviceId: string | null) => ipcRenderer.send(IPC.hidDeviceChosen, deviceId),
 
+  onReleaseHid: (handler: () => void) => {
+    const listener = (): void => handler()
+    ipcRenderer.on(IPC.hidRelease, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC.hidRelease, listener)
+    }
+  },
+  hidReleased: () => ipcRenderer.send(IPC.hidReleased),
+
   reportError: (message: string, detail?: string) =>
     ipcRenderer.send(IPC.logReport, message, detail)
 }

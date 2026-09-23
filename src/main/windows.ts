@@ -7,6 +7,7 @@
 
 import { join } from 'node:path'
 import { BrowserWindow, screen, shell } from 'electron'
+import { IPC } from '../shared/ipc'
 import {
   type Bounds,
   ensureOnScreen,
@@ -20,6 +21,12 @@ import { loadSettings, saveSettings } from './settings'
 
 /** 移動・リサイズの保存をまとめる間隔。つまみの操作は毎フレーム飛んでくる。 */
 const BOUNDS_SAVE_DELAY_MS = 400
+
+/**
+ * モードを切り替えるとき、古いウィンドウがキーボードを手放すのを待つ上限(ms)。
+ * 返事が無くても先へ進む(renderer が応答できない状態でも切り替えは効かせる)。
+ */
+const HID_RELEASE_TIMEOUT_MS = 600
 
 /**
  * オーバーレイの後ろの画面をすりガラスにする(Windows 11 22H2 以降のアクリル)。
@@ -41,7 +48,11 @@ function setBackdrop(win: BrowserWindow, on: boolean): void {
 export class WindowManager {
   private window: BrowserWindow | null = null
   private currentMode: WindowMode = 'normal'
+  /** いま画面に出ているウィンドウを作ったときのモード。切り替えの途中は currentMode と食い違う。 */
+  private liveMode: WindowMode = 'normal'
   private boundsSaveTimer: ReturnType<typeof setTimeout> | null = null
+  /** 古いウィンドウの「手放した」を待っているあいだの後始末と続き。 */
+  private handover: { timer: ReturnType<typeof setTimeout>; finish: () => void } | null = null
   /** renderer が図を濃く出しているか(薄くしているあいだは後ろをぼかさない)。 */
   private blurActive = true
 
@@ -70,7 +81,15 @@ export class WindowManager {
     this.open()
   }
 
-  /** 位置とサイズを引き継いだままモードを切り替える。 */
+  /**
+   * 位置とサイズを引き継いだままモードを切り替える。
+   *
+   * 透明ウィンドウは作り直すしかないので、新しいウィンドウの renderer は、できた瞬間から
+   * 同じキーボードを開きに行く。古い方はまだ 20ms ごとに matrix を読んでいて、raw HID の
+   * 応答は同じデバイスを開いている**全員**に配られる。Vial コマンド(`0xFE`)は応答を
+   * 照合できない(hid/vial.ts)ので、両方が話していると新しい方の読み込みが壊れ、
+   * 「切り替えたら繋ぎ直しになる」ことがあった。先に古い方へ手放させてから作る。
+   */
   setMode(next: WindowMode): void {
     const old = this.current
     if (next === this.currentMode && old) return
@@ -83,12 +102,44 @@ export class WindowManager {
       ...(next === 'overlay' ? { overlayBounds: bounds } : { normalBounds: bounds })
     })
 
-    const win = this.create(next, bounds)
-    this.window = win
-    // 新しい方が出てから古い方を消す(ちらつかせない)
-    win.once('ready-to-show', () => {
-      if (old && !old.isDestroyed()) old.destroy()
+    // 途中だった切り替えは取り消す(連打)。取り消した結果、出ているウィンドウが
+    // そのまま目的のモードなら、作り直さない
+    this.cancelHandover()
+    if (old && next === this.liveMode) return
+
+    this.releaseHid(old, () => {
+      const win = this.create(next, bounds)
+      this.window = win
+      // 新しい方が出てから古い方を消す(ちらつかせない)
+      win.once('ready-to-show', () => {
+        if (old && !old.isDestroyed()) old.destroy()
+      })
     })
+  }
+
+  /** renderer が「手放した」と言ってきた。待っている切り替えがあれば先へ進む。 */
+  noteHidReleased(): void {
+    this.handover?.finish()
+  }
+
+  /** 古いウィンドウに手放させ、返事か時間切れで続きへ進む。ウィンドウが無ければすぐ進む。 */
+  private releaseHid(old: BrowserWindow | null, next: () => void): void {
+    if (!old || old.isDestroyed()) {
+      next()
+      return
+    }
+    const finish = (): void => {
+      this.cancelHandover()
+      next()
+    }
+    this.handover = { timer: setTimeout(finish, HID_RELEASE_TIMEOUT_MS), finish }
+    old.webContents.send(IPC.hidRelease)
+  }
+
+  private cancelHandover(): void {
+    if (!this.handover) return
+    clearTimeout(this.handover.timer)
+    this.handover = null
   }
 
   toggleMode(): void {
@@ -150,6 +201,7 @@ export class WindowManager {
 
   private create(mode: WindowMode, requested: Bounds): BrowserWindow {
     const overlay = mode === 'overlay'
+    this.liveMode = mode
     const settings = loadSettings()
     // 外したモニターの上に復元されて見えなくなるのを防ぐ
     const bounds = ensureOnScreen(

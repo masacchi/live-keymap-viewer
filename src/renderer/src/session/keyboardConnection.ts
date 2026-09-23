@@ -192,6 +192,27 @@ export class KeyboardConnection {
     else mock.press(row, col)
   }
 
+  /**
+   * キーボードを手放す(セッションを破棄して HID を閉じる)。**画面の表示はそのまま残す。**
+   *
+   * モードを切り替えるとウィンドウごと作り直すので、このウィンドウは間もなく壊される。
+   * そのあいだ新しいウィンドウの renderer が同じキーボードを開きに来るが、raw HID の応答は
+   * 開いている全員に配られ、Vial コマンド(`0xFE`)は照合できないので、両方が話していると
+   * 新しい方の読み込みが壊れる。壊される前にこちらから黙って降りる。
+   *
+   * 「切断」(disconnect)と違って IDLE を配らないのは、壊れるまでのあいだ画面が
+   * 「未接続」に切り替わって見えるのを避けるため。
+   */
+  async release(): Promise<void> {
+    this.autoReconnect = false
+    this.stopReconnecting()
+    this.search++
+    const session = this.session
+    this.session = null
+    this.mock = null
+    await session?.dispose()
+  }
+
   async disconnect(): Promise<void> {
     this.autoReconnect = false
     this.stopReconnecting()
