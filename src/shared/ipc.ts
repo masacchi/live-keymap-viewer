@@ -28,7 +28,8 @@ export const IPC = {
   windowMoveBy: 'window:move-by',
   windowResizeBy: 'window:resize-by',
   hidChooseDevice: 'hid:choose-device',
-  hidDeviceChosen: 'hid:device-chosen'
+  hidDeviceChosen: 'hid:device-chosen',
+  logReport: 'log:report'
 } as const
 
 /** select-hid-device で候補が複数あったときに renderer へ渡すもの。 */
@@ -83,4 +84,10 @@ export interface RendererApi {
   /** 候補が飛んできたときのハンドラを登録する。戻り値を呼ぶと解除。 */
   onChooseDevice(handler: (devices: HidCandidate[]) => void): () => void
   chooseDevice(deviceId: string | null): void
+
+  /**
+   * 画面で起きたエラーを main のログ(userData/log.txt)に残す。
+   * 配布ビルドでは DevTools を開けないので、実機で何が起きたかはこれでしか分からない。
+   */
+  reportError(message: string, detail?: string): void
 }

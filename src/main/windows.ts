@@ -15,6 +15,7 @@ import {
   type Settings,
   type WindowMode
 } from '../shared/settings'
+import { log } from './log'
 import { loadSettings, saveSettings } from './settings'
 
 /** 移動・リサイズの保存をまとめる間隔。つまみの操作は毎フレーム飛んでくる。 */
@@ -33,7 +34,7 @@ function setBackdrop(win: BrowserWindow, on: boolean): void {
   try {
     win.setBackgroundMaterial(on ? 'acrylic' : 'none')
   } catch (error) {
-    console.warn('背景のぼかしを切り替えられなかった', error)
+    log('warn', '背景のぼかしを切り替えられなかった', error)
   }
 }
 

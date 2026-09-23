@@ -2,7 +2,7 @@
  * main プロセスのテスト。electron はモックに差し替える。
  * 実際のウィンドウは出さず、呼ばれ方と保存される設定を確かめる。
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -106,7 +106,7 @@ const fake = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  app: { getPath: () => fake.state.userData },
+  app: { getPath: () => fake.state.userData, getVersion: () => '9.9.9-test' },
   BrowserWindow: fake.FakeWindow,
   screen: { getAllDisplays: () => fake.state.displays },
   shell: { openExternal: () => Promise.resolve() },
@@ -138,9 +138,10 @@ async function loadMain() {
   const { HidPermissions } = await import('../../src/main/hid')
   const { registerIpc } = await import('../../src/main/ipc')
   const settings = await import('../../src/main/settings')
+  const logging = await import('../../src/main/log')
   const windows = new WindowManager()
   const hid = new HidPermissions(windows)
-  return { windows, hid, registerIpc, settings }
+  return { windows, hid, registerIpc, settings, logging }
 }
 
 const invoke = (channel: string, ...args: unknown[]): unknown =>
@@ -159,6 +160,47 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(fake.state.userData, { recursive: true, force: true })
+})
+
+describe('log.ts', () => {
+  const logFile = (): string => join(fake.state.userData, 'log.txt')
+
+  it('起動の印に版が入る(どのビルドが動いていたかが分かる)', async () => {
+    const { logging } = await loadMain()
+    // process のハンドラはテストの環境に残さない
+    const before = process.listeners('uncaughtException')
+    logging.installLogging()
+    for (const listener of process.listeners('uncaughtException')) {
+      if (!before.includes(listener)) process.off('uncaughtException', listener)
+    }
+    expect(readFileSync(logFile(), 'utf8')).toContain('起動 v9.9.9-test')
+  })
+
+  it('例外はスタックまで残す', async () => {
+    const { logging } = await loadMain()
+    logging.log('error', '転んだ', new Error('ぐえ'))
+    const text = readFileSync(logFile(), 'utf8')
+    expect(text).toContain('[error] 転んだ')
+    expect(text).toContain('Error: ぐえ')
+  })
+
+  it('古い行は捨てて、無限には伸びない', async () => {
+    const { logging } = await loadMain()
+    for (let i = 0; i < 600; i++) logging.log('info', `行 ${i}`)
+    const lines = readFileSync(logFile(), 'utf8').split('\n').filter(Boolean)
+    expect(lines.length).toBeLessThanOrEqual(500)
+    expect(lines.at(-1)).toContain('行 599')
+    expect(readFileSync(logFile(), 'utf8')).not.toContain('行 0 ')
+  })
+
+  it('前の起動のログは残したまま続きを書く', async () => {
+    writeFileSync(logFile(), '前の起動の行\n')
+    const { logging } = await loadMain()
+    logging.log('info', '今の起動の行')
+    const text = readFileSync(logFile(), 'utf8')
+    expect(text).toContain('前の起動の行')
+    expect(text).toContain('今の起動の行')
+  })
 })
 
 describe('settings.ts', () => {
@@ -367,6 +409,21 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
     const win = fake.FakeWindow.all[0]
     emit('window:set-ignore-mouse', false)
     expect(win.ignoreMouse).toBeNull()
+  })
+
+  it('画面から報告されたエラーはログに残す。文字列でないものは捨て、長すぎるものは切る', async () => {
+    await setup()
+    const logFile = join(fake.state.userData, 'log.txt')
+    emit('log:report', { evil: true })
+    emit('log:report', '')
+    expect(existsSync(logFile)).toBe(false)
+
+    emit('log:report', 'あ'.repeat(400), 'ス'.repeat(3000))
+    const text = readFileSync(logFile, 'utf8')
+    expect(text).toContain('renderer: ')
+    // 見出しは 300 文字、詳細は 2000 文字まで
+    expect(text.match(/あ+/)?.[0]).toHaveLength(300)
+    expect(text.match(/ス+/)?.[0]).toHaveLength(2000)
   })
 })
 

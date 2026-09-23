@@ -16,8 +16,13 @@ import {
   withoutDevice
 } from '../shared/settings'
 import type { HidPermissions } from './hid'
+import { log } from './log'
 import { loadSettings, saveSettings } from './settings'
 import type { WindowManager } from './windows'
+
+/** renderer から来たエラーの、残す長さの上限。 */
+const LOG_MESSAGE_MAX = 300
+const LOG_DETAIL_MAX = 2000
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -88,5 +93,15 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
 
   ipcMain.on(IPC.hidDeviceChosen, (_event, deviceId: unknown) => {
     hid.resolve(typeof deviceId === 'string' ? deviceId : null)
+  })
+
+  // 画面で起きたエラー。長いスタックがそのまま来るので、ログが 1 件で埋まらないように切る
+  ipcMain.on(IPC.logReport, (_event, message: unknown, detail: unknown) => {
+    if (typeof message !== 'string' || message === '') return
+    log(
+      'error',
+      `renderer: ${message.slice(0, LOG_MESSAGE_MAX)}`,
+      typeof detail === 'string' ? detail.slice(0, LOG_DETAIL_MAX) : undefined
+    )
   })
 }

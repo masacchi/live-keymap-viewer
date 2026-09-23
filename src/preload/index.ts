@@ -27,7 +27,10 @@ const api: RendererApi = {
       ipcRenderer.removeListener(IPC.hidChooseDevice, listener)
     }
   },
-  chooseDevice: (deviceId: string | null) => ipcRenderer.send(IPC.hidDeviceChosen, deviceId)
+  chooseDevice: (deviceId: string | null) => ipcRenderer.send(IPC.hidDeviceChosen, deviceId),
+
+  reportError: (message: string, detail?: string) =>
+    ipcRenderer.send(IPC.logReport, message, detail)
 }
 
 contextBridge.exposeInMainWorld('api', api)
