@@ -222,15 +222,6 @@ body.overlay .app-shell.faded {
   transition: transform 90ms ease-out;
 }
 
-/* 押した瞬間だけ縁から広がって消える輪。ふだんは描かない(アニメーションは状態の節) */
-.press-ring {
-  fill: none;
-  stroke: var(--color-press);
-  stroke-width: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
 .main {
   fill: var(--color-ink);
   text-anchor: middle;
@@ -363,6 +354,8 @@ body.overlay .app-shell.faded {
   stroke: var(--color-press);
   /* 押しているあいだは淡く光らせる。色だけより、離れて見ても押下が拾いやすい */
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-press) 55%, transparent));
+  /* 押した瞬間の光(下の press-flash) */
+  animation: press-flash 220ms ease-out;
 }
 
 /* 押したら 2px 沈める(縁の 3px が 1px だけ残る)。戻りより速く */
@@ -372,22 +365,16 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * 押した瞬間に 1 回だけ、縁から外へ輪を広げて消す(0.26 秒)。線の太さを 0 → 8 にすると
- * 外側に 4px 出る(キーの隙間ぶん)。内側の半分は本体の後ろに隠れる。
- * クラスが付くたびに最初から再生されるので、同じキーを連打しても毎回出る
+ * 押した瞬間だけ明るく強く光り、0.22 秒で落ち着く。動きはキーの中で終わる。
+ * 以前は縁から輪を外へ広げていたが、打つたびに周りまで動いて目が疲れる、との声でやめた。
+ * 終わりの色は書かない(from だけ)。そのとき効いている色に向かうので、長押しで
+ * レイヤーの色に変わる途中でも黄色を挟まずに落ち着く。クラスが付くたびに最初から再生される
  */
-.key-pressed .press-ring {
-  animation: press-ring 260ms ease-out;
-}
-
-@keyframes press-ring {
+@keyframes press-flash {
   from {
-    stroke-width: 0;
-    opacity: 0.9;
-  }
-  to {
-    stroke-width: 8;
-    opacity: 0;
+    fill: #fff4c9;
+    stroke: #fff4c9;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-press) 95%, transparent));
   }
 }
 
@@ -441,7 +428,7 @@ body.overlay .app-shell.faded {
 @media (prefers-reduced-motion: reduce) {
   .key-unlock .cap,
   .key-flash .cap,
-  .key-pressed .press-ring {
+  .key-pressed .cap {
     animation: none;
   }
 

@@ -251,8 +251,6 @@ export function KeyCap({
     >
       {/* キーの厚み(下の縁)。押すと本体が沈んで隠れる */}
       <rect className="skirt" x={x} y={y + SKIRT} width={width} height={height} rx={7} />
-      {/* 押した瞬間だけ縁から広がって消える輪(styles.css の press-ring) */}
-      <rect className="press-ring" x={x} y={y} width={width} height={height} rx={7} />
 
       {/*
        * 本体。押したときに沈めるのはこの中だけ。外側の g には回転(transform 属性)があり、
