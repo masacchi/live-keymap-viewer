@@ -6,7 +6,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocalStorageDefinitionCache } from '../hid/definitionCache'
-import { IDLE, KeyboardConnection } from '../session/keyboardConnection'
+import { reportError, reportInfo } from '../lib/report'
+import { type ConnectionState, IDLE, KeyboardConnection } from '../session/keyboardConnection'
 
 export type {
   ConnectionState as VialKeyboardState,
@@ -16,6 +17,33 @@ export type { UnlockState } from '../session/keyboardSession'
 
 /** 実機の定義はキャッシュする(モックには使わない)。 */
 const definitionCache = new LocalStorageDefinitionCache()
+
+/**
+ * 接続の区切りを main のログに残す見張り。**切れた理由は、実機では後から追えない**ので。
+ *
+ * 残すのは「エラーになった」「応答待ちに入った / 戻った(何秒詰まったか)」だけ。
+ * 応答待ちは、ウィンドウのドラッグ中に main が止まると出る(keyboardSession.ts の STALL_LIMIT_MS)ので、
+ * 切断まで至ったのか、詰まって戻っただけなのかが、これで区別できる。
+ */
+function watchForLog(next: (state: ConnectionState) => void): (state: ConnectionState) => void {
+  let lastError: string | null = null
+  let stalledSince: number | null = null
+  return (state) => {
+    if (state.error !== lastError) {
+      if (state.error) reportError(`接続: ${state.error}`)
+      lastError = state.error
+    }
+    if (state.stalled && stalledSince === null) {
+      stalledSince = Date.now()
+      reportInfo('接続: 応答待ちに入った')
+    } else if (!state.stalled && stalledSince !== null) {
+      const seconds = ((Date.now() - stalledSince) / 1000).toFixed(1)
+      reportInfo(`接続: 応答待ちから戻った(${seconds} 秒)`)
+      stalledSince = null
+    }
+    next(state)
+  }
+}
 
 /**
  * @param tappingTerm 長押しと見なすまでの時間(設定)。変わったら動いている接続にもすぐ効かせる
@@ -29,7 +57,7 @@ export function useVialKeyboard(tappingTerm?: number) {
   useEffect(() => {
     const connection = new KeyboardConnection({ hid: navigator.hid ?? null, definitionCache })
     connectionRef.current = connection
-    const unsubscribe = connection.subscribe(setState)
+    const unsubscribe = connection.subscribe(watchForLog(setState))
     connection.start()
     return () => {
       unsubscribe()

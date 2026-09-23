@@ -1,7 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { ErrorBoundary, reportError } from './components/ErrorBoundary'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { reportError } from './lib/report'
 import './styles.css'
 
 // React の外で起きたもの(非同期の失敗など)も main のログに残す。

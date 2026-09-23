@@ -1,6 +1,12 @@
 /** renderer に渡す最小限の IPC。HID そのものは renderer の WebHID で扱う。 */
 import { contextBridge, ipcRenderer } from 'electron'
-import { type HidCandidate, IPC, type RendererApi, type SettingsPatch } from '../shared/ipc'
+import {
+  type HidCandidate,
+  IPC,
+  type RendererApi,
+  type ReportLevel,
+  type SettingsPatch
+} from '../shared/ipc'
 
 const api: RendererApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC.appGetInfo),
@@ -39,8 +45,8 @@ const api: RendererApi = {
   },
   hidReleased: () => ipcRenderer.send(IPC.hidReleased),
 
-  reportError: (message: string, detail?: string) =>
-    ipcRenderer.send(IPC.logReport, message, detail)
+  report: (level: ReportLevel, message: string, detail?: string) =>
+    ipcRenderer.send(IPC.logReport, level, message, detail)
 }
 
 contextBridge.exposeInMainWorld('api', api)

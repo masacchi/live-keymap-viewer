@@ -7,17 +7,13 @@
  * (配布ビルドでは DevTools を開けないので、これが唯一の手がかりになる)。
  */
 import { Component, type ErrorInfo, type JSX, type ReactNode, useEffect } from 'react'
+import { reportError } from '../lib/report'
 import { messages } from '../messages'
 import { Button } from './ui/Button'
 
 function describe(error: unknown): string {
   if (error instanceof Error) return error.message || error.name
   return String(error)
-}
-
-/** 画面で起きたエラーを main のログ(userData/log.txt)に残す。 */
-export function reportError(message: string, detail?: string): void {
-  window.api?.reportError(message, detail)
 }
 
 function CrashScreen({ message }: { message: string }): JSX.Element {

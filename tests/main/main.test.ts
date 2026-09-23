@@ -477,15 +477,18 @@ describe('registerIpc: renderer からの値を確かめてから使う', () => 
 
   it('画面から報告されたエラーはログに残す。文字列でないものは捨て、長すぎるものは切る', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
     await setup()
     const logFile = join(fake.state.userData, 'log.txt')
-    emit('log:report', { evil: true })
-    emit('log:report', '')
+    emit('log:report', 'error', { evil: true })
+    emit('log:report', 'error', '')
     expect(existsSync(logFile)).toBe(false)
 
-    emit('log:report', 'あ'.repeat(400), 'ス'.repeat(3000))
+    emit('log:report', 'info', '応答待ちから戻った(3.2 秒)')
+    emit('log:report', 'error', 'あ'.repeat(400), 'ス'.repeat(3000))
     const text = readFileSync(logFile, 'utf8')
-    expect(text).toContain('renderer: ')
+    expect(text).toContain('[info] renderer: 応答待ちから戻った(3.2 秒)')
+    expect(text).toContain('[error] renderer: ')
     // 見出しは 300 文字、詳細は 2000 文字まで
     expect(text.match(/あ+/)?.[0]).toHaveLength(300)
     expect(text.match(/ス+/)?.[0]).toHaveLength(2000)

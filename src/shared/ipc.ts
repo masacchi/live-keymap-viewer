@@ -35,6 +35,9 @@ export const IPC = {
   logReport: 'log:report'
 } as const
 
+/** renderer がログに残せる段。警告は main だけが使う。 */
+export type ReportLevel = 'info' | 'error'
+
 /** どのビルドが動いているか。設定パネルの隅に出す。 */
 export interface AppInfo {
   version: string
@@ -112,8 +115,9 @@ export interface RendererApi {
   hidReleased(): void
 
   /**
-   * 画面で起きたエラーを main のログ(userData/log.txt)に残す。
+   * 画面側の出来事を main のログ(userData/log.txt)に残す。
    * 配布ビルドでは DevTools を開けないので、実機で何が起きたかはこれでしか分からない。
+   * 残すのはまれにしか起きない区切りだけ(例外・接続が切れた理由・応答待ちからの復帰)。
    */
-  reportError(message: string, detail?: string): void
+  report(level: ReportLevel, message: string, detail?: string): void
 }

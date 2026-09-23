@@ -109,11 +109,11 @@ export function registerIpc(windows: WindowManager, hid: HidPermissions): void {
   // 「手放した」の返事。待っているモード切り替えがあれば、そこで先へ進む
   ipcMain.on(IPC.hidReleased, () => windows.noteHidReleased())
 
-  // 画面で起きたエラー。長いスタックがそのまま来るので、ログが 1 件で埋まらないように切る
-  ipcMain.on(IPC.logReport, (_event, message: unknown, detail: unknown) => {
+  // 画面側の出来事。長いスタックがそのまま来るので、ログが 1 件で埋まらないように切る
+  ipcMain.on(IPC.logReport, (_event, level: unknown, message: unknown, detail: unknown) => {
     if (typeof message !== 'string' || message === '') return
     log(
-      'error',
+      level === 'info' ? 'info' : 'error',
       `renderer: ${message.slice(0, LOG_MESSAGE_MAX)}`,
       typeof detail === 'string' ? detail.slice(0, LOG_DETAIL_MAX) : undefined
     )
