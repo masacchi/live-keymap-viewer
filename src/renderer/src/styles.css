@@ -153,6 +153,15 @@ body.overlay .app-shell.blurred::before {
 }
 
 /*
+ * ぼかしているあいだは角を丸めない。ぼかしはウィンドウの四角いっぱいに掛かり、角丸にできない
+ * (Electron は透明なウィンドウの角丸を切っていて、setShape でも切り抜けなかった。2026-09-23 実機)。
+ * 板だけ丸いと四隅にぼかしがはみ出して見えるので、板を四角にして揃える
+ */
+body.overlay .app-shell.blurred {
+  border-radius: 0;
+}
+
+/*
  * ベースレイヤーのあいだは、板も図と同じだけ薄くする(濃さは App.tsx が --faded-opacity で渡す)。
  * 以前は板だけ消していたので、薄い図が壁紙の上にじかに乗り、どこまでが図か分かりにくかった。
  * 図と同じく、薄くするのは少し待ってからゆっくり
@@ -162,6 +171,11 @@ body.overlay .app-shell.faded::before {
   transition:
     opacity 400ms ease 300ms,
     background-color 400ms ease 300ms;
+}
+
+/* 角丸に戻すのは、ぼかしが外れるのと同時(薄くし始めて 300ms 後。useOverlayFade.ts) */
+body.overlay .app-shell.faded {
+  transition: border-radius 0s linear 300ms;
 }
 
 /*
