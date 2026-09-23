@@ -94,4 +94,4 @@
 | アイコン・インストーラー・署名 | 配布するとき | electron-builder を入れる。Linux から作るなら wine、または Windows 上でビルド |
 | ノブの回転を光らせる | ファームを触れるなら | ファームに独自の raw HID コマンドを足してエンコーダーのイベントを返させる |
 | Combo / Key Override の表示 | 要望があれば | Vial の dynamic entry で読める(`[0xFE, 0x0D, 0x03, idx]` / `[0xFE, 0x0D, 0x05, idx]`) |
-| ほかのキーボード | 持っている人がいれば | コードの変更はほぼ不要のはず。DEVELOPMENT.md §6 |
+| ほかのキーボード | 持っている人がいれば | **モックでは確認済み**(tests/otherKeyboard.test.tsx)。行列・レイヤー数が違う / ノブ無し / レイアウトオプション無し / カスタムキーコード無し / Tap Dance 無しでも、読み込みから押下まで通る。残るのは実機での確認。DEVELOPMENT.md §6 |

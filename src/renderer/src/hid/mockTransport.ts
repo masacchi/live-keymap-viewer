@@ -2,8 +2,13 @@
  * 実機なしで動かすためのモックデバイス。
  *
  * ファーム(vial-qmk の via.c / vial.c)と同じバイト並びで応答を組み立てる。
- * キーマップと Tap Dance は reference/Cornix_設定_LT.vil、定義 JSON は
- * Cornix LP V1.12 のファームから取り出した実物(XZ 圧縮のまま)を使う。
+ * 既定で名乗るのは Cornix LP ― キーマップと Tap Dance は reference/Cornix_設定_LT.vil、
+ * 定義 JSON は Cornix LP V1.12 のファームから取り出した実物(XZ 圧縮のまま)。
+ *
+ * **ほかのキーボードも名乗れる**(`MockOptions.keyboard`)。このアプリは固定データを持たず、
+ * 配置もキーマップもキーボードから読むので、別の行列・レイヤー数・ノブ無し・
+ * カスタムキーコード無しでも動くことを、ここで差し替えて確かめられる
+ * (tests/otherKeyboard.test.ts)。
  */
 
 import { keyId } from '../layout/geometry'
@@ -52,7 +57,47 @@ function fromBase64(base64: string): Uint8Array {
   return out
 }
 
+/**
+ * モックが名乗るキーボード。定義 JSON・キーマップ・行列の大きさをまとめて差し替える。
+ * バイト並びはファームと同じなので、アプリから見れば実機と区別が付かない。
+ */
+export interface MockKeyboard {
+  /** 画面に出す名前(実機の productName に当たる)。 */
+  label: string
+  viaProtocol: number
+  vialProtocol: number
+  uid: bigint
+  /** 定義 JSON を XZ で固めたもの(base64)。実機の応答と同じ形。 */
+  definitionXzBase64: string
+  layers: number
+  rows: number
+  cols: number
+  /** [layer][row][col] を平らにした生キーコード列。 */
+  keymap: readonly number[]
+  /** 枠ごとの [onTap, onHold, onDoubleTap, onTapHold, tappingTerm]。無ければ空。 */
+  tapDance: ReadonlyArray<readonly number[]>
+  /** [layer][index] = [反時計回り, 時計回り]。ノブが無ければ空。 */
+  encoders: ReadonlyArray<ReadonlyArray<readonly number[]>>
+}
+
+/** 既定のモック。reference/ の実物から生成したもの(mock/cornix.generated.ts)。 */
+export const CORNIX_MOCK: MockKeyboard = {
+  label: 'Cornix LP (モック)',
+  viaProtocol: MOCK_VIA_PROTOCOL,
+  vialProtocol: MOCK_VIAL_PROTOCOL,
+  uid: MOCK_UID,
+  definitionXzBase64: MOCK_DEFINITION_XZ_BASE64,
+  layers: MOCK_LAYERS,
+  rows: MOCK_ROWS,
+  cols: MOCK_COLS,
+  keymap: MOCK_KEYMAP,
+  tapDance: MOCK_TAP_DANCE,
+  encoders: MOCK_ENCODERS
+}
+
 export interface MockOptions {
+  /** 名乗るキーボード。既定は Cornix LP。 */
+  keyboard?: MockKeyboard
   /** 最初からアンロック済みにするか。 */
   unlocked?: boolean
   /** アンロックに使うキー。既定は Cornix の左上 2 つ。 */
@@ -65,8 +110,9 @@ export interface MockOptions {
  * Transport と同じ口を持つ偽デバイス。押下状態はテスト側から動かす。
  */
 export class MockTransport implements Transport {
-  readonly label = 'Cornix LP (モック)'
+  readonly label: string
 
+  private readonly keyboard: MockKeyboard
   private isOpen = false
   private unlocked: boolean
   private unlockInProgress = false
@@ -74,15 +120,19 @@ export class MockTransport implements Transport {
   private readonly unlockKeys: Array<{ row: number; col: number }>
   private readonly latencyMs: number
   private readonly pressed = new Set<string>()
-  private readonly definitionBytes = fromBase64(MOCK_DEFINITION_XZ_BASE64)
+  private readonly definitionBytes: Uint8Array
 
   /** 送られてきたリクエストの記録。テストで順序を確かめるのに使う。 */
   readonly requests: Uint8Array[] = []
 
   /** 書き換えられるようにコピーを持つ。 */
-  private readonly keymap = [...MOCK_KEYMAP]
+  private readonly keymap: number[]
 
   constructor(options: MockOptions = {}) {
+    this.keyboard = options.keyboard ?? CORNIX_MOCK
+    this.label = this.keyboard.label
+    this.definitionBytes = fromBase64(this.keyboard.definitionXzBase64)
+    this.keymap = [...this.keyboard.keymap]
     this.unlocked = options.unlocked ?? false
     this.unlockKeys = options.unlockKeys ?? [
       { row: 0, col: 0 },
@@ -133,7 +183,8 @@ export class MockTransport implements Transport {
    * 実機の set_keycode は実装していない(このアプリは読むだけなので)。
    */
   setKeycode(layer: number, row: number, col: number, keycode: number): void {
-    this.keymap[layer * MOCK_ROWS * MOCK_COLS + row * MOCK_COLS + col] = keycode
+    const { rows, cols } = this.keyboard
+    this.keymap[layer * rows * cols + row * cols + col] = keycode
   }
 
   isPressed(row: number, col: number): boolean {
@@ -185,12 +236,12 @@ export class MockTransport implements Transport {
     const out = new Uint8Array(msg)
     switch (msg[0]) {
       case CMD_VIA_GET_PROTOCOL_VERSION:
-        out[1] = (MOCK_VIA_PROTOCOL >> 8) & 0xff
-        out[2] = MOCK_VIA_PROTOCOL & 0xff
+        out[1] = (this.keyboard.viaProtocol >> 8) & 0xff
+        out[2] = this.keyboard.viaProtocol & 0xff
         return out
 
       case CMD_VIA_GET_LAYER_COUNT:
-        out[1] = MOCK_LAYERS
+        out[1] = this.keyboard.layers
         return out
 
       case CMD_VIA_KEYMAP_GET_BUFFER: {
@@ -209,10 +260,11 @@ export class MockTransport implements Transport {
       case CMD_VIA_GET_KEYBOARD_VALUE:
         if (msg[1] === VIA_SWITCH_MATRIX_STATE) {
           if (!this.unlocked) return out // ロック中は返さない(via.c:251-255)
-          const rowSize = Math.ceil(MOCK_COLS / 8)
-          for (let row = 0; row < MOCK_ROWS; row++) {
+          const { rows, cols } = this.keyboard
+          const rowSize = Math.ceil(cols / 8)
+          for (let row = 0; row < rows; row++) {
             let value = 0
-            for (let col = 0; col < MOCK_COLS; col++) {
+            for (let col = 0; col < cols; col++) {
               if (this.pressed.has(keyId(row, col))) value |= 1 << col
             }
             for (let byte = 0; byte < rowSize; byte++) {
@@ -241,11 +293,12 @@ export class MockTransport implements Transport {
     switch (msg[1]) {
       case CMD_VIAL_GET_KEYBOARD_ID: {
         out.fill(0)
-        out[0] = MOCK_VIAL_PROTOCOL & 0xff
-        out[1] = (MOCK_VIAL_PROTOCOL >> 8) & 0xff
-        out[2] = (MOCK_VIAL_PROTOCOL >> 16) & 0xff
-        out[3] = (MOCK_VIAL_PROTOCOL >> 24) & 0xff
-        let uid = MOCK_UID
+        const { vialProtocol } = this.keyboard
+        out[0] = vialProtocol & 0xff
+        out[1] = (vialProtocol >> 8) & 0xff
+        out[2] = (vialProtocol >> 16) & 0xff
+        out[3] = (vialProtocol >> 24) & 0xff
+        let uid = this.keyboard.uid
         for (let i = 0; i < 8; i++) {
           out[4 + i] = Number(uid & 0xffn)
           uid >>= 8n
@@ -276,7 +329,7 @@ export class MockTransport implements Transport {
       case CMD_VIAL_GET_ENCODER: {
         const layer = msg[2]
         const index = msg[3]
-        const entry = MOCK_ENCODERS[layer]?.[index] ?? [0, 0]
+        const entry = this.keyboard.encoders[layer]?.[index] ?? [0, 0]
         out[0] = (entry[0] >> 8) & 0xff
         out[1] = entry[0] & 0xff
         out[2] = (entry[1] >> 8) & 0xff
@@ -327,14 +380,14 @@ export class MockTransport implements Transport {
       case CMD_VIAL_DYNAMIC_ENTRY_OP: {
         if (msg[2] === DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES) {
           out.fill(0)
-          out[0] = MOCK_TAP_DANCE.length
+          out[0] = this.keyboard.tapDance.length
           out[1] = 0
           out[2] = 0
           out[3] = 0
           return out
         }
         if (msg[2] === DYNAMIC_VIAL_TAP_DANCE_GET) {
-          const entry = MOCK_TAP_DANCE[msg[3]]
+          const entry = this.keyboard.tapDance[msg[3]]
           if (!entry) {
             out[0] = 1 // エラー
             return out

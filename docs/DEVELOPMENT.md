@@ -252,8 +252,15 @@ L0 と一致することを確かめるテストがある。
 - Vial protocol 6 / VIA protocol 9
 - `vial_protocol >= 3` かつ `(cols / 8 + 1) * rows <= 28`(matrix state が 1 パケットに収まる)
 
-モックで確かめたいときは、`.vil` と定義 JSON を `reference/` に置き、
-[`scripts/gen-mock.py`](../scripts/gen-mock.py) 冒頭のパスを差し替えて生成し直す。
+**これはモックで確かめてある**([tests/otherKeyboard.test.tsx](../tests/otherKeyboard.test.tsx))。
+`MockTransport` は名乗るキーボードを差し替えられる(`MockOptions.keyboard`)ので、
+行列の大きさもレイヤー数も違う・ノブ無し・レイアウトオプション無し・カスタムキーコード無し・
+Tap Dance 無しのキーボードで、読み込み → 描画 → 押下 → レイヤー判定まで通している。
+その定義 JSON は [`scripts/gen-test-boards.py`](../scripts/gen-test-boards.py) で作る
+(実機と同じく XZ で固めた JSON)。
+
+実機の `.vil` と定義 JSON が手に入るなら、`reference/` に置いて
+[`scripts/gen-mock.py`](../scripts/gen-mock.py) 冒頭のパスを差し替えれば、その機種のモックになる。
 定義 JSON をファームから取り出す手順は [reference/README.md](../reference/README.md)。
 
 ### renderer ⇄ main のやり取りを足す
