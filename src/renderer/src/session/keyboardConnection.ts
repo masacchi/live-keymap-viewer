@@ -18,6 +18,9 @@
  *     RECONNECT_DELAY_MS ごとに許可済みのデバイスを探し直して繋ぐ
  *   - HID の connect イベント(挿された)が来たら、待たずに試す。起動時にキーボードが
  *     無かったときも、これで繋がる
+ *   - HID の disconnect イベント(抜かれた・消えた)が来たら、その場で切って繋ぎ直しに入る。
+ *     通信の失敗を待つと、応答が返らないだけの詰まり(ウィンドウのドラッグ中など)と
+ *     見分けが付かず、STALL_LIMIT_MS ぶん「応答待ち」のままになる
  *
  * 読み込みの途中で止まったもの(未対応のプロトコルなど)は、繰り返しても同じなのでタイマーでは
  * 繋ぎ直さない(挿し直しと手動の接続は受け付ける)。
@@ -120,6 +123,8 @@ export class KeyboardConnection {
   private reconnecting = false
   /** モックに繋いでいるときの、そのモック。 */
   private mock: MockTransport | null = null
+  /** いま使っている実機。disconnect イベントが自分のものかを見分けるために持つ。 */
+  private device: HIDDevice | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private started = false
   private disposed = false
@@ -144,6 +149,7 @@ export class KeyboardConnection {
     if (this.started || this.disposed) return
     this.started = true
     this.options.hid?.addEventListener('connect', this.onHidConnect)
+    this.options.hid?.addEventListener('disconnect', this.onHidDisconnect)
     void this.connectToGranted()
   }
 
@@ -154,6 +160,7 @@ export class KeyboardConnection {
     this.search++
     this.cancelRetry()
     this.options.hid?.removeEventListener('connect', this.onHidConnect)
+    this.options.hid?.removeEventListener('disconnect', this.onHidDisconnect)
     this.listeners.clear()
     const session = this.session
     this.session = null
@@ -226,6 +233,7 @@ export class KeyboardConnection {
     const session = this.session
     this.session = null
     this.mock = null
+    this.device = null
     await session?.dispose()
   }
 
@@ -236,6 +244,7 @@ export class KeyboardConnection {
     const session = this.session
     this.session = null
     this.mock = null
+    this.device = null
     this.publish(IDLE)
     await session?.dispose()
   }
@@ -255,6 +264,31 @@ export class KeyboardConnection {
     if (this.current.status === 'connecting') return
     this.cancelRetry()
     void this.connectToGranted()
+  }
+
+  /**
+   * 使っていたキーボードが消えた。通信の失敗を待たずに切り、繋ぎ直しに入る。
+   *
+   * 待っても意味が無いうえ、待つと「詰まっているだけ(ウィンドウのドラッグ中など)」との
+   * 区別が付かない ― セッションは時間切れを 15 秒こらえるので、そのあいだ「応答待ち」に見える。
+   */
+  private readonly onHidDisconnect = (event: HIDConnectionEvent): void => {
+    if (this.disposed || this.device === null || event.device !== this.device) return
+    this.options.log?.('info', `切断: ${describeDevice(event.device)} が外れた`)
+
+    const session = this.session
+    this.session = null
+    this.device = null
+    // 動いていたものが消えたときだけ繋ぎ直す(読み込みの途中で止まったものは繰り返しても同じ)
+    if (
+      this.autoReconnect &&
+      (this.current.status === 'ready' || this.current.status === 'unlocking')
+    ) {
+      this.reconnecting = true
+      this.scheduleRetry()
+    }
+    this.publish({ ...this.current, status: 'error', error: messages.connection.deviceGone })
+    void session?.dispose()
   }
 
   /** 前に許可した Vial デバイスを探して繋ぐ。 */
@@ -314,6 +348,7 @@ export class KeyboardConnection {
     )
 
     const open = this.options.openTransport ?? ((d: HIDDevice) => new WebHidTransport(d))
+    this.device = device
     await this.attach(open(device), true)
   }
 
@@ -331,6 +366,7 @@ export class KeyboardConnection {
    */
   private async attach(transport: Transport, real: boolean): Promise<void> {
     if (real) this.mock = null
+    else this.device = null
     const previous = this.session
     const session = new KeyboardSession(transport, {
       ...this.options.sessionOptions,

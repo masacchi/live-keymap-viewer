@@ -215,6 +215,7 @@ export const messages = {
     noResponse: (tried: number) =>
       `キーボードが応答しない(${tried} 個のインターフェースを試した)。` +
       'Vial など別のアプリで使っていないか、USB / Bluetooth の出力先を確かめる',
-    noMatrix: 'このキーボードでは matrix state を読めない(プロトコルまたは行列サイズの制限)'
+    noMatrix: 'このキーボードでは matrix state を読めない(プロトコルまたは行列サイズの制限)',
+    deviceGone: 'キーボードが外れた'
   }
 } as const

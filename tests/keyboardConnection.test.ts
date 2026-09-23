@@ -36,9 +36,12 @@ class FakeHid extends EventTarget {
     this.dispatchEvent(event)
   }
 
-  /** 抜く。一覧から消す(使っていた transport の途切れはテスト側で作る)。 */
+  /** 抜く。一覧から消し、disconnect イベントを出す(Chromium と同じ)。 */
   unplug(device: HIDDevice): void {
     this.devices = this.devices.filter((d) => d !== device)
+    const event = new Event('disconnect')
+    Object.defineProperty(event, 'device', { value: device })
+    this.dispatchEvent(event)
   }
 }
 
@@ -179,6 +182,38 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     const back = await waitFor(connection, (s) => s.status === 'ready')
     expect(back.reconnecting).toBe(false)
     expect(opened).toHaveLength(2)
+    await connection.dispose()
+  })
+
+  it('抜かれたら、通信の失敗を待たずに切って繋ぎ直しに入る', async () => {
+    // 通信の失敗を待つと、詰まっているだけ(ウィンドウのドラッグ中など)と区別が付かず、
+    // セッションが時間切れをこらえるぶん「応答待ち」に見えてしまう
+    const { hid, connection, opened } = setup()
+    const device = fakeDevice()
+    hid.devices = [device]
+    connection.start()
+    await waitFor(connection, (s) => s.status === 'ready')
+
+    hid.unplug(device)
+    expect(connection.state.status).toBe('error')
+    expect(connection.state.reconnecting).toBe(true)
+    await pause(0)
+    expect(opened[0].opened).toBe(false) // セッションは閉じた
+
+    hid.plug(fakeDevice())
+    await waitFor(connection, (s) => s.status === 'ready')
+    await connection.dispose()
+  })
+
+  it('別のデバイスが抜けても、使っている接続はそのまま', async () => {
+    const { hid, connection } = setup()
+    const device = fakeDevice()
+    hid.devices = [device]
+    connection.start()
+    await waitFor(connection, (s) => s.status === 'ready')
+
+    hid.unplug(fakeDevice()) // 一覧にも無い別物
+    expect(connection.state.status).toBe('ready')
     await connection.dispose()
   })
 
