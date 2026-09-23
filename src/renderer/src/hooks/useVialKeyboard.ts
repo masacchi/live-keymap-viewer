@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocalStorageDefinitionCache } from '../hid/definitionCache'
+import { LocalStorageKeymapCache } from '../hid/keymapCache'
 import { report, reportError, reportInfo } from '../lib/report'
 import { type ConnectionState, IDLE, KeyboardConnection } from '../session/keyboardConnection'
 
@@ -15,8 +16,9 @@ export type {
 } from '../session/keyboardConnection'
 export type { UnlockState } from '../session/keyboardSession'
 
-/** 実機の定義はキャッシュする(モックには使わない)。 */
+/** 実機の定義とキーマップはキャッシュする(モックには使わない)。 */
 const definitionCache = new LocalStorageDefinitionCache()
+const keymapCache = new LocalStorageKeymapCache()
 
 /**
  * 接続の区切りを main のログに残す見張り。**切れた理由は、実機では後から追えない**ので。
@@ -58,6 +60,7 @@ export function useVialKeyboard(tappingTerm?: number) {
     const connection = new KeyboardConnection({
       hid: navigator.hid ?? null,
       definitionCache,
+      keymapCache,
       log: report
     })
     connectionRef.current = connection

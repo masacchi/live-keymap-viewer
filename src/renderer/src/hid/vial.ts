@@ -69,6 +69,8 @@ export interface KeyboardSnapshot {
   vialProtocol: number
   uid: string
   definition: VialDefinition
+  /** 圧縮した定義のバイト数。キャッシュを引くときの鍵にする。 */
+  definitionSize: number
   layers: number
   rows: number
   cols: number
@@ -465,6 +467,98 @@ export interface DefinitionCache {
   set(uid: string, size: number, definition: VialDefinition): void
 }
 
+/**
+ * キーマップ側のキャッシュ。キーボードの UID で引く。
+ *
+ * 定義(物理配置)は DefinitionCache が持つ。こちらは **Vial で編集され得るところ** ―
+ * キーマップ・Tap Dance・エンコーダー・レイアウトオプション ― を覚えておき、
+ * 繋いだ直後に**まずキャッシュで画面を出す**ために使う。裏で読み直して、違っていれば差し替える。
+ *
+ * これが無いと、モードを切り替えるたび・繋ぎ直すたびに 70 往復ほど待つことになる
+ * (USB で数秒、Bluetooth では 30 秒)。そのあいだ画面には何も出ない。
+ */
+export interface CachedKeymap {
+  /** 圧縮した定義のバイト数。ファームを焼き直したら変わるので、違えば捨てる。 */
+  definitionSize: number
+  layers: number
+  rows: number
+  cols: number
+  keymap: number[][][]
+  tapDance: Array<TapDanceEntry | undefined>
+  encoders: number[][][]
+  layoutOptions: number
+}
+
+export interface KeymapCache {
+  get(uid: string): CachedKeymap | null
+  set(uid: string, value: CachedKeymap): void
+}
+
+/** スナップショットから、キャッシュに残すところだけを取り出す。 */
+export function toCachedKeymap(snapshot: KeyboardSnapshot): CachedKeymap {
+  return {
+    definitionSize: snapshot.definitionSize,
+    layers: snapshot.layers,
+    rows: snapshot.rows,
+    cols: snapshot.cols,
+    keymap: snapshot.keymap,
+    tapDance: snapshot.tapDance,
+    encoders: snapshot.encoders,
+    layoutOptions: snapshot.layoutOptions
+  }
+}
+
+export interface CacheSet {
+  definitionCache?: DefinitionCache
+  keymapCache?: KeymapCache
+}
+
+/**
+ * キャッシュだけでスナップショットを組み立てる。使えなければ null(呼んだ側が普通に読む)。
+ *
+ * 読むのは身元だけ ― VIA の版・Vial の版と UID・定義のバイト数の **3 往復**。
+ * 定義とキーマップの両方がキャッシュにあり、バイト数も行列の大きさも合っているときだけ返す。
+ * 中身が古い可能性は残るので、呼んだ側が裏で読み直して確かめる(session/keyboardSession.ts)。
+ */
+export async function loadCachedKeyboard(
+  transport: Transport,
+  { definitionCache, keymapCache }: CacheSet
+): Promise<KeyboardSnapshot | null> {
+  if (!definitionCache || !keymapCache) return null
+
+  const viaProtocol = await getViaProtocol(transport)
+  const { vialProtocol, uid } = await getKeyboardId(transport)
+  // 未対応のプロトコルは、普通に読ませてそちらでエラーにする(文言が 1 か所で済む)
+  if (viaProtocol !== SUPPORTED_VIA_PROTOCOL || vialProtocol !== SUPPORTED_VIAL_PROTOCOL)
+    return null
+
+  const cached = keymapCache.get(uid)
+  if (!cached) return null
+
+  const definitionSize = await getDefinitionSize(transport)
+  if (cached.definitionSize !== definitionSize) return null
+  const definition = definitionCache.get(uid, definitionSize)
+  if (!definition) return null
+  // 定義とキーマップが食い違っていたら(別々に古くなった)使わない
+  if (definition.matrix.rows !== cached.rows || definition.matrix.cols !== cached.cols) return null
+
+  return {
+    viaProtocol,
+    vialProtocol,
+    uid,
+    definition,
+    definitionSize,
+    layers: cached.layers,
+    rows: cached.rows,
+    cols: cached.cols,
+    keymap: cached.keymap,
+    tapDance: cached.tapDance,
+    encoders: cached.encoders,
+    layoutOptions: cached.layoutOptions,
+    matrixTestSupported: isMatrixTestSupported(vialProtocol, cached.rows, cached.cols)
+  }
+}
+
 export interface LoadOptions {
   /** 定義のキャッシュ。無ければ毎回読む。 */
   definitionCache?: DefinitionCache
@@ -484,16 +578,16 @@ async function loadDefinition(
   transport: Transport,
   uid: string,
   options: LoadOptions
-): Promise<VialDefinition> {
+): Promise<{ definition: VialDefinition; size: number }> {
   const { definitionCache, refreshDefinition = false } = options
   const onStep = reporter(options, 'definition')
-  if (!definitionCache) return getDefinition(transport, undefined, onStep)
+  // サイズは常に先に聞く。キャッシュの鍵であり、スナップショットにも残すため
   const size = await getDefinitionSize(transport)
-  const cached = refreshDefinition ? null : definitionCache.get(uid, size)
-  if (cached) return cached
+  const cached = refreshDefinition ? null : definitionCache?.get(uid, size)
+  if (cached) return { definition: cached, size }
   const definition = await getDefinition(transport, size, onStep)
-  definitionCache.set(uid, size, definition)
-  return definition
+  definitionCache?.set(uid, size, definition)
+  return { definition, size }
 }
 
 /** キーマップ・定義・Tap Dance を一通り読み込む。 */
@@ -511,7 +605,7 @@ export async function loadKeyboard(
     )
   }
 
-  const definition = await loadDefinition(transport, uid, options)
+  const { definition, size: definitionSize } = await loadDefinition(transport, uid, options)
   const rows = definition.matrix.rows
   const cols = definition.matrix.cols
   const layers = await getLayerCount(transport)
@@ -545,6 +639,7 @@ export async function loadKeyboard(
     vialProtocol,
     uid,
     definition,
+    definitionSize,
     layers,
     rows,
     cols,

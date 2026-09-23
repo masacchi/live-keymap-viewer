@@ -28,11 +28,14 @@ import {
   getMatrixState,
   getUnlockStatus,
   type KeyboardSnapshot,
+  type KeymapCache,
   keymapUnchanged,
   type LoadProgress,
+  loadCachedKeyboard,
   loadKeyboard,
   nextUnlockAction,
   reloadKeymap,
+  toCachedKeymap,
   unlockPoll,
   unlockStart
 } from '../hid/vial'
@@ -111,6 +114,8 @@ export interface SessionOptions {
   sleep?: (ms: number) => Promise<void>
   /** キーボード定義のキャッシュ。無ければ繋ぐたびに読む。 */
   definitionCache?: DefinitionCache
+  /** キーマップのキャッシュ。定義のキャッシュと両方あるときだけ、繋いだ直後の即表示に使う。 */
+  keymapCache?: KeymapCache
   /** 長押しと見なすまでの時間(ms、LT の既定)。無ければエンジンの既定(200ms)。 */
   tappingTerm?: number
 }
@@ -159,6 +164,9 @@ export class KeyboardSession {
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
+  private readonly keymapCache: KeymapCache | undefined
+  /** キャッシュで始めたときに、裏で確かめるキーマップ。ポーリングに入ったら消える。 */
+  private pendingVerify: KeyboardSnapshot | null = null
   private tappingTerm: number | undefined
 
   constructor(
@@ -170,6 +178,7 @@ export class KeyboardSession {
     this.now = options.now ?? (() => performance.now())
     this.sleep = options.sleep ?? defaultSleep
     this.definitionCache = options.definitionCache
+    this.keymapCache = options.keymapCache
     this.tappingTerm = options.tappingTerm
     this.current = {
       status: 'connecting',
@@ -213,14 +222,25 @@ export class KeyboardSession {
       if (!this.alive(gen)) return
       this.update({ status: 'loading' })
 
-      const snapshot = await loadKeyboard(this.transport, {
+      // キャッシュが使えるなら、3 往復で図を出してしまう。全部読むのは 70〜95 往復で、
+      // USB でも数秒、Bluetooth では 30 秒ほど画面に何も出ない。読み直しは裏でやる
+      const cached = await loadCachedKeyboard(this.transport, {
         definitionCache: this.definitionCache,
-        onProgress: (loading) => {
-          if (this.alive(gen)) this.update({ loading })
-        }
+        keymapCache: this.keymapCache
       })
       if (!this.alive(gen)) return
+
+      const snapshot =
+        cached ??
+        (await loadKeyboard(this.transport, {
+          definitionCache: this.definitionCache,
+          onProgress: (loading) => {
+            if (this.alive(gen)) this.update({ loading })
+          }
+        }))
+      if (!this.alive(gen)) return
       this.update({ loading: null })
+      this.pendingVerify = cached
       const engine = this.install(snapshot, false)
 
       if (!snapshot.matrixTestSupported) {
@@ -367,6 +387,10 @@ export class KeyboardSession {
             rows: snapshot.rows,
             cols: snapshot.cols
           })
+    // 次に繋いだとき(モードの切り替え・繋ぎ直し)に、すぐ図を出せるようにしておく
+    if (this.keymapCache && snapshot.definitionSize > 0) {
+      this.keymapCache.set(snapshot.uid, toCachedKeymap(snapshot))
+    }
     this.update({
       snapshot,
       geometry,
@@ -420,6 +444,33 @@ export class KeyboardSession {
   }
 
   /**
+   * キャッシュで出した表示を、裏で読み直して確かめる。
+   *
+   * ポーリングは止めない。要求は 1 本のキューに並ぶ(hid/transport.ts)ので、確かめている
+   * あいだは matrix の間隔が延びるだけで、押下の表示は生きたままになる。
+   * 違っていたら新しいキーマップでエンジンを作り直し、ポーリングを入れ替える。
+   *
+   * 失敗しても表示は壊さない ― キャッシュのまま使い続け、次のフォーカスか手動の読み直しに任せる。
+   */
+  private async verifyCached(gen: number, cached: KeyboardSnapshot): Promise<void> {
+    this.update({ reloading: true })
+    try {
+      const next = await reloadKeymap(this.transport, cached)
+      if (!this.alive(gen)) return
+      if (keymapUnchanged(cached, next)) {
+        this.update({ reloading: false })
+        return
+      }
+      const engine = this.install(next, true, this.current.engine)
+      this.update({ reloading: false })
+      const replaced = ++this.generation // 動いているポーリングを止めて入れ替える
+      void this.runPolling(replaced, next, engine)
+    } catch {
+      if (this.alive(gen)) this.update({ reloading: false })
+    }
+  }
+
+  /**
    * matrix を読み続ける。1 往復 → 残りの時間だけ待つ、の繰り返し。
    * 応答が遅いときは自然に間隔が延びる(要求を積み上げない)。
    */
@@ -430,6 +481,11 @@ export class KeyboardSession {
   ): Promise<void> {
     this.lastSignature = ''
     this.update({ status: 'ready', unlock: null, stalled: false })
+    // キャッシュで始めていたら、ここから裏で読み直して確かめる
+    // (アンロックが要るキーボードでは、それが済んでここに来る)
+    const verify = this.pendingVerify
+    this.pendingVerify = null
+    if (verify) void this.verifyCached(gen, verify)
     /** 応答が返らなくなった時刻。1 回でも読めたら null に戻る。 */
     let stalledSince: number | null = null
     try {

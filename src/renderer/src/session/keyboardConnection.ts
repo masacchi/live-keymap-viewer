@@ -27,7 +27,7 @@ import type { ReportLevel } from '../../../shared/ipc'
 import { type ProbeResult, pickResponsiveDevice } from '../hid/deviceProbe'
 import { MockTransport } from '../hid/mockTransport'
 import { isVialDevice, type Transport, VIAL_HID_FILTERS, WebHidTransport } from '../hid/transport'
-import type { DefinitionCache } from '../hid/vial'
+import type { DefinitionCache, KeymapCache } from '../hid/vial'
 import { messages } from '../messages'
 import {
   KeyboardSession,
@@ -79,6 +79,8 @@ export interface ConnectionOptions {
   hid?: HidLike | null
   /** 実機の定義のキャッシュ(モックには使わない)。 */
   definitionCache?: DefinitionCache
+  /** 実機のキーマップのキャッシュ(モックには使わない)。繋いだ直後の即表示に使う。 */
+  keymapCache?: KeymapCache
   reconnectDelayMs?: number
   // --- テストで差し替える ---
   openTransport?: (device: HIDDevice) => Transport
@@ -333,6 +335,7 @@ export class KeyboardConnection {
     const session = new KeyboardSession(transport, {
       ...this.options.sessionOptions,
       definitionCache: real ? this.options.definitionCache : undefined,
+      keymapCache: real ? this.options.keymapCache : undefined,
       tappingTerm: this.tappingTerm
     })
     this.session = session

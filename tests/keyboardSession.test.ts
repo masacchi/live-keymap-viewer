@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
 import { TransportError } from '@/hid/transport'
+import type { CachedKeymap, VialDefinition } from '@/hid/vial'
 import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
 import {
   KeyboardSession,
@@ -253,6 +254,97 @@ describe('KeyboardSession: ポーリング', () => {
     const before = mock.requests.length
     await new Promise((r) => setTimeout(r, 30))
     expect(mock.requests.length).toBe(before)
+    await session.dispose()
+  })
+})
+
+describe('KeyboardSession: キャッシュから始める', () => {
+  /** 定義とキーマップのキャッシュをメモリに持つ(localStorage の代わり)。 */
+  function memoryCaches() {
+    const definitions = new Map<string, { size: number; definition: VialDefinition }>()
+    const keymaps = new Map<string, CachedKeymap>()
+    return {
+      keymaps,
+      definitionCache: {
+        get: (uid: string, size: number) => {
+          const entry = definitions.get(uid)
+          return entry && entry.size === size ? entry.definition : null
+        },
+        set: (uid: string, size: number, definition: VialDefinition) => {
+          definitions.set(uid, { size, definition })
+        }
+      },
+      keymapCache: {
+        get: (uid: string) => keymaps.get(uid) ?? null,
+        set: (uid: string, value: CachedKeymap) => {
+          keymaps.set(uid, value)
+        }
+      }
+    }
+  }
+
+  /** キャッシュを満たすために 1 回繋いで切る。 */
+  async function warmUp(caches: ReturnType<typeof memoryCaches>): Promise<void> {
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    await session.dispose()
+  }
+
+  /** キーマップを読んだ往復の数(0x12 = keymap buffer)。 */
+  const keymapReads = (mock: MockTransport): number =>
+    mock.requests.filter((request) => request[0] === 0x12).length
+
+  it('2 回目は読まずに図を出し、裏で読み直して確かめる', async () => {
+    // モードの切り替えや繋ぎ直しのたびに 70 往復待たされていた(BT では 30 秒)
+    const caches = memoryCaches()
+    await warmUp(caches)
+
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+
+    expect(session.state.geometry?.keys).toHaveLength(50) // もう図は出ている
+    expect(keymapReads(mock)).toBe(0) // まだ一度もキーマップを読んでいない
+
+    await until(() => keymapReads(mock) > 0) // 裏で読み直している
+    await waitFor(session, (s) => !s.reloading)
+    expect(session.state.error).toBeNull()
+    await session.dispose()
+  })
+
+  it('キャッシュが古ければ、裏の確かめで差し替える', async () => {
+    const caches = memoryCaches()
+    await warmUp(caches)
+
+    const mock = new MockTransport({ unlocked: true })
+    mock.setKeycode(0, 0, 1, 0x001d) // 繋いでいない間に Vial で Q → Z に変えた
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    expect(session.state.snapshot?.keymap[0][0][1]).toBe(0x0014) // まだキャッシュの中身(Q)
+
+    await waitFor(session, (s) => s.snapshot?.keymap[0][0][1] === 0x001d)
+    // 差し替えたあともポーリングは続く
+    mock.press(0, 1)
+    await waitFor(session, (s) => (s.layers?.held.size ?? 0) > 0)
+    await session.dispose()
+  })
+
+  it('ファームを焼き直して定義の大きさが変わったら、キャッシュは使わない', async () => {
+    const caches = memoryCaches()
+    await warmUp(caches)
+    for (const [uid, entry] of caches.keymaps) {
+      caches.keymaps.set(uid, { ...entry, definitionSize: entry.definitionSize + 1 })
+    }
+
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    expect(keymapReads(mock)).toBeGreaterThan(0) // 普通に全部読んだ
     await session.dispose()
   })
 })
