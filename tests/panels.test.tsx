@@ -108,7 +108,7 @@ describe('LayerStrip', () => {
     const html = strip({ names: ['基本', '', '記号'], onRename: noop })
     expect(html).toContain('<span>L0</span><span class="font-medium max-md:hidden">基本</span>')
     expect(html).toContain('<span>L2</span><span class="font-medium max-md:hidden">記号</span>')
-    expect(html).toContain('ダブルクリックで名前を付ける')
+    expect(html).toContain('ダブルクリックで名前を付けられます')
   })
 })
 
@@ -127,7 +127,7 @@ describe('PreviewNotice', () => {
   it('押して固定したプレビューは、戻り方と「戻る」を出す', () => {
     const html = renderToStaticMarkup(<PreviewNotice layer={5} pinned onExit={noop} />)
     expect(html).toContain('をプレビュー中')
-    expect(html).toContain('キーを押すか Esc で戻る')
+    expect(html).toContain('キーを押すか Esc で戻ります')
     expect(html).toContain('>戻る<')
   })
 
@@ -136,7 +136,7 @@ describe('PreviewNotice', () => {
       <PreviewNotice layer={3} name="記号" pinned={false} onExit={noop} />
     )
     expect(html).toContain('L3 記号')
-    expect(html).toContain('ポインタを外すと戻る')
+    expect(html).toContain('ポインタを外すと戻ります')
     expect(html).not.toContain('>戻る<')
   })
 })
@@ -152,7 +152,7 @@ describe('オーバーレイの自動フェード', () => {
     expect(overlayFaded({ ...base, shownLayer: 2 })).toBe(false)
     expect(overlayFaded({ ...base, shift: true })).toBe(false)
     expect(overlayFaded({ ...base, status: 'unlocking' })).toBe(false)
-    expect(overlayFaded({ ...base, error: 'デバイスが応答しない' })).toBe(false)
+    expect(overlayFaded({ ...base, error: 'デバイスが応答しません' })).toBe(false)
     expect(overlayFaded({ ...base, autoFade: false })).toBe(false)
   })
 
@@ -307,7 +307,7 @@ describe('SettingsPanel', () => {
   it('繋いでいなければ名前の欄の代わりに案内を出す', () => {
     const html = panel({ layers: [], onRename: undefined })
     expect(html).not.toContain('の名前"')
-    expect(html).toContain('キーボードに繋ぐと付けられる')
+    expect(html).toContain('キーボードに繋ぐと付けられます')
   })
 
   it('ノブの位置とオーバーレイの設定は、いまの値を選んだ状態で出す', () => {
@@ -328,13 +328,15 @@ describe('SettingsPanel', () => {
     expect(panel()).toContain('e118:0001')
     expect(panel()).not.toContain('>忘れる<')
     expect(panel({ onForgetDevice: noop })).toContain('>忘れる<')
-    expect(panel({ settings: { ...panelSettings, grantedDevices: [] } })).toContain('まだ無い')
+    expect(panel({ settings: { ...panelSettings, grantedDevices: [] } })).toContain(
+      'まだありません'
+    )
   })
 
   it('後ろのぼかしは、使えない OS では押せなくしてそう書く', () => {
     expect(panel()).toMatch(/type="checkbox"[^>]*disabled=""/)
-    expect(panel()).toContain('Windows 11 でだけ使える')
-    expect(panel({ blurSupported: true })).toContain('強さは OS が決める')
+    expect(panel()).toContain('Windows 11 でだけ使えます')
+    expect(panel({ blurSupported: true })).toContain('強さは OS が決めます')
   })
 })
 
@@ -380,7 +382,7 @@ describe('SymbolFinder', () => {
 
   it('出せない記号のカードは押せなくし、そう書く', () => {
     const html = finder(new Map([['¥', []]]))
-    expect(html).toMatch(/disabled=""[^>]*aria-label="¥: このキーマップでは出せない"/)
+    expect(html).toMatch(/disabled=""[^>]*aria-label="¥: このキーマップでは出せません"/)
   })
 
   it('タップと長押しを兼ねるキーは「タップ」と添える', () => {

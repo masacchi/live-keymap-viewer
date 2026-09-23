@@ -144,7 +144,7 @@ export class WebHidTransport implements Transport {
       }
       throw lastError instanceof Error
         ? lastError
-        : new TransportError('デバイスと通信できなかった')
+        : new TransportError('デバイスと通信できませんでした')
     })
   }
 
@@ -167,7 +167,7 @@ export class WebHidTransport implements Transport {
         // 諦めるだけで、応答はあとから届くかもしれない。届いたら捨てて並びを戻す
         this.abandoned++
         this.abandonedAt = Date.now()
-        reject(new TransportError(`デバイスが応答しない(コマンド ${describeCommand(payload)})`))
+        reject(new TransportError(`デバイスが応答しません(コマンド ${describeCommand(payload)})`))
       }, timeoutMs)
       // report ID を持たないデバイスなので 0 で送る
       const report = new Uint8Array(MSG_LEN)

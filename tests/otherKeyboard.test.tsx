@@ -139,7 +139,7 @@ describe('対応できないキーボード', () => {
     const session = new KeyboardSession(mock, { sleep: yieldSleep })
     await session.start()
     const state = await waitFor(session, (s) => s.status === 'error')
-    expect(state.error).toContain('押しているキーを読み取れない')
+    expect(state.error).toContain('押しているキーを読み取れません')
     // 図そのものは読めているので、キーマップの確認には使える
     expect(state.geometry?.keys).toHaveLength(200)
     await session.dispose()

@@ -150,7 +150,7 @@ export function buildGeometry(
     const [row, col] = pair ?? [0, 0]
     if (matrix && (row >= matrix.rows || col >= matrix.cols)) {
       throw new Error(
-        `定義が壊れている: キーが ${row},${col} を指しているが matrix は rows=${matrix.rows} cols=${matrix.cols}`
+        `定義が壊れています: キーが ${row},${col} を指していますが、matrix は rows=${matrix.rows} cols=${matrix.cols} です`
       )
     }
 

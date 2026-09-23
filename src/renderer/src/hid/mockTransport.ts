@@ -194,7 +194,7 @@ export class MockTransport implements Transport {
   // --- Transport ---
 
   async send(request: Uint8Array, options?: SendOptions): Promise<Uint8Array> {
-    if (!this.isOpen) throw new TransportError('デバイスが開かれていない')
+    if (!this.isOpen) throw new TransportError('デバイスが開かれていません')
     const msg = pad(request)
     this.requests.push(msg)
     if (this.latencyMs > 0) {

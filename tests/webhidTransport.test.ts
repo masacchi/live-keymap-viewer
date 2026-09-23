@@ -203,7 +203,7 @@ describe('時間切れのメッセージ', () => {
     await transport.open()
     await expect(
       transport.send(new Uint8Array([0x02, 0x03]), { timeoutMs: 10, retries: 1 })
-    ).rejects.toThrow('デバイスが応答しない(コマンド 0x02 0x03)')
+    ).rejects.toThrow('デバイスが応答しません(コマンド 0x02 0x03)')
     await expect(
       transport.send(new Uint8Array([0x01]), { timeoutMs: 10, retries: 1 })
     ).rejects.toThrow('(コマンド 0x01)')

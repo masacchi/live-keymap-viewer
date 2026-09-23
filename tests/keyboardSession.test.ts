@@ -198,7 +198,7 @@ describe('KeyboardSession: ポーリング', () => {
     mock.send = async (request, opts) => {
       if (request[0] === 0x02 && failuresLeft > 0) {
         failuresLeft--
-        throw new TransportError('デバイスが応答しない(コマンド 0x02 0x03)')
+        throw new TransportError('デバイスが応答しません(コマンド 0x02 0x03)')
       }
       return original(request, opts)
     }
@@ -226,7 +226,8 @@ describe('KeyboardSession: ポーリング', () => {
 
     const original = mock.send.bind(mock)
     mock.send = async (request, o) => {
-      if (request[0] === 0x02) throw new TransportError('デバイスが応答しない(コマンド 0x02 0x03)')
+      if (request[0] === 0x02)
+        throw new TransportError('デバイスが応答しません(コマンド 0x02 0x03)')
       return original(request, o)
     }
     await waitFor(session, (s) => s.stalled)
@@ -234,7 +235,7 @@ describe('KeyboardSession: ポーリング', () => {
 
     opts.clock.t += STALL_LIMIT_MS // ドラッグでは説明が付かないほど詰まった
     const stopped = await waitFor(session, (s) => s.status === 'error')
-    expect(stopped.error).toContain('応答しない')
+    expect(stopped.error).toContain('応答しません')
     await session.dispose()
   })
 
@@ -355,7 +356,7 @@ describe('KeyboardSession: 読み直し', () => {
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
-      if (request[0] === 0x12) throw new TransportError('デバイスが応答しない(コマンド 0x12)')
+      if (request[0] === 0x12) throw new TransportError('デバイスが応答しません(コマンド 0x12)')
       return original(request, opts)
     }
 

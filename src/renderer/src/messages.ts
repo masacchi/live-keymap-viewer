@@ -18,13 +18,15 @@
  *
  * ## 書き方
  *
- * - ボタン・見出し・ラベルは**体言止め**(「キーマップを読み直す」「濃さ」)
- * - 説明とツールチップは**常体の言い切り**(「〜する」「〜できる」「〜になる」)。
- *   「しばらく待つ」「確かめる」のような**メモ調の言い切りは使わない** ― 読み手への指示に
- *   見えてしまう。起きることを説明する形(「少し待つと戻る」「〜の可能性がある」)にする
+ * - **文はですます調**(「〜します」「〜できます」「〜してください」)。説明・ツールチップ・
+ *   エラーの案内など、文の形をしているものはすべてこちら
+ * - **ラベルは体言止めのまま**(ボタン・見出し・状態・チップ・単位)。「接続中…」「濃さ」
+ *   「長押し中」のような短い札まで丁寧にすると、かえって読みにくい
  * - **「押す」はキーボードのキーにだけ使う。**マウス操作は「クリック」「選ぶ」。
  *   このアプリは画面の中にもキーが並ぶので、混ざると何を押すのか分からなくなる
  * - 専門用語(matrix state など)はそのまま出さない。画面では起きていることの言葉にする
+ * - **硬い言い回しを避ける。**「アンロックが要る」→「アンロックが必要です」、
+ *   「効いている」→「押されています」のように、ふだん使う言葉で書く
  */
 
 export const messages = {
@@ -37,7 +39,7 @@ export const messages = {
     error: 'エラー',
     reloading: '読み直し中…',
     stalled: '応答待ち…',
-    stalledHint: '応答が途切れている。省電力で一瞬詰まることがあり、少し待つと戻る'
+    stalledHint: '応答が途切れています。省電力で一瞬詰まることがあり、少し待つと戻ります'
   },
 
   deviceMenu: {
@@ -49,7 +51,7 @@ export const messages = {
     toOverlay: 'オーバーレイへ',
     toNormal: '通常ウィンドウへ',
     modeShortcut: 'Ctrl+Alt+K',
-    modeShortcutHint: 'Ctrl+Alt+K でも切り替えられる',
+    modeShortcutHint: 'Ctrl+Alt+K でも切り替えられます',
     symbols: '記号の出し方',
     settings: '設定'
   },
@@ -69,23 +71,23 @@ export const messages = {
 
   layerStrip: {
     chipTitle: (layer: number, how: string | null) => (how ? `L${layer}: ${how}` : `L${layer}`),
-    pinnedHint: 'クリックすると実際の表示に戻る',
-    unpinnedHint: 'ポインタを乗せると表示、クリックで固定',
-    renameHint: 'ダブルクリックで名前を付ける',
+    pinnedHint: 'クリックすると実際の表示に戻ります',
+    unpinnedHint: 'ポインタを乗せると表示、クリックで固定します',
+    renameHint: 'ダブルクリックで名前を付けられます',
     /** ツールチップの文をつなぐ。 */
     joiner: '。',
     showBlank: (count: number) => `+${count} 空き`,
     showBlankTitle: (layers: readonly number[]) =>
-      `L${layers.join(' / L')} は中身が無い(透過・無効か L0 と同じ)。クリックで一覧に出す`,
+      `L${layers.join(' / L')} は中身がありません(透過・無効か L0 と同じ)。クリックで一覧に出せます`,
     hideBlank: '隠す',
-    hideBlankTitle: '中身の無いレイヤーを隠す',
+    hideBlankTitle: '中身の無いレイヤーを隠します',
     nameLabel: (layer: number) => `L${layer} の名前`
   },
 
   preview: {
     previewing: 'をプレビュー中',
-    pinnedHint: '(キーを押すか Esc で戻る)',
-    hoverHint: '(ポインタを外すと戻る)',
+    pinnedHint: '(キーを押すか Esc で戻ります)',
+    hoverHint: '(ポインタを外すと戻ります)',
     back: '戻る',
     /** 記号の出し方で選んだとき(「@ は L2 + W」の「は」)。 */
     symbolIs: 'は'
@@ -105,8 +107,8 @@ export const messages = {
   },
 
   modifiers: {
-    on: (name: string) => `${name} が効いている`,
-    onForReader: '(効いている)'
+    on: (name: string) => `${name} が押されています`,
+    onForReader: '(押されています)'
   },
 
   unlock: {
@@ -114,13 +116,14 @@ export const messages = {
     separator: '・',
     pressTogether: 'を同時に、',
     pressOne: 'を、',
-    untilFull: 'バーが埋まるまで押し続ける',
-    pressHighlighted: '図で白い破線が回っているキーを、バーが埋まるまで押し続ける',
+    untilFull: 'バーが埋まるまで押し続けてください',
+    pressHighlighted: '図で白い破線が回っているキーを、バーが埋まるまで押し続けてください',
     explain:
-      '押しているキーを読むには、Vial のアンロックが要る。対象は図で白い破線が回っているキー。' +
-      '押しても光らないが、バーが進んでいれば効いている。途中で離すとやり直しになる。' +
-      'アンロックを解除したいときは、使い終わったあとでキーボードを挿し直す。',
-    mockHint: ' (モックでは、キーをクリックすると押したままになる。もう一度クリックで離す)'
+      '押しているキーを読み取るには、Vial のアンロックが必要です。対象は、図で白い破線が回っているキーです。' +
+      '押しても光りませんが、バーが進んでいれば正しく押せています。途中で離すとやり直しになります。' +
+      'アンロックを解除したいときは、使い終わったあとでキーボードを挿し直してください。',
+    mockHint:
+      ' (モックでは、キーをクリックすると押したままになります。もう一度クリックすると離します)'
   },
 
   loading: {
@@ -135,20 +138,20 @@ export const messages = {
   },
 
   empty: {
-    lead: 'Vial に対応したキーボードを繋ぐと、キーマップと押しているキーがここに出る。',
+    lead: 'Vial に対応したキーボードを繋ぐと、キーマップと押しているキーがここに出ます。',
     connect: 'キーボードに接続',
     mock: 'モックで試す'
   },
 
   error: {
-    reconnecting: '自動で繋ぎ直している…',
+    reconnecting: '自動で繋ぎ直しています…',
     retry: '接続し直す'
   },
 
   /** 画面そのものが落ちたとき(components/ErrorBoundary.tsx)。 */
   crash: {
-    title: '画面でエラーが起きた',
-    hint: '詳しい記録は、設定の「このアプリ」から開けるログに残っている。Ctrl+Alt+K でも通常ウィンドウとオーバーレイを行き来できる',
+    title: '画面でエラーが起きました',
+    hint: '詳しい記録は、設定の「このアプリ」から開けるログに残っています。Ctrl+Alt+K でも通常ウィンドウとオーバーレイを行き来できます',
     reload: '画面を読み込み直す',
     toNormal: '通常ウィンドウへ'
   },
@@ -162,31 +165,32 @@ export const messages = {
   settings: {
     layerNames: 'レイヤー名',
     unnamed: '名前なし',
-    layerNamesHint: 'キーの色帯とツールバーに出る。キーボードごとに覚えていて、空にすると消える',
-    connectToName: 'キーボードに繋ぐと付けられる',
+    layerNamesHint:
+      'キーの色帯とツールバーに出ます。キーボードごとに覚えていて、空にすると消えます',
+    connectToName: 'キーボードに繋ぐと付けられます',
     knobs: 'ノブの割り当て',
     knobsTop: '図の上',
     knobsBottom: '図の下',
     overlay: 'オーバーレイ',
     opacity: '濃さ',
     autoFade: 'ベースレイヤー(L0)のあいだは薄くする',
-    autoFadeHint: 'ほかのレイヤーに入るか Shift を押すと濃く戻る',
+    autoFadeHint: 'ほかのレイヤーに入るか Shift を押すと濃く戻ります',
     fadedOpacity: '薄くしたとき',
-    fadedOpacityHint: '薄くしたときに残す濃さ。0% で消える(左上のパネルは残る)',
+    fadedOpacityHint: '薄くしたときに残す濃さです。0% で消えます(左上のパネルは残ります)',
     blur: '後ろの画面をぼかす',
     blurHint:
-      'すりガラスのようにぼかす(Windows 11)。強さは OS が決める。薄くしているあいだは外れる',
-    blurUnsupported: 'Windows 11 でだけ使える',
-    overlayPanelToo: 'オーバーレイの左上のパネルからも変えられる',
+      'すりガラスのようにぼかします(Windows 11)。強さは OS が決めます。薄くしているあいだは外れます',
+    blurUnsupported: 'Windows 11 でだけ使えます',
+    overlayPanelToo: 'オーバーレイの左上のパネルからも変えられます',
     keys: 'キーの判定',
     tappingTerm: '長押しまで',
     tappingTermValue: (ms: number) => `${ms} ms`,
     tappingTermHint:
-      'この時間押し続けると長押し(LT のレイヤー)と見なす。キーボード側の設定(tapping term / hold timeout)と同じ値にすると表示がずれない。Tap Dance はキーボードに設定された時間を使う',
+      'この時間押し続けると長押し(LT のレイヤー)と判定します。キーボード側の設定(tapping term / hold timeout)と同じ値にすると、表示がずれません。Tap Dance はキーボードに設定された時間を使います',
     devices: '許可したキーボード',
     devicesHint:
-      '起動したときに自動で繋ぐ。「忘れる」を押すと、次からは「キーボードに接続」で選び直しになる',
-    noDevices: 'まだ無い。一度接続すれば、次からは自動で繋がる',
+      '起動したときに自動で繋ぎます。「忘れる」を押すと、次からは「キーボードに接続」で選び直しになります',
+    noDevices: 'まだありません。一度接続すれば、次からは自動で繋がります',
     deviceId: (vendorId: number, productId: number) =>
       `${vendorId.toString(16).padStart(4, '0')}:${productId.toString(16).padStart(4, '0')}`,
     forget: '忘れる',
@@ -194,7 +198,7 @@ export const messages = {
     /** 置き直しても版は変わらないので、ビルドした時刻で見分ける。 */
     build: (version: string, at: string) => (at ? `v${version}(${at} のビルド)` : `v${version}`),
     electron: (version: string) => `Electron ${version}`,
-    logHint: '起動・警告・接続が切れた理由・画面のエラーが残っている',
+    logHint: '起動・警告・接続が切れた理由・画面のエラーが残っています',
     openLog: 'ログを開く'
   },
 
@@ -203,17 +207,18 @@ export const messages = {
     resize: 'ドラッグで大きさを変える',
     opacity: '濃さ',
     autoFade: 'L0 で薄く',
-    autoFadeHint: 'ベースレイヤーのあいだは図を薄くする。ほかのレイヤーや Shift で濃く戻る',
+    autoFadeHint:
+      'ベースレイヤーのあいだは図を薄くします。ほかのレイヤーや Shift を押すと濃く戻ります',
     fadedOpacity: '残す',
-    fadedOpacityHint: '薄くしたときに残す濃さ。0% で消える(このパネルは残る)',
+    fadedOpacityHint: '薄くしたときに残す濃さです。0% で消えます(このパネルは残ります)',
     blur: '後ろをぼかす',
-    blurHint: '後ろの画面をすりガラスのようにぼかす(Windows 11)。薄くしているあいだは外れる',
+    blurHint: '後ろの画面をすりガラスのようにぼかします(Windows 11)。薄くしているあいだは外れます',
     exit: '通常ウィンドウに戻す'
   },
 
   symbols: {
-    lead: '選ぶと、その記号を打つキーを図で示す。キーを押すか Esc で戻る',
-    unavailable: 'このキーマップでは出せない',
+    lead: '選ぶと、その記号を打つキーを図で示します。キーを押すか Esc で戻ります',
+    unavailable: 'このキーマップでは出せません',
     /** 2 番目に手数の少ない打ち方の前に置く。 */
     alternative: 'または',
     or: ' / または ',
@@ -222,13 +227,13 @@ export const messages = {
 
   /** 接続まわりで、そのまま画面に出す案内(session/keyboardConnection.ts)。 */
   connection: {
-    noWebHid: 'WebHID が使えない',
+    noWebHid: 'WebHID が使えません',
     probing: '応答するインターフェースを確認中',
     noResponse: (tried: number) =>
-      `キーボードが応答しない(${tried} 個のインターフェースを試した)。` +
-      'Vial など別のアプリが使っているか、USB / Bluetooth の出力先が違う可能性がある',
+      `キーボードが応答しません(${tried} 個のインターフェースを試しました)。` +
+      'Vial など別のアプリが使っているか、USB / Bluetooth の出力先が違う可能性があります',
     noMatrix:
-      'このキーボードでは押しているキーを読み取れない(Vial のプロトコルか、行列の大きさの制限)',
-    deviceGone: 'キーボードが外れた'
+      'このキーボードでは押しているキーを読み取れません(Vial のプロトコルか、行列の大きさの制限)',
+    deviceGone: 'キーボードが外れました'
   }
 } as const

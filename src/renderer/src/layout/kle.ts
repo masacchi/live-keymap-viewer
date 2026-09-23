@@ -101,7 +101,7 @@ export function parseKle(rows: unknown[]): KleKeyboard {
       const props = item as KleProps
 
       if (k !== 0 && ('r' in props || 'rx' in props || 'ry' in props)) {
-        throw new Error('KLE: 回転は行の先頭キーでしか指定できない')
+        throw new Error('KLE: 回転は行の先頭キーでしか指定できません')
       }
       if (typeof props.r === 'number') rotationAngle = props.r
       if (typeof props.rx === 'number') {
