@@ -35,11 +35,16 @@ const HID_RELEASE_TIMEOUT_MS = 600
  * Chromium が重ねられるのは自分の中身だけなので、OS に描いてもらう。ぼかしの強さは OS が
  * 決めるので、アプリでは入り切りしかできない。ほかの OS では何もしない。古い Windows では
  * 効かないだけのはずだが、念のため失敗しても落とさない。
+ *
+ * 呼ぶのはオーバーレイ(transparent で作ったウィンドウ)だけ。Electron は材質に合わせて背景色を
+ * 塗り直し、'none' では**白**にする(v44 の electron_api_browser_window.cc)。そのままだと
+ * 「L0 で薄く」で外すたびに、透かしていたはずの背景が白い板になる。なので透明に塗り直す。
  */
 function setBackdrop(win: BrowserWindow, on: boolean): void {
   if (process.platform !== 'win32') return
   try {
     win.setBackgroundMaterial(on ? 'acrylic' : 'none')
+    if (!on) win.setBackgroundColor('#00000000')
   } catch (error) {
     log('warn', '背景のぼかしを切り替えられなかった', error)
   }

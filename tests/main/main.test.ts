@@ -24,6 +24,7 @@ const fake = vi.hoisted(() => {
     }
 
     constructor(readonly options: Record<string, unknown>) {
+      this.backgroundColor = options.backgroundColor as string | undefined
       this.bounds = {
         x: options.x as number,
         y: options.y as number,
@@ -76,8 +77,17 @@ const fake = vi.hoisted(() => {
     }
     /** setBackgroundMaterial で最後に渡されたもの。呼ばれていなければ null。 */
     material: string | null = null
+    /** いまの背景色。作ったときの backgroundColor から始まる。 */
+    backgroundColor: string | undefined = undefined
     setBackgroundMaterial(material: string): void {
       this.material = material
+      // Electron と同じく、材質に合わせて背景色も塗り直す(v44 の electron_api_browser_window.cc)。
+      // 'none' では白にされるので、透明なオーバーレイが白い板になる
+      if (material === 'none') this.backgroundColor = '#FFFFFFFF'
+      else if (['acrylic', 'mica', 'tabbed'].includes(material)) this.backgroundColor = '#00000000'
+    }
+    setBackgroundColor(color: string): void {
+      this.backgroundColor = color
     }
     shown = false
     show(): void {
@@ -398,6 +408,21 @@ describe('WindowManager', () => {
       await invoke('settings:update', { overlayBlur: false })
       expect(win.material).toBe('none')
       expect(settings.loadSettings().overlayBlur).toBe(false)
+    })
+
+    it('ぼかしを外しても、オーバーレイの背景は透明のまま(Electron が白で塗り直すのを戻す)', async () => {
+      // 「L0 で薄く」で薄くするたびに背景が白い板になり、濃く戻すと直っていた
+      onPlatform('win32')
+      const { win, windows } = await setup({ mode: 'overlay', overlayBlur: true })
+      windows.setOverlayBlurActive(false)
+      expect(win.material).toBe('none')
+      expect(win.backgroundColor).toBe('#00000000')
+    })
+
+    it('ぼかしを切った設定で開いても、オーバーレイの背景は透明', async () => {
+      onPlatform('win32')
+      const { win } = await setup({ mode: 'overlay', overlayBlur: false })
+      expect(win.backgroundColor).toBe('#00000000')
     })
 
     it('Windows 以外ではぼかしに何もしない(保存はする)', async () => {
