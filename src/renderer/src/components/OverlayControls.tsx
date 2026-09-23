@@ -114,23 +114,26 @@ export function OverlayControls({
           active ? 'opacity-100' : 'opacity-45'
         )}
       >
+        {/*
+         * 移動のつまみ。「⠿」とレイヤーの札をまとめてつかめるようにし、パネルの余白
+         * (左と上下)まで広げる。以前は「⠿」の 1 文字だけで、狙って押さないとつかめなかった
+         */}
         <span
           title={messages.overlay.move}
           onPointerDown={startDrag('move')}
           onPointerMove={onDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
-          className="cursor-move select-none px-1 text-sm leading-none text-muted"
+          className="-my-1.5 -ml-2 flex cursor-move items-center gap-2 self-stretch py-1.5 pl-2"
         >
-          ⠿
-        </span>
-
-        <span
-          className="rounded-md px-1.5 py-0.5 text-xs font-bold leading-none text-ink-inverse"
-          style={{ backgroundColor: layerColor(displayLayer) }}
-        >
-          L{displayLayer}
-          {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
+          <span className="px-0.5 text-base leading-none text-muted">⠿</span>
+          <span
+            className="rounded-md px-1.5 py-0.5 text-xs font-bold leading-none text-ink-inverse"
+            style={{ backgroundColor: layerColor(displayLayer) }}
+          >
+            L{displayLayer}
+            {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
+          </span>
         </span>
 
         {/* 畳んでいるあいだは隠すだけ(外すと、広げた瞬間にパネルの幅が決まらずポインタが外れる) */}
@@ -189,7 +192,10 @@ export function OverlayControls({
         </div>
       </div>
 
-      {/* 右下のリサイズつまみ。枠が無いので OS の境界は使えない */}
+      {/*
+       * 右下のリサイズつまみ。枠が無いので OS の境界は使えない。
+       * 見た目の印(角の線)は小さいまま、つかめる範囲だけ 32px に広げる
+       */}
       <div
         data-interactive
         title={messages.overlay.resize}
@@ -197,12 +203,16 @@ export function OverlayControls({
         onPointerMove={onDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={cn(
-          'absolute bottom-0 right-0 z-20 size-5 cursor-nwse-resize',
-          'border-b-[3px] border-r-[3px] border-muted transition-opacity',
-          active ? 'opacity-100' : 'opacity-40'
-        )}
-      />
+        className="absolute bottom-0 right-0 z-20 size-8 cursor-nwse-resize"
+      >
+        <span
+          className={cn(
+            'absolute bottom-0 right-0 size-5',
+            'border-b-[3px] border-r-[3px] border-muted transition-opacity',
+            active ? 'opacity-100' : 'opacity-40'
+          )}
+        />
+      </div>
     </>
   )
 }
