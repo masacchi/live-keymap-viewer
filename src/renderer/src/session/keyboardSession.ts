@@ -22,7 +22,7 @@
 
 import { emptyMatrix, LayerEngine, type LayerSnapshot } from '../engine/layerState'
 import { VIAL_UNLOCK_COUNTER_MAX } from '../hid/constants'
-import type { Transport } from '../hid/transport'
+import { type Transport, TransportError } from '../hid/transport'
 import {
   type DefinitionCache,
   getMatrixState,
@@ -44,17 +44,33 @@ export const MATRIX_POLL_MS = 20
 /** アンロックのポーリング間隔。vial-gui と同じ。 */
 export const UNLOCK_POLL_MS = 200
 /**
- * matrix の読み取りが連続でこれだけ失敗したら、切れたと見なす。
+ * 応答が返らないまま、これだけ続いたら切れたと見なす(ms)。
  *
- * 1 回の読み取りは 200ms × 3 回まで投げ直す(hid/vial.ts)。以前はその 1 回が失敗しただけで
- * セッションを落としていたので、USB でも「少し放置すると切断される」ことがあった ―
- * OS の省電力(触っていないときのプロセスの間引き)やファームの省電力で、応答が一瞬詰まるだけで
- * 落ちていた。連続で失敗したときだけ切り、そのあいだは最後の表示のまま読み続ける。
- * ケーブルが抜けたときは即座に失敗が返るので、これだけ数えてもすぐ切断に至る。
+ * 以前は「連続 5 回失敗」で数えていて、合計 3 秒ほどで切れていた。これだと
+ * **ウィンドウの枠をドラッグしているあいだに切断される**。Windows では移動・リサイズの
+ * ドラッグ中、ブラウザ(main)プロセスのメッセージループが止まり、WebHID の往復は
+ * main を通るので応答が返らない。数秒のドラッグで切断 → 繋ぎ直し → キーマップの丸ごと
+ * 読み直し、になっていた。OS やファームの省電力で一瞬詰まるのも同じ。
+ *
+ * 回数ではなく時間で数えるのは、往復が遅いほど 1 回の失敗に時間がかかるため
+ * (USB は 600ms/回、BT ではもっと)。待っているあいだは最後の表示のまま読み続ける。
+ *
+ * 長く待てるのは、**時間切れ以外の失敗は待たずに切る**から(isTimeout)。ケーブルが抜けた・
+ * デバイスが消えたときは書き込みそのものが失敗し、時間切れを待たずに即座に返る。
  */
-export const POLL_FAIL_LIMIT = 5
+export const STALL_LIMIT_MS = 15_000
 /** 読み取りに失敗したあと、次を投げるまでの待ち。詰まっている相手に間を置く。 */
 export const POLL_RETRY_MS = 100
+
+/**
+ * 時間切れ(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
+ *
+ * WebHidTransport は時間切れだけを TransportError にし、書き込みそのものの失敗
+ * (デバイスが消えた・開けていない)は元の例外をそのまま投げる(hid/transport.ts)。
+ */
+function isTimeout(error: unknown): boolean {
+  return error instanceof TransportError
+}
 
 export type SessionStatus = 'connecting' | 'loading' | 'unlocking' | 'ready' | 'error'
 
@@ -273,7 +289,18 @@ export class KeyboardSession {
       this.update({ reloading: false })
       void this.runPolling(gen, next, engine)
     } catch (error) {
-      if (this.alive(gen)) this.fail(error)
+      if (!this.alive(gen)) return
+      // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま
+      // ポーリングに戻す(表示は続けられるし、次のフォーカスや手動でまた読み直せる)。
+      // 以前はここで error にしていたので、ウィンドウに戻った拍子に 1 回詰まっただけで
+      // 接続が切れ、繋ぎ直しで丸ごと読み直していた
+      const engine = this.current.engine
+      if (isTimeout(error) && engine) {
+        this.update({ reloading: false })
+        void this.runPolling(gen, previous, engine)
+        return
+      }
+      this.fail(error)
     }
   }
 
@@ -403,8 +430,8 @@ export class KeyboardSession {
   ): Promise<void> {
     this.lastSignature = ''
     this.update({ status: 'ready', unlock: null, stalled: false })
-    /** 連続で失敗した回数。1 回でも読めたら 0 に戻る。 */
-    let failures = 0
+    /** 応答が返らなくなった時刻。1 回でも読めたら null に戻る。 */
+    let stalledSince: number | null = null
     try {
       while (this.alive(gen)) {
         const started = this.now()
@@ -413,14 +440,17 @@ export class KeyboardSession {
           matrix = await getMatrixState(this.transport, snapshot.rows, snapshot.cols)
         } catch (error) {
           if (!this.alive(gen)) return
-          if (++failures >= POLL_FAIL_LIMIT) throw error
+          // 時間切れ以外(デバイスが消えた・書き込みに失敗した)は待っても直らない
+          if (!isTimeout(error)) throw error
+          if (stalledSince === null) stalledSince = started
+          if (started - stalledSince >= STALL_LIMIT_MS) throw error
           if (!this.current.stalled) this.update({ stalled: true })
           await this.sleep(POLL_RETRY_MS)
           continue
         }
         if (!this.alive(gen)) return
-        if (failures > 0) {
-          failures = 0
+        if (stalledSince !== null) {
+          stalledSince = null
           this.update({ stalled: false })
         }
 

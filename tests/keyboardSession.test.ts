@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
+import { TransportError } from '@/hid/transport'
 import { decodeKeycode, formatKeycode } from '@/keycodes/decode'
-import { KeyboardSession, type SessionOptions, type SessionState } from '@/session/keyboardSession'
+import {
+  KeyboardSession,
+  type SessionOptions,
+  type SessionState,
+  STALL_LIMIT_MS
+} from '@/session/keyboardSession'
 
 /** ループが毎回イベントループに制御を返すようにする(でないとテスト側が進めない)。 */
 const yieldSleep = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
@@ -191,7 +197,7 @@ describe('KeyboardSession: ポーリング', () => {
     mock.send = async (request, opts) => {
       if (request[0] === 0x02 && failuresLeft > 0) {
         failuresLeft--
-        throw new Error('応答しない')
+        throw new TransportError('デバイスが応答しない(コマンド 0x02 0x03)')
       }
       return original(request, opts)
     }
@@ -208,10 +214,34 @@ describe('KeyboardSession: ポーリング', () => {
     await session.dispose()
   })
 
-  it('通信が失敗したら error にして止まる', async () => {
+  it('応答が返らないあいだは粘り、限界を超えたら切る', async () => {
+    // Windows ではウィンドウの枠をドラッグしているあいだ main のメッセージループが止まり、
+    // WebHID の往復が返らない。数秒で切っていたので、ドラッグのたびに繋ぎ直していた
+    const opts = options()
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, opts)
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+
+    const original = mock.send.bind(mock)
+    mock.send = async (request, o) => {
+      if (request[0] === 0x02) throw new TransportError('デバイスが応答しない(コマンド 0x02 0x03)')
+      return original(request, o)
+    }
+    await waitFor(session, (s) => s.stalled)
+    expect(session.state.status).toBe('ready') // 図は最後の表示のまま、まだ切らない
+
+    opts.clock.t += STALL_LIMIT_MS // ドラッグでは説明が付かないほど詰まった
+    const stopped = await waitFor(session, (s) => s.status === 'error')
+    expect(stopped.error).toContain('応答しない')
+    await session.dispose()
+  })
+
+  it('時間切れ以外の失敗(デバイスが消えた)は待たずに切る', async () => {
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
+      // 書き込みそのものの失敗。待っても直らないので、時間切れの粘りには入れない
       if (request[0] === 0x02) throw new Error('ケーブルが抜けた')
       return original(request, opts)
     }
@@ -228,6 +258,27 @@ describe('KeyboardSession: ポーリング', () => {
 })
 
 describe('KeyboardSession: 読み直し', () => {
+  it('読み直しが時間切れでも、セッションは落とさず前のキーマップで続ける', async () => {
+    // ウィンドウに戻った拍子(フォーカスで自動の読み直し)に 1 回詰まっただけで切れていた
+    const { session, mock } = await readySession()
+    const original = mock.send.bind(mock)
+    mock.send = async (request, opts) => {
+      if (request[0] === 0x12) throw new TransportError('デバイスが応答しない(コマンド 0x12)')
+      return original(request, opts)
+    }
+
+    await session.reload()
+    expect(session.state.status).toBe('ready')
+    expect(session.state.error).toBeNull()
+    expect(session.state.reloading).toBe(false)
+
+    // 読み続けている
+    mock.send = original
+    mock.press(0, 1)
+    await waitFor(session, (s) => (s.layers?.held.size ?? 0) > 0)
+    await session.dispose()
+  })
+
   it('Vial で変えたキーマップを拾い、ポーリングを続ける', async () => {
     const { session, mock } = await readySession()
     const geometryBefore = session.state.geometry
