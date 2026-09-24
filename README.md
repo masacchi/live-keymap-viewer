@@ -17,13 +17,14 @@ Vial キーボード(まずは Cornix LP)の **押しているキー** と **い
 
 GitHub のリリース(または Actions の実行結果の Artifacts)から、どちらかを取ってくる(Windows x64 向け):
 
-- **インストーラー**(`…-win-x64-setup.exe`)… 実行するとスタートメニューに入る。管理者権限は要らない
-- **ポータブル版**(`…-win-x64-portable.zip`)… 展開した `LiveKeymapViewer/` の中の `LiveKeymapViewer.exe` を実行する
+- **インストーラー**(`…-win-x64-setup.exe`、2MB ほど)… 実行するとスタートメニューに入る。管理者権限は要らない
+- **ポータブル版**(`…-win-x64-portable.exe`、6MB ほど)… そのまま実行する(exe 1 つで動く)
 
-署名していないので、初回は SmartScreen の警告が出る(「詳細情報」→「実行」)。
+画面は Windows の **WebView2** で描く。Windows 11 には最初から入っている(Windows 10 で無ければ、
+インストーラーが入れ方を案内する)。署名していないので、初回は SmartScreen の警告が出る(「詳細情報」→「実行」)。
 ビルドの流れは [docs/DEVELOPMENT.md §5](docs/DEVELOPMENT.md#5-windows-に置く)。
 
-手元で作って Windows に置くなら(WSL):
+手元で作って Windows に置くなら(WSL。Rust のビルドは podman のコンテナの中で動く):
 
 ```bash
 npm install
@@ -31,7 +32,6 @@ npm run deploy:win
 ```
 
 Windows のデスクトップに `LiveKeymapViewer/` ができるので、中の `LiveKeymapViewer.exe` を実行する。
-**フォルダごと**でないと動かない(exe だけを持ち出すと起動しない)。
 
 実機が無くても、画面の **「モックで試す」** で動きを確かめられる。モックでは図のキーを
 クリックすると押したままになり、もう一度で離す(アンロックは色の付いた 2 つを押したままにして 10 秒ほど)。
@@ -152,9 +152,13 @@ WSL 上で起動した場合は、USB でもキーボードは見えない(WSL2 
 
 ## 開発
 
+アプリは **Tauri 2**(外側は Rust、画面は React)。Rust と Windows 向けのビルドの道具は
+コンテナ([.devcontainer/](.devcontainer/))に入っていて、WSL から打ったコマンドは自動でその中で動く。
+
 ```bash
-npm run dev      # 開発サーバーつきで起動
-npm run check    # 型チェック + lint + テスト(コミット時に husky が自動で走らせる)
+npm run dev          # 画面だけを開発サーバーで出す(ブラウザで開く。「モックで試す」で触れる)
+npm run check        # 型チェック + lint + テスト(コミット時に husky が自動で走らせる)
+npm run check:rust   # Rust の整形・clippy・テスト(src-tauri/ を触ったコミットで自動で走る)
 ```
 
 | ドキュメント | 内容 |
@@ -169,6 +173,6 @@ npm run check    # 型チェック + lint + テスト(コミット時に husky �
 ## ライセンスについて
 
 プロトコルの仕様は `vial-kb/vial-gui` と `vial-kb/vial-qmk`(どちらも GPL-2.0-or-later)を
-読んで確かめたが、コードは独自に TypeScript で書き起こしている。
+読んで確かめたが、コードは独自に TypeScript(と Rust)で書き起こしている。
 `src/renderer/src/keycodes/table.generated.ts` は `keycodes_v6.py` の数値定数を抽出したもの。
 詳細は [docs/PROTOCOL.md](docs/PROTOCOL.md) §9。
