@@ -1,5 +1,6 @@
 # コミット前に、型チェック・lint(Biome)・テストを通す(npm run check)。
-# 5 秒ほどかかる。急ぎで飛ばしたいときは `git commit --no-verify`(または HUSKY=0)。
+# 5 秒ほどかかる。src-tauri/ を触ったときは Rust の検査(npm run check:rust)も通す。
+# 急ぎで飛ばしたいときは `git commit --no-verify`(または HUSKY=0)。
 #
 # 注意: 見るのは作業ツリー全体で、ステージした内容だけではない。
 # 一部だけステージしてコミットすると、ステージしていない変更も込みで検査される。
@@ -20,4 +21,15 @@ if ! npm run --silent check; then
   echo "pre-commit: npm run check が通らなかったのでコミットを止めた。" >&2
   echo "  直してからコミットし直すこと。整形だけなら npm run format で直る。" >&2
   exit 1
+fi
+
+# Rust(src-tauri/)を触ったときだけ、Rust の検査も通す。コンテナで動くので数十秒かかる
+# (WSL からなら scripts/container.mjs が podman で中に入る)
+if git diff --cached --name-only | grep -q '^src-tauri/'; then
+  if ! npm run --silent check:rust; then
+    echo "" >&2
+    echo "pre-commit: npm run check:rust が通らなかったのでコミットを止めた。" >&2
+    echo "  整形だけなら npm run container -- cargo fmt --manifest-path src-tauri/Cargo.toml で直る。" >&2
+    exit 1
+  fi
 fi

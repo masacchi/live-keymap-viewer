@@ -249,7 +249,7 @@ export function SettingsPanel({
           <p className="text-xs text-ink">
             {messages.settings.build(appInfo.version, formatBuildTime(appInfo.buildTime))}
           </p>
-          <p className="text-2xs text-muted">{messages.settings.electron(appInfo.electron)}</p>
+          <p className="text-2xs text-muted">{messages.settings.runtime(appInfo.runtime)}</p>
           <p className="break-all font-mono text-2xs text-faint">{appInfo.logPath}</p>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => window.api?.openLog()}>

@@ -341,14 +341,14 @@ describe('SettingsPanel', () => {
     const html = panel({
       appInfo: {
         version: '0.1.0',
-        electron: '44.4.3',
+        runtime: 'WebView2 153.0.4234.48',
         buildTime: '2026-09-23T10:48:00.000Z',
         logPath: 'C:\\Users\\masato\\AppData\\Roaming\\live-keymap-viewer\\log.txt'
       }
     })
     expect(html).toContain('このアプリ')
     expect(html).toContain('v0.1.0')
-    expect(html).toContain('Electron 44.4.3')
+    expect(html).toContain('WebView2 153.0.4234.48')
     expect(html).toContain('log.txt')
   })
 

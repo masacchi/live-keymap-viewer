@@ -5,10 +5,12 @@
 #   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
 #                              (タグが無ければ、ビルドした commit に付ける)
 #
-# 作るもの: インストーラー(…-setup.exe)と、ポータブル版の zip。
+# 作るもの: インストーラー(…-setup.exe)と、ポータブル版(exe 単体)。
 #
-# Ubuntu で作る。package-win.mjs も installer-win.mjs も Linux で Windows 版を作る作りで
-# (wine も Windows も要らない)、手元の WSL と同じ手順・同じ結果になるため。
+# Ubuntu で作る。package-win.mjs(cargo-xwin でクロスビルド)も installer-win.mjs も Linux で
+# Windows 版を作る作りで(wine も Windows も要らない)、手元のコンテナと同じ手順・同じ結果になるため。
+# ツールは .devcontainer/Dockerfile と同じものを直に入れる(CI ではコンテナを通さない ―
+# scripts/container.mjs は CI ならそのまま動かす)。
 # 詳しくは docs/DEVELOPMENT.md「GitHub Actions でのビルド」。
 
 name: Windows 版のビルド
@@ -27,7 +29,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Rust の初回ビルド(キャッシュが無いとき)に 10 分ほどかかる
+    timeout-minutes: 45
     permissions:
       # リリースを作るため(最後の手順だけが使う)
       contents: write
@@ -79,28 +82,43 @@ jobs:
           echo "label=$label" >> "$GITHUB_OUTPUT"
           echo "版: $label / リリース: ${tag:-しない}"
 
+      - name: ビルドの道具を入れる(.devcontainer/Dockerfile と同じもの)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev librsvg2-dev libudev-dev clang lld llvm nsis
+          rustup toolchain install stable --profile minimal \
+            --component clippy,rustfmt --target x86_64-pc-windows-msvc
+          rustup default stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-xwin
+
+      # crate のビルド結果と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK を残す
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-directories: ~/.cache/cargo-xwin
+
       - run: npm ci
 
       - name: 検査(型チェック・lint・テスト)
         run: npm run check
 
-      - name: Windows 版一式を作る(dist/win32-x64)
+      - name: 検査(Rust の整形・clippy・テスト)
+        run: npm run check:rust
+
+      - name: Windows 版を作る(dist/win32-x64/LiveKeymapViewer.exe)
         run: npm run package:win
 
-      - name: NSIS を入れる
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nsis
-
-      - name: インストーラーとポータブル版の zip を作る
+      - name: インストーラーとポータブル版を作る
         env:
           LABEL: ${{ steps.meta.outputs.label }}
         run: |
           node scripts/installer-win.mjs --out "dist/release/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
-          # 展開したときにフォルダが 1 つできるように、LiveKeymapViewer/ の下に入れる。
-          # exe 単体では動かないので、ばらばらに展開されると困る
-          mv dist/win32-x64 dist/LiveKeymapViewer
-          (cd dist && zip -qr "release/LiveKeymapViewer-$LABEL-win-x64-portable.zip" LiveKeymapViewer)
+          # Tauri の exe は 1 つで完結するので、ポータブル版は exe をそのまま置く
+          cp dist/win32-x64/LiveKeymapViewer.exe "dist/release/LiveKeymapViewer-$LABEL-win-x64-portable.exe"
           ls -l dist/release
 
       # どちらも圧縮済みなので、zip に包まずそのまま置く(ダウンロードしたものがそのまま使える)
@@ -110,13 +128,13 @@ jobs:
           path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-setup.exe
           archive: false
           if-no-files-found: error
-          # 1 回で 200MB ほどある。非公開リポジトリだと容量の枠があるので長くは置かない
+          # 非公開リポジトリだと容量の枠があるので長くは置かない
           retention-days: 14
 
       - name: Artifacts に置く(ポータブル版)
         uses: actions/upload-artifact@v7
         with:
-          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-portable.zip
+          path: dist/release/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-portable.exe
           archive: false
           if-no-files-found: error
           retention-days: 14

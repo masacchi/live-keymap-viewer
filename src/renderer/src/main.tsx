@@ -1,3 +1,5 @@
+// Tauri で動いているなら window.api と HID を用意する。部品より先に読み込むこと
+import './platform/tauri'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

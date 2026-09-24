@@ -8,9 +8,8 @@
  * 中身は scripts/installer-win.nsi。
  *
  * NSIS を使うのは、Linux の makensis が Windows のインストーラーをそのまま作れるから。
- * package-win.mjs と同じく wine も Windows も要らず、npm の依存も増えない
- * (electron-builder の NSIS も中身は同じもの)。
- * makensis が無ければ `sudo apt install nsis` で入る。
+ * package-win.mjs と同じく wine も Windows も要らず、npm の依存も増えない。
+ * makensis はコンテナ(.devcontainer)に入っている。npm run installer:win はコンテナの中で動かす。
  */
 
 import { execFileSync } from 'node:child_process'
@@ -45,11 +44,11 @@ if (!existsSync(join(SOURCE, 'LiveKeymapViewer.exe'))) {
 try {
   execFileSync('makensis', ['-VERSION'], { stdio: 'ignore' })
 } catch {
-  fail('makensis(NSIS)が見つからない。`sudo apt install nsis` で入れること')
+  fail('makensis(NSIS)が見つからない。コンテナの中で動かすこと(npm run installer:win)')
 }
 
 await mkdir(dirname(out), { recursive: true })
-console.log(`インストーラーを作成中(${version})… 圧縮に 1〜2 分かかる`)
+console.log(`インストーラーを作成中(${version})…`)
 execFileSync(
   'makensis',
   [
@@ -59,6 +58,7 @@ execFileSync(
     `-DVERSION=${version}`,
     `-DVERSION_WIN=${versionWin}`,
     `-DSOURCE_DIR=${SOURCE}`,
+    `-DICON=${join(ROOT, 'assets', 'icon.ico')}`,
     `-DOUT_FILE=${out}`,
     join(ROOT, 'scripts', 'installer-win.nsi')
   ],
