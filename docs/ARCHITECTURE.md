@@ -212,7 +212,8 @@ stateDiagram-v2
 | **Electron をやめて Tauri にする**(2026-09-24) | 配布物の 369MB のうちアプリは 0.9MB で、残りは Chromium 一式だった。Tauri は Windows に入っている WebView2 を使うので exe 1 つ(6MB)、インストーラーは 2MB になった。exe のアイコンとバージョン情報もビルドで入る(Electron では rcedit が要り、Linux からだと wine が要るので入れていなかった)。**メモリはあまり減らない** ― WebView2 も中身は Chromium で、画面のプロセスはほぼ同じだけ使う(減るのは Node の main の分)。画面・プロトコル・接続の管理は TypeScript のまま使い、Rust に移したのは Electron の main がしていたこと(ウィンドウ・HID・設定・ログ)だけ |
 | **Windows 版は Linux からクロスビルドする**(cargo-xwin) | 手元(WSL)と CI(Ubuntu)で同じ手順になり、wine も Windows も要らない。cargo-xwin は MSVC の CRT と Windows SDK を落としてきて、clang / lld でリンクする。hidapi は C を使わない Windows 実装(`windows-native`)にして、C のクロスコンパイルを避けた |
 | **Rust の道具はコンテナ(podman)に入れる** | WSL(ホスト)を汚さず、CI と同じ道具をそろえられる。`scripts/container.mjs` が WSL から打ったコマンドを中で動かすので、`npm run deploy:win` は 1 回で済む。Windows に置く部分だけは powershell.exe が要るので WSL で動かす |
-| **インストーラーは NSIS を直接使う。CI は Ubuntu で作る** | Linux の makensis は Windows のインストーラーをそのまま作れるので、上と同じく wine も Windows も要らない。Tauri のインストーラー作り(bundle)は使わない ― 起動中なら止めずに断る、入る場所を固定して上書き時に丸ごと消す、といった方針をそのまま保つため。手元と CI が同じ手順になる |
+| **インストーラーと更新は Velopack。CI は Ubuntu で作る** | 以前の NSIS は「次へ」を押していくウィザードで、更新は新しいインストーラーを取ってきて入れ直すしかなかった。Velopack の Setup はワンクリックで入れて起動し、アプリの中から「更新して再起動」で入れ替えられる。入る場所がパッケージ ID(`live-keymap-viewer`)から決まるので、パスに半角スペースが入らない(Tauri 標準の NSIS は製品名から決まり、スペースが入る)。vpk は Linux から Windows 向けの包みを作れるので、wine も Windows も要らず、手元と CI が同じ手順になる。代わりにビルド用のコンテナに .NET が入る(配布物には入らない)。Velopack のポータブル版は起動用 exe に表示名(スペース入り)が付くので作らない |
+| **更新は、このリポジトリの GitHub のリリースから取る**(`releases/latest/download`) | 公開リポジトリなので認証が要らない。非公開のままだとトークンが要り、exe に埋め込むと中身を読まれたときに漏れる。最新の正式リリースだけを見るので、プレリリースは更新の対象にならない。モードを切り替えるたびにウィンドウごと作り直すので、確認の結果は Rust が 1 時間使い回す(認証なしの問い合わせは 1 時間に 60 回まで) |
 | **画面のビルドは Vite だけ** | Electron のころは main / preload / renderer を別々に束ねていた(electron-vite の安定版が Vite 8 に対応していなかったので、Vite の設定 3 つと自前の dev スクリプトで)。いまは画面だけなので `vite.config.ts` 1 つ。Tauri が `vite build` の出力を exe に埋め込む |
 | **Shift 中は、Shift で入る文字を主文字にする** | エンジンがモディファイアも追う(`LayerSnapshot.mods`)。単独の Shift は押しているあいだ、MT / Tap Dance の Shift は長押しが確定してから(LT と同じ規則)。時間だけで確定したときも画面が変わるよう、通知の指紋に mods を入れている |
 | **プレビューは、キーを押したら実際の表示に戻す** | 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違う。縁を破線にして実際の状態ではないと示す |
@@ -227,7 +228,7 @@ stateDiagram-v2
 | **lint とフォーマットは Biome、コミット時の検査は husky** | どちらも依存が小さく設定が 1 か所で済む(ESLint + Prettier は 6 パッケージ・設定 2 ファイルになる)。husky は誰でも見れば分かる標準的な置き場所 |
 | **画面からの設定の変更は 1 本のコマンド**(`settings_update`) | 以前は項目ごとにチャネルがあり、設定を 1 つ足すのに 9 か所ほど触っていた。いまは変えてよい項目を `RENDERER_SETTINGS_KEYS` に決め打ちし(TS と Rust の両方)、Rust はそれ以外を捨ててから `sanitize` で検証する(壊れた値は手で直したファイルと同じく既定値に戻る)。ウィンドウの位置・モード・許可したデバイスは画面から書かせない |
 | **App は部品をつなぐだけ。状態と規則はフックに置く** | 以前は App が 497 行・フック 40 個で、設定・プレビュー・案内の状態が混ざっていた。プレビューの規則(キーを押したら戻る、Esc、乗せている方が勝つ …)は一番こみ入っているので reducer にして、画面なしでテストする(`tests/preview.test.ts`) |
-| **設定は項目ごとに検証して読む**(`settings.rs` の `sanitize`)。**置き場所は Electron 版と同じ** | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す。置き場所(`%APPDATA%\Live Keymap Viewer`)を Electron 版と同じにしたので、乗り換えてもレイヤー名・ウィンドウの位置・許可したキーボードがそのまま使える(同時に動かすと、互いに上書きする) |
+| **設定は項目ごとに検証して読む**(`settings.rs` の `sanitize`)。**置き場所は `%APPDATA%\live-keymap-viewer`** | 手で直したファイルや古い版のファイルが残っていても起動できるように。外したモニターの上に復元されたウィンドウは主画面に戻す。フォルダ名にスペースを入れない(Electron 版は製品名から `Live Keymap Viewer` になっていた)。新しい方に設定が無ければ、初回の起動で Electron 版の置き場所から写す(`migrate_legacy`)。前の置き場所は消さない |
 
 ## 7. 壊しやすいところ
 
@@ -251,6 +252,11 @@ stateDiagram-v2
   ウィンドウを作ると Windows では止まる(`window_toggle_mode`)。
 - **検証の範囲は TS と Rust の 2 か所にある**(`shared/settings.ts` と `settings.rs`)。範囲や既定値を
   変えるときは両方を直す。
+- **パッケージ ID(`live-keymap-viewer`、`scripts/pack-win.mjs`)を変えない。** 変えると別のアプリとして
+  扱われ、入っているものが更新されなくなる。
+- **vpk とアプリの `velopack` crate は同じ版にする**(Dockerfile の `VPK_VERSION` と Cargo.toml)。
+- **`VelopackApp::build().run()` は `main` のいちばん先。** インストール・更新の途中で Velopack が exe を
+  呼んだときは、そこで用を済ませて終わる。後ろに置くとウィンドウが出てしまう。
 - **同じキーボードが 2 つ見えることがある。** USB と BT の両方で繋がっているとき。
   `getDevices()` の先頭を掴むと、答えない側を掴んで全リクエストが時間切れになる。
   デバイスを選ぶところでは必ず `pickResponsiveDevice` を通す。

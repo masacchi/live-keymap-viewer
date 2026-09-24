@@ -17,11 +17,17 @@ Vial キーボード(まずは Cornix LP)の **押しているキー** と **い
 
 GitHub のリリース(または Actions の実行結果の Artifacts)から、どちらかを取ってくる(Windows x64 向け):
 
-- **インストーラー**(`…-win-x64-setup.exe`、2MB ほど)… 実行するとスタートメニューに入る。管理者権限は要らない
-- **ポータブル版**(`…-win-x64-portable.exe`、6MB ほど)… そのまま実行する(exe 1 つで動く)
+- **インストーラー**(`live-keymap-viewer-win-Setup.exe`)… 実行するとそのまま入って起動する。
+  入る場所は `%LOCALAPPDATA%\live-keymap-viewer`、スタートメニューとデスクトップにショートカットができる。
+  管理者権限は要らない。**新しい版が出たら、アプリの設定の「このアプリ」から「更新して再起動」で更新できる**
+- **ポータブル版**(`…-win-x64-portable.exe`、6MB ほど)… そのまま実行する(exe 1 つで動く。自動では更新しない)
 
-画面は Windows の **WebView2** で描く。Windows 11 には最初から入っている(Windows 10 で無ければ、
-インストーラーが入れ方を案内する)。署名していないので、初回は SmartScreen の警告が出る(「詳細情報」→「実行」)。
+画面は Windows の **WebView2** で描く。Windows 11 には最初から入っている(無ければインストーラーが先に入れる)。
+署名していないので、初回は SmartScreen の警告が出る(「詳細情報」→「実行」)。
+設定とログは `%APPDATA%\live-keymap-viewer` に置く。
+
+以前の版(Electron。`%LOCALAPPDATA%\Programs\LiveKeymapViewer` に入るもの)を使っていたなら、
+先に「設定 → アプリ」からアンインストールしておく。レイヤー名などの設定は、新しい版が初回に引き継ぐ。
 ビルドの流れは [docs/DEVELOPMENT.md §5](docs/DEVELOPMENT.md#5-windows-に置く)。
 
 手元で作って Windows に置くなら(WSL。Rust のビルドは podman のコンテナの中で動く):

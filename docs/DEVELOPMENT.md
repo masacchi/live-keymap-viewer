@@ -11,6 +11,7 @@
 WSL に Rust を入れる必要は無い。
 
 - Node.js 22 以上、`npm install`
+- コンテナには Rust・cargo-xwin・clang / lld / llvm・.NET 10 と vpk(インストーラー)・WebKitGTK が入る
 - podman(rootless)。Rust のビルドを使うコマンドは、中身を
   [scripts/container.mjs](../scripts/container.mjs) がコンテナの中で動かす。イメージは初回に自動で作る
   ([.devcontainer/Dockerfile](../.devcontainer/Dockerfile)。数分かかる)。Docker なら `CONTAINER_ENGINE=docker`
@@ -37,7 +38,7 @@ Windows で実機を相手に動かすときは、WSL で `npm run deploy:win` �
 | `npm run container -- <コマンド>` | コンテナの中でコマンドを動かす(`-- bash` でシェル) |
 | `npm run package:win` | Windows 版の exe を作る(`dist/win32-x64/LiveKeymapViewer.exe`。コンテナの中で動く) |
 | `npm run deploy:win` | 上に加えて、Windows のデスクトップに置く |
-| `npm run installer:win` | `package:win` に加えて、`dist/` にインストーラー(セットアップ exe)を作る([§5](#インストーラー)) |
+| `npm run installer:win` | `package:win` に加えて、`dist/releases/` にインストーラー(Setup.exe)と更新の包みを作る(vpk。[§5](#インストーラーと更新)) |
 | `npm run diag:hid` | Windows の HID API から Cornix のインターフェースを調べ、Vial が答えるか・往復時間を見る(アプリには触らない) |
 | `npm run shots` | モックを動かして状態ごとに画面を撮る(下記)。`-- --compare <前の出力>` で画素比較 |
 | `npm run gen:icon` | `assets/icon.svg` から `icon.png` と `icon.ico` を作り直す([§6](#生成ファイルを作り直す)) |
@@ -229,39 +230,58 @@ npm run deploy:win
 入っている。Windows 10 で無ければ Microsoft の配布ページから入れる)。アイコンとバージョン情報は
 ビルドのときに exe に入る。
 
-### インストーラー
+### インストーラーと更新
 
 ```bash
 npm run installer:win
 ```
 
-`dist/LiveKeymapViewer-<版>-win-x64-setup.exe`(2MB ほど)ができる。中身は
-[scripts/installer-win.nsi](../scripts/installer-win.nsi)。Linux の makensis(コンテナに入っている)が
-Windows のインストーラーをそのまま作るので、ここでも wine は要らない。Tauri にもインストーラーを作る
-機能(bundle)はあるが使っていない ― 下の方針(起動中なら止めずに断る、など)をそのまま保つため。
+`dist/releases/` に次ができる。作るのは [Velopack](https://velopack.io/) の vpk
+([scripts/pack-win.mjs](../scripts/pack-win.mjs))。vpk は .NET のツールで、コンテナに入っている。
+Linux から Windows 向けの包みを作れる(`vpk [win] pack`)ので、ここでも wine は要らない。
 
-- 入る場所は `%LOCALAPPDATA%\Programs\LiveKeymapViewer`(ユーザーごと。管理者権限は要らない)。
-  **場所は選ばせない。** 上書きのときに前の版を丸ごと消してから置く(版によって置くファイルが変わっても
-  古いものが残らないように。Electron 版は DLL や locales を並べていた)ので、任意の場所を選べると、
-  そこを丸ごと消すことになる
-- WebView2 が見つからなければ、入れ方を案内する(インストールは続ける)
-- スタートメニューにショートカットを作る。デスクトップのショートカットは最後の画面で選べる
-- 「設定 → アプリ」から消せる。設定とログ(`%APPDATA%\Live Keymap Viewer`)は消さずに残す
-- 起動中なら、閉じるまで先に進まない(勝手に終了させない。`deploy:win` と同じ)
+| ファイル | 中身 |
+|---|---|
+| `live-keymap-viewer-win-Setup.exe` | インストーラー(13MB ほど)。ワンクリックで入れて起動する |
+| `live-keymap-viewer-<版>-full.nupkg` | 更新の中身 |
+| `releases.win.json` など | 更新の目録。入っているアプリはこれを読んで新しい版を知る |
+
+- 入る場所は `%LOCALAPPDATA%\live-keymap-viewer`(パッケージ ID。ユーザーごとで、管理者権限は要らない)。
+  **パッケージ ID(`live-keymap-viewer`)は変えない。** 変えると別のアプリとして扱われ、入っているものが
+  更新されなくなる
+- スタートメニューとデスクトップにショートカットを作る。名前と「設定 → アプリ」の表示は「Live Keymap Viewer」
+- WebView2 が無ければ、Setup が先に入れる(`--framework webview2`)
+- 設定とログは `%APPDATA%\live-keymap-viewer`。アンインストールしても残る
+- Velopack のポータブル版は作らない。展開したところの起動用 exe に表示名(スペース入り)が付くため。
+  ポータブル版は `dist/win32-x64/LiveKeymapViewer.exe` をそのまま使う(自分では更新しない)
 - 署名していないので、初回は SmartScreen の「Windows によって PC が保護されました」が出る。
   「詳細情報」→「実行」で進む
+- **vpk とアプリの `velopack` crate は同じ版にする**(`.devcontainer/Dockerfile` の `VPK_VERSION` と
+  `src-tauri/Cargo.toml`)。CI は Dockerfile から版を読む
+
+**更新の流れ。** インストーラーで入れたアプリは、起動して 5 秒後に GitHub のリリース
+(`https://github.com/masacchi/live-keymap-viewer/releases/latest/download/releases.win.json`)を見に行く。
+新しい版があれば設定ボタンに印が付き、設定パネルの「このアプリ」から「更新して再起動」で入れ替わる
+(`src-tauri/src/updater.rs`)。見に行くのは**最新の正式リリース**だけで、プレリリースは対象にならない。
+リポジトリが公開なので認証は要らない(exe にトークンを埋め込まない)。`deploy:win` で置いた exe や開発中は
+Velopack の管理下に無いので、更新の欄には「インストーラーで入れたときに使えます」と出る。
+
+**Electron 版(NSIS のインストーラー)から乗り換えるとき**は、先に「設定 → アプリ」から古い
+「Live Keymap Viewer」をアンインストールしておく。入る場所が違う(`%LOCALAPPDATA%\Programs\LiveKeymapViewer`)
+ので両方入ってしまい、ショートカットの名前も同じになる。設定(レイヤー名など)は、Tauri 版が初回の起動で
+Electron 版の置き場所(`%APPDATA%\Live Keymap Viewer`)から写す。
 
 ### GitHub Actions でのビルド
 
 [.github/workflows/build-windows.yml](../.github/workflows/build-windows.yml)。Ubuntu のランナーで、
-手元と同じ `npm run check` → `check:rust` → `package:win` → `installer-win.mjs` を流し、ポータブル版
+手元と同じ `npm run check` → `check:rust` → `package:win` → `pack-win.mjs` を流し、ポータブル版
 (exe 単体)も置く。ツールは Dockerfile と同じものを直に入れる(CI ではコンテナを通さない)。
 Rust のビルド結果と MSVC の CRT / SDK はキャッシュする。キャッシュが無い初回は 10 分ほどかかる。
 
 | きっかけ | やること |
 |---|---|
 | main への push(PR のマージを含む) | ビルドして、その実行の Artifacts にインストーラーとポータブル版を置く(14 日で消える) |
-| `v*` のタグの push | ビルドして、GitHub のリリースを作って載せる |
+| `v*` のタグの push | ビルドして、GitHub のリリースを作って載せる(`vpk upload github`)。**入っているアプリはここから更新する** |
 | 手動(Actions → 「Windows 版のビルド」→ Run workflow) | 選んだブランチでビルドする。「タグ」を書けばリリースも作る(無いタグなら、ビルドした commit に付ける) |
 
 リリースするとき:
@@ -275,10 +295,14 @@ git push --follow-tags                          # タグの push でリリース
   「設定 → アプリ」に出る版は package.json から来るので、リリースの名前と食い違わないように
 - 手動で既にあるタグを書くと、そのタグの commit をビルドしているときだけ進む。別の commit なら止まる
   (既にあるタグでやり直すなら、「Use workflow from」でそのタグを選ぶ)
-- `v0.2.0-beta.1` のように `-` の付くタグはプレリリースになる
+- `v0.2.0-beta.1` のように `-` の付くタグはプレリリースになる。**アプリの更新の対象にならない**
+  (アプリは最新の正式リリースだけを見る)
 - 同じタグでもう一度流すと、リリースは作り直さずに添付だけ差し替える
+- リリースに載せるのは Setup.exe・更新の包み・目録(`releases.win.json` など)とポータブル版。
+  目録と包みは vpk が付けた名前のまま載せる(アプリはその名前で取りに来る)
 - リリースしないビルドは、ファイル名に commit の先頭 7 文字が付く
-  (`LiveKeymapViewer-0.1.0-abc1234-win-x64-setup.exe`)
+  (`LiveKeymapViewer-0.1.0-abc1234-win-x64-setup.exe`)。包みの版は `0.1.0-gabc1234`
+  (SemVer にするため。commit が数字だけで 0 から始まると SemVer として正しくない)
 
 ## 6. よくある変更
 
@@ -391,7 +415,8 @@ python3 scripts/gen-mock.py       # .vil + 定義 JSON → mock/cornix.generated
 こちらも手で直さず、SVG を直して `npm run gen:icon` で作り直し、3 つともコミットする。
 SVG を描くのに開発用の Electron の画面を使う。
 
-- exe のアイコン(エクスプローラー・タスクバー・Alt+Tab)とインストーラーのアイコンはこれになる。
+- exe のアイコン(エクスプローラー・タスクバー・Alt+Tab)とインストーラーのアイコン・インストール中に
+  出る絵(`icon.png`)はこれになる。
   exe へはビルドのときに Tauri が埋め込む(`src-tauri/tauri.conf.json` の `bundle.icon`)
 
 ## 7. 決まりごと

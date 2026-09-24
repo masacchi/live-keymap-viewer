@@ -15,11 +15,11 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 
 - `npm run check` … 型チェック + Biome + テスト。**husky の pre-commit で自動実行**され、落ちるとコミットできない。`--no-verify` で逃げずに直す
 - `npm run check:rust` … Rust の整形・clippy(Linux と Windows)・テスト。`src-tauri/` を触ったコミットで自動実行
-- Rust の道具(cargo・cargo-xwin・NSIS)は**コンテナ(podman)にだけ**ある。`npm run container -- <コマンド>` で中で動く。
+- Rust の道具(cargo・cargo-xwin・vpk)は**コンテナ(podman)にだけ**ある。`npm run container -- <コマンド>` で中で動く。
   `package:win` / `installer:win` / `check:rust` は自動で中で動く(scripts/container.mjs)
 - `npm test` / `npm run lint` / `npm run format`
 - `npm run deploy:win` … Windows 版を作ってデスクトップに置く
-- `npm run installer:win` … インストーラーを作る(NSIS はコンテナにある)。
+- `npm run installer:win` … インストーラー(Velopack の Setup.exe)と更新の包みを作る(vpk はコンテナにある)。
   GitHub Actions(`.github/workflows/build-windows.yml`)も同じ手順で作り、タグならリリースに載せる
 - `npm run diag:hid` … 実機の通信を OS の段で切り分ける(アプリには触らない。アプリも同じ Windows の HID API を使う)。
   「繋がらない」「候補に出ない」ときはまずこれ(docs/BLUETOOTH.md §8)
@@ -38,6 +38,9 @@ Vial キーボード(Cornix LP)の押下とレイヤーをリアルタイム表�
 - CSS のキーキャップは「基本 → 種類 → 状態」の順を崩さない(同じ詳細度なので後勝ち)
 - 設定の範囲・既定値は `src/shared/settings.ts` と `src-tauri/src/settings.rs` の 2 か所にある。変えるときは両方
 - 画面は Tauri を直接呼ばない。Rust との繋ぎは `src/renderer/src/platform/tauri.ts` だけ
+- インストーラーのパッケージ ID(`live-keymap-viewer`)は変えない(変えると入っているものが更新されない)。
+  vpk(Dockerfile の `VPK_VERSION`)と `velopack` crate は同じ版にする
+- パス(フォルダ・ファイル名)に半角スペースを入れない。表示名(ショートカット・アプリ一覧)は「Live Keymap Viewer」
 - コミットは小さくこまめに。push は頼まれたときだけ
 - **コミットメッセージは日本語で書く**(何を直したかと、なぜそうしたか)。
   種類と範囲の接頭辞は英語のまま残す(`fix(session): …` / `feat(ui): …`)― 一覧が読みやすいので
