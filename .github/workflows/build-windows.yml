@@ -1,9 +1,9 @@
 # Windows 版をビルドする。
 #
-#   main に push(マージ)   → ビルドして、この実行の Artifacts に置く
-#   v* のタグを push        → ビルドして、GitHub のリリースに載せる。入っているアプリはここから更新する
+#   main に push(マージ)   → ビルドして、GitHub のリリース(dev-build。プレリリース)に置く
+#   v* のタグを push        → ビルドして、GitHub の正式リリースに載せる。入っているアプリはここから更新する
 #   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
-#                              (タグが無ければ、ビルドした commit に付ける)
+#                              (タグが無ければ、dev-build リリースを更新)
 #
 # 作るもの: インストーラー(Velopack の Setup)と更新の包み、ポータブル版(exe 単体)。
 #
@@ -32,7 +32,7 @@ jobs:
     # Rust の初回ビルド(キャッシュが無いとき)に 10 分ほどかかる
     timeout-minutes: 45
     permissions:
-      # リリースを作るため(最後の手順だけが使う)
+      # リリースを作るため
       contents: write
     env:
       # CI ではコミットしないので、husky のフックは入れない
@@ -85,7 +85,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
           echo "pack_version=$pack_version" >> "$GITHUB_OUTPUT"
-          echo "版: $label / リリース: ${tag:-しない}"
+          echo "版: $label / リリース: ${tag:-しない(dev-buildを更新)}"
 
       - name: ビルドの道具を入れる(.devcontainer/Dockerfile と同じもの)
         run: |
@@ -134,7 +134,7 @@ jobs:
           PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
         run: |
           node scripts/pack-win.mjs --version "$PACK_VERSION"
-          # Actions の Artifacts には、どのビルドか分かる名前で置く
+          # dev-build や正式リリースの添付には、どのビルドか分かる名前で置く
           mkdir -p dist/artifacts
           cp dist/releases/live-keymap-viewer-win-Setup.exe \
             "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
@@ -143,43 +143,41 @@ jobs:
             "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe"
           ls -l dist/releases dist/artifacts
 
-      # どちらも圧縮済みなので、zip に包まずそのまま置く(ダウンロードしたものがそのまま使える)
-      - name: Artifacts に置く(インストーラー)
-        uses: actions/upload-artifact@v7
-        with:
-          path: dist/artifacts/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-setup.exe
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Artifacts に置く(ポータブル版)
-        uses: actions/upload-artifact@v7
-        with:
-          path: dist/artifacts/LiveKeymapViewer-${{ steps.meta.outputs.label }}-win-x64-portable.exe
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
       # 入っているアプリは、最新の正式リリースの releases.win.json を見て更新する
-      # (src-tauri/src/updater.rs)。載せるのは vpk upload github ― 目録と包みを、
-      # アプリが読む名前のまま載せる
-      - name: リリースに載せる
-        if: steps.meta.outputs.tag != ''
+      # (src-tauri/src/updater.rs)。正式リリースに載せるのは vpk upload github ― 目録と包みを、
+      # アプリが読む名前のまま載せる。dev-build はプレリリースなので、更新の対象にならない
+      - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.meta.outputs.tag }}
           LABEL: ${{ steps.meta.outputs.label }}
         run: |
-          flags=()
-          # v0.2.0-beta.1 のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
-          if [[ "$TAG" == *-* ]]; then
-            flags+=(--pre)
+          if [ -n "$TAG" ]; then
+            flags=()
+            # v0.2.0-beta.1 のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
+            if [[ "$TAG" == *-* ]]; then
+              flags+=(--pre)
+            fi
+            # --channel は必ず付ける(付けないと、動いている OS から linux になる)。
+            # --merge で、同じタグで流し直したときは添付を差し替える
+            vpk upload github --outputDir dist/releases --channel win \
+              --repoUrl "https://github.com/$GITHUB_REPOSITORY" --token "$GH_TOKEN" \
+              --publish --merge --releaseName "$TAG" --tag "$TAG" --targetCommitish "$GITHUB_SHA" \
+              "${flags[@]}"
+            gh release upload "$TAG" "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
           fi
-          # --channel は必ず付ける(付けないと、動いている OS から linux になる)。
-          # --merge で、同じタグで流し直したときは添付を差し替える
-          vpk upload github --outputDir dist/releases --channel win \
-            --repoUrl "https://github.com/$GITHUB_REPOSITORY" --token "$GH_TOKEN" \
-            --publish --merge --releaseName "$TAG" --tag "$TAG" --targetCommitish "$GITHUB_SHA" \
-            "${flags[@]}"
-          gh release upload "$TAG" "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe" \
-            --repo "$GITHUB_REPOSITORY" --clobber
+
+          # 正式なタグがない場合(main への push や手動実行)は、固定の「dev-build」に置く
+          RELEASE_TAG=dev-build
+          FILES=(dist/artifacts/*)
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "既存のリリース($RELEASE_TAG)が見つかりました。ファイルを最新版に差し替えます。"
+            # --clobber で同名ファイルがあっても上書き
+            gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            echo "新しいリリース($RELEASE_TAG)を作成します。"
+            gh release create "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Development Build ($LABEL)" --generate-notes --prerelease
+          fi
