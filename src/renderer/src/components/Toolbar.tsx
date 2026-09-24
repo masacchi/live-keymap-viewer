@@ -31,6 +31,8 @@ export interface ToolbarProps {
   layers?: ReactNode
   /** 設定パネルの中身(右端の「設定」から開く)。 */
   settings: ReactNode
+  /** 設定ボタンに印を付ける(新しい版があるとき)。 */
+  settingsBadge?: boolean
   /** 記号の出し方の中身。閉じる関数を受け取る(記号を選んだら閉じる)。キーボードを読み込むまでは渡さない。 */
   symbols?: (close: () => void) => ReactNode
   /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
@@ -60,6 +62,7 @@ export function Toolbar({
   deviceLabel,
   layers,
   settings,
+  settingsBadge = false,
   symbols,
   mods,
   stalled,
@@ -178,6 +181,15 @@ export function Toolbar({
             <>
               <SlidersIcon />
               <span className="max-md:hidden">{messages.toolbar.settings}</span>
+              {settingsBadge && (
+                // 色相はレイヤーにだけ使う決まりなので、明るさで目立たせる
+                <span
+                  role="img"
+                  aria-label={messages.toolbar.updateAvailable}
+                  title={messages.toolbar.updateAvailable}
+                  className="size-1.5 rounded-full bg-ink"
+                />
+              )}
             </>
           }
         >

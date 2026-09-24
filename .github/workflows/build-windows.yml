@@ -1,14 +1,16 @@
 # Windows 版をビルドする。
 #
-#   main に push(マージ)   → ビルドして、GitHub のリリース(dev-build)に置く
-#   v* のタグを push        → ビルドして、GitHub の正式リリースに載せる
+#   main に push(マージ)   → ビルドして、GitHub のリリース(dev-build。プレリリース)に置く
+#   v* のタグを push        → ビルドして、GitHub の正式リリースに載せる。入っているアプリはここから更新する
 #   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
 #                              (タグが無ければ、dev-build リリースを更新)
 #
-# 作るもの: インストーラー(…-setup.exe)と、ポータブル版の zip。
+# 作るもの: インストーラー(Velopack の Setup)と更新の包み、ポータブル版(exe 単体)。
 #
-# Ubuntu で作る。package-win.mjs も installer-win.mjs も Linux で Windows 版を作る作りで
-# (wine も Windows も要らない)、手元の WSL と同じ手順・同じ結果になるため。
+# Ubuntu で作る。package-win.mjs(cargo-xwin でクロスビルド)も pack-win.mjs(vpk)も Linux で
+# Windows 版を作る作りで(wine も Windows も要らない)、手元のコンテナと同じ手順・同じ結果になるため。
+# ツールは .devcontainer/Dockerfile と同じものを直に入れる(CI ではコンテナを通さない ―
+# scripts/container.mjs は CI ならそのまま動かす)。
 # 詳しくは docs/DEVELOPMENT.md「GitHub Actions でのビルド」。
 
 name: Windows 版のビルド
@@ -27,7 +29,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Rust の初回ビルド(キャッシュが無いとき)に 10 分ほどかかる
+    timeout-minutes: 45
     permissions:
       # リリースを作るため
       contents: write
@@ -60,6 +63,9 @@ jobs:
           if [ -z "$tag" ]; then
             # リリースしないビルドは、どの commit のものか分かるように名前に入れる
             label="$version-${GITHUB_SHA::7}"
+            # 包みの版は SemVer でないといけない。commit が数字だけで 0 から始まると SemVer として
+            # 正しくないので、git describe と同じく g を前に付ける
+            pack_version="$version-g${GITHUB_SHA::7}"
           else
             # アプリの画面・ログ・「設定 → アプリ」に出る版は package.json から来る。タグと食い違わないように
             if [ "$tag" != "v$version" ]; then
@@ -73,64 +79,105 @@ jobs:
               exit 1
             fi
             label=$version
+            pack_version=$version
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
+          echo "pack_version=$pack_version" >> "$GITHUB_OUTPUT"
           echo "版: $label / リリース: ${tag:-しない(dev-buildを更新)}"
+
+      - name: ビルドの道具を入れる(.devcontainer/Dockerfile と同じもの)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev librsvg2-dev libudev-dev clang lld llvm
+          rustup toolchain install stable --profile minimal \
+            --component clippy,rustfmt --target x86_64-pc-windows-msvc
+          rustup default stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-xwin
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: vpk(Velopack の CLI)を入れる
+        run: |
+          # 版は .devcontainer/Dockerfile の VPK_VERSION に合わせる(Cargo.toml の velopack とも同じ)
+          version=$(sed -n 's/^ARG VPK_VERSION=//p' .devcontainer/Dockerfile)
+          dotnet tool install --global vpk --version "$version"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # crate のビルド結果と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK を残す
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-directories: ~/.cache/cargo-xwin
 
       - run: npm ci
 
       - name: 検査(型チェック・lint・テスト)
         run: npm run check
 
-      - name: Windows 版一式を作る(dist/win32-x64)
+      - name: 検査(Rust の整形・clippy・テスト)
+        run: npm run check:rust
+
+      - name: Windows 版を作る(dist/win32-x64/LiveKeymapViewer.exe)
         run: npm run package:win
 
-      - name: NSIS を入れる
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nsis
-
-      - name: インストーラーとポータブル版の zip を作る
+      - name: インストーラーと更新の包み、ポータブル版を作る
         env:
           LABEL: ${{ steps.meta.outputs.label }}
+          PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
         run: |
-          node scripts/installer-win.mjs --out "dist/release/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
-          # 展開したときにフォルダが 1 つできるように、LiveKeymapViewer/ の下に入れる。
-          # exe 単体では動かないので、ばらばらに展開されると困る
-          mv dist/win32-x64 dist/LiveKeymapViewer
-          (cd dist && zip -qr "release/LiveKeymapViewer-$LABEL-win-x64-portable.zip" LiveKeymapViewer)
-          ls -l dist/release
+          node scripts/pack-win.mjs --version "$PACK_VERSION"
+          # dev-build や正式リリースの添付には、どのビルドか分かる名前で置く
+          mkdir -p dist/artifacts
+          cp dist/releases/live-keymap-viewer-win-Setup.exe \
+            "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
+          # ポータブル版は exe をそのまま置く(Tauri の exe は 1 つで完結する。自分では更新しない)
+          cp dist/win32-x64/LiveKeymapViewer.exe \
+            "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe"
+          ls -l dist/releases dist/artifacts
 
+      # 入っているアプリは、最新の正式リリースの releases.win.json を見て更新する
+      # (src-tauri/src/updater.rs)。正式リリースに載せるのは vpk upload github ― 目録と包みを、
+      # アプリが読む名前のまま載せる。dev-build はプレリリースなので、更新の対象にならない
       - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.meta.outputs.tag }}
           LABEL: ${{ steps.meta.outputs.label }}
         run: |
-          # 正式なタグがない場合（main pushや手動実行）は、固定の「dev-build」をリリース名にする
-          RELEASE_TAG="${TAG:-dev-build}"
-          
-          # 生成された exe と zip の両方をアップロード対象にする
-          FILES=(dist/release/*)
+          if [ -n "$TAG" ]; then
+            flags=()
+            # v0.2.0-beta.1 のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
+            if [[ "$TAG" == *-* ]]; then
+              flags+=(--pre)
+            fi
+            # --channel は必ず付ける(付けないと、動いている OS から linux になる)。
+            # --merge で、同じタグで流し直したときは添付を差し替える
+            vpk upload github --outputDir dist/releases --channel win \
+              --repoUrl "https://github.com/$GITHUB_REPOSITORY" --token "$GH_TOKEN" \
+              --publish --merge --releaseName "$TAG" --tag "$TAG" --targetCommitish "$GITHUB_SHA" \
+              "${flags[@]}"
+            gh release upload "$TAG" "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
+          fi
 
+          # 正式なタグがない場合(main への push や手動実行)は、固定の「dev-build」に置く
+          RELEASE_TAG=dev-build
+          FILES=(dist/artifacts/*)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "既存のリリース（$RELEASE_TAG）が見つかりました。ファイルを最新版に差し替えます。"
+            echo "既存のリリース($RELEASE_TAG)が見つかりました。ファイルを最新版に差し替えます。"
             # --clobber で同名ファイルがあっても上書き
             gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           else
-            echo "新しいリリース（$RELEASE_TAG）を作成します。"
-            flags=()
-            
-            # 正式タグがない（開発用ビルド）、またはプレリリースタグ（v0.2.0-beta.1等）の場合はプレリリース設定にする
-            if [ -z "$TAG" ] || [[ "$TAG" == *-* ]]; then
-              flags+=(--prerelease)
-            fi
-            
-            # リリースのタイトルを決定
-            TITLE="${TAG:-Development Build ($LABEL)}"
-            
+            echo "新しいリリース($RELEASE_TAG)を作成します。"
             gh release create "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "$TITLE" --generate-notes "${flags[@]}"
+              --target "$GITHUB_SHA" --title "Development Build ($LABEL)" --generate-notes --prerelease
           fi

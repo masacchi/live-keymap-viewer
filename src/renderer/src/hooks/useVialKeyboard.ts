@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocalStorageDefinitionCache } from '../hid/definitionCache'
 import { LocalStorageKeymapCache } from '../hid/keymapCache'
 import { report, reportError, reportInfo } from '../lib/report'
+import { nativeHid } from '../platform/tauri'
 import { type ConnectionState, IDLE, KeyboardConnection } from '../session/keyboardConnection'
 
 export type {
@@ -63,7 +64,8 @@ export function useVialKeyboard(tappingTerm?: number) {
   // 1 回目のものは dispose されるので、HID のイベントもタイマーも残らない
   useEffect(() => {
     const connection = new KeyboardConnection({
-      hid: navigator.hid ?? null,
+      // Tauri では Rust の hidapi、ブラウザ(npm run dev)では WebHID
+      hid: nativeHid ?? navigator.hid ?? null,
       definitionCache,
       keymapCache,
       log: report

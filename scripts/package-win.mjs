@@ -1,85 +1,46 @@
 /**
- * Windows 用の実行ファイル一式を作る。
+ * Windows 版の exe を作る。Linux から cargo-xwin でクロスビルドする。
  *
- *   npm run package:win
+ *   npm run package:win      # WSL から打てば、コンテナの中で動く(scripts/container.mjs)
  *
- * 本来 electron-builder や @electron/packager を使うところだが、どちらも
- * Windows の exe にアイコンやバージョン情報を書き込むために rcedit を呼び、
- * Linux からだと wine が要る。このアプリは
+ * できたものは dist/win32-x64/LiveKeymapViewer.exe に置く。deploy-win.mjs と
+ * installer-win.mjs はそこから取る。
  *
- *   - ネイティブモジュールを使っていない(HID は renderer の WebHID)
- *   - main / preload は electron と node 標準しか import していない
- *   - xz の WASM は renderer のバンドルに埋め込まれている
+ * Tauri の exe は 1 つで完結する。画面は Windows に入っている WebView2 で描くので、
+ * Electron のころのように Chromium 一式(DLL・pak・locales)を横に置く必要は無い。
+ * アイコンとバージョン情報もビルドのときに exe に入る(Electron のころは rcedit が要り、
+ * Linux からだと wine が要るので入れていなかった)。
  *
- * ので、公式の win32 zip を展開して out/ を resources/app に置き、
- * electron.exe をリネームするだけで動く。wine は要らない。
+ * Tauri のインストーラー作り(bundle)は使わない(tauri.conf.json の bundle.active: false)。
+ * インストーラーは scripts/installer-win.nsi を使い続ける ― 入れる場所や「起動中なら止めずに
+ * 断る」などの方針をそのまま保つため。
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { copyFileSync, existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { downloadArtifact } from '@electron/get'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const ARCH = process.argv[2] ?? 'x64' // x64 | arm64
-const OUT_DIR = join(ROOT, 'dist', `win32-${ARCH}`)
-
-const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-const electronVersion = pkg.devDependencies.electron.replace(/^[^0-9]*/, '')
+const TARGET = 'x86_64-pc-windows-msvc'
+const OUT_DIR = join(ROOT, 'dist', 'win32-x64')
 /** Windows のエクスプローラに出る実行ファイル名。 */
 const EXE_NAME = 'LiveKeymapViewer.exe'
 
-if (!existsSync(join(ROOT, 'out/main/index.js'))) {
-  throw new Error('out/ が無い。先に `npm run build` を実行すること')
-}
-
-console.log(`Electron ${electronVersion} (win32-${ARCH}) を取得中…`)
-const zip = await downloadArtifact({
-  version: electronVersion,
-  platform: 'win32',
-  arch: ARCH,
-  artifactName: 'electron'
-})
-
-await rm(OUT_DIR, { recursive: true, force: true })
-await mkdir(OUT_DIR, { recursive: true })
-console.log(`展開中 → ${OUT_DIR}`)
-execFileSync('unzip', ['-q', zip, '-d', OUT_DIR], { stdio: 'inherit' })
-
-// 既定の「Electron へようこそ」アプリを外し、自前のものを置く
-await rm(join(OUT_DIR, 'resources/default_app.asar'), { force: true })
-const appDir = join(OUT_DIR, 'resources/app')
-await mkdir(appDir, { recursive: true })
-await cp(join(ROOT, 'out'), join(appDir, 'out'), { recursive: true })
-// アイコン。ウィンドウ(main/windows.ts の appIcon)とインストーラーのショートカットが使う
-await cp(join(ROOT, 'assets'), join(appDir, 'assets'), { recursive: true })
-await writeFile(
-  join(appDir, 'package.json'),
-  `${JSON.stringify(
-    {
-      name: pkg.name,
-      productName: 'Live Keymap Viewer',
-      version: pkg.version,
-      description: pkg.description,
-      type: 'module',
-      main: './out/main/index.js'
-    },
-    null,
-    2
-  )}\n`,
-  'utf8'
+// 画面のビルド(型チェックと vite build)は tauri.conf.json の beforeBuildCommand が先に走らせる
+execFileSync(
+  join(ROOT, 'node_modules', '.bin', 'tauri'),
+  ['build', '--runner', 'cargo-xwin', '--target', TARGET, '--no-bundle'],
+  { cwd: ROOT, stdio: 'inherit' }
 )
 
-await rename(join(OUT_DIR, 'electron.exe'), join(OUT_DIR, EXE_NAME))
+const built = join(ROOT, 'src-tauri', 'target', TARGET, 'release', 'live-keymap-viewer.exe')
+if (!existsSync(built)) throw new Error(`できているはずの exe が無い: ${built}`)
 
-// exe 単体では動かない。icudtl.dat や resources/app が隣に無いと
-// 「Invalid file descriptor to ICU data received」で落ちる。
-console.log(`\n完成: ${OUT_DIR}`)
-console.log('')
-console.log('  ⚠ exe 単体では動かない。フォルダごとコピーすること。')
-console.log('')
-console.log(`    cp -r ${relative(ROOT, OUT_DIR)} /mnt/c/Users/$USER/Desktop/LiveKeymapViewer`)
-console.log('')
-console.log(`  コピーしたフォルダの中の ${EXE_NAME} を実行する。`)
+rmSync(OUT_DIR, { recursive: true, force: true })
+mkdirSync(OUT_DIR, { recursive: true })
+const exe = join(OUT_DIR, EXE_NAME)
+copyFileSync(built, exe)
+
+const megabytes = (statSync(exe).size / 1024 / 1024).toFixed(1)
+console.log(`\n完成: ${relative(ROOT, exe)}(${megabytes} MB)`)

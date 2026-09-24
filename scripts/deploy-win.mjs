@@ -5,11 +5,14 @@
  *   npm run deploy:win -- --dest /mnt/c/Tools/LiveKeymapViewer
  *
  * 先に `npm run package:win` で dist/win32-x64 を作っておくこと(deploy:win は両方やる)。
+ * これは WSL で動かす(powershell.exe を呼ぶので、コンテナの中からは動かない)。
  *
  * 気をつけていること:
  *
- * 1. **起動中なら止めずに断る。** 動いているアプリの exe と DLL は Windows がロックして
+ * 1. **起動中なら止めずに断る。** 動いているアプリの exe は Windows がロックして
  *    いて消せない。勝手に終了させると、確認中の画面を落とすことになる。
+ *    見るのは**置き場所の exe が動いているか**(名前だけでは見ない)。別の場所に置いた版
+ *    (たとえば Electron 版)が動いていても、置き場所が違えば差し替えられる。
  * 2. **置き場所を壊さない。** 以前は `rm -rf` してからコピーしていたため、ロックされた
  *    ファイルで rm が途中で止まり、icudtl.dat などだけが消えて起動できない状態が残った。
  *    いまは隣に `.new` として完全に置いてから、名前の付け替えで差し替える。
@@ -23,8 +26,8 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE = join(ROOT, 'dist', 'win32-x64')
 const EXE_NAME = 'LiveKeymapViewer.exe'
-/** これが揃っていなければ起動しない(docs/DEVELOPMENT.md「exe 単体では動かない」)。 */
-const REQUIRED = [EXE_NAME, 'icudtl.dat', 'resources.pak', 'resources/app/out/main/index.js']
+/** これが揃っていなければ起動しない。Tauri の exe は 1 つで完結する。 */
+const REQUIRED = [EXE_NAME]
 
 function fail(message) {
   console.error(`\n✗ ${message}\n`)
@@ -50,10 +53,18 @@ function defaultDestination() {
   return join(wsl, 'LiveKeymapViewer')
 }
 
-function isRunning() {
-  // 一致しないときは日本語(CP932)の案内だけが出る。一致すれば CSV 行に名前が ASCII で出る
-  const out = windows('tasklist.exe', ['/FI', `IMAGENAME eq ${EXE_NAME}`, '/FO', 'CSV', '/NH'])
-  return out.toString('latin1').includes(`"${EXE_NAME}"`)
+/** 置き場所の exe が動いているか。 */
+function isRunning(dest) {
+  const exe = execFileSync('wslpath', ['-w', join(dest, EXE_NAME)])
+    .toString('utf8')
+    .trim()
+  const name = EXE_NAME.replace(/\.exe$/, '')
+  // パスは ' を重ねて PowerShell の文字列に埋める。-eq は大文字小文字を区別しない
+  const script =
+    `@(Get-Process -Name '${name}' -ErrorAction SilentlyContinue | ` +
+    `Where-Object { $_.Path -eq '${exe.replaceAll("'", "''")}' }).Count`
+  const out = windows('powershell.exe', ['-NoProfile', '-Command', script])
+  return Number.parseInt(out.toString('utf8').trim(), 10) > 0
 }
 
 function parseDestination() {
@@ -74,7 +85,7 @@ const dest = parseDestination()
 const staging = `${dest}.new`
 const backup = `${dest}.old`
 
-if (isRunning()) {
+if (isRunning(dest)) {
   fail(
     `${EXE_NAME} が起動中なので差し替えられない。\n` +
       '  アプリを閉じてから、もう一度実行すること(このスクリプトは勝手に終了させない)。'

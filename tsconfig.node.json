@@ -1,14 +1,5 @@
 {
-  "include": [
-    "vite.config.ts",
-    "vite.main.config.ts",
-    "vite.preload.config.ts",
-    "vitest.config.ts",
-    "src/main/**/*",
-    "src/preload/**/*",
-    "src/shared/**/*",
-    "tests/main/**/*"
-  ],
+  "include": ["vite.config.ts", "vitest.config.ts"],
   "compilerOptions": {
     "composite": true,
     "target": "ES2022",

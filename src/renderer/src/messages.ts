@@ -53,7 +53,9 @@ export const messages = {
     modeShortcut: 'Ctrl+Alt+K',
     modeShortcutHint: 'Ctrl+Alt+K でも切り替えられます',
     symbols: '記号の出し方',
-    settings: '設定'
+    settings: '設定',
+    /** 新しい版があるとき、設定ボタンに付ける印の説明。 */
+    updateAvailable: '新しい版があります(設定の「このアプリ」から更新できます)'
   },
 
   /** レイヤーへの行き方。キーの名前の後ろに付ける(「Space 長押し」)。 */
@@ -199,9 +201,20 @@ export const messages = {
     about: 'このアプリ',
     /** 置き直しても版は変わらないので、ビルドした時刻で見分ける。 */
     build: (version: string, at: string) => (at ? `v${version}(${at} のビルド)` : `v${version}`),
-    electron: (version: string) => `Electron ${version}`,
+    runtime: (runtime: string) => runtime,
     logHint: '起動・警告・接続が切れた理由・画面のエラーが残っています',
-    openLog: 'ログを開く'
+    openLog: 'ログを開く',
+    update: {
+      unsupported: '更新は、インストーラーで入れたときに使えます',
+      checking: '更新を確認中…',
+      latest: '最新の版です',
+      available: (version: string) => `v${version} があります`,
+      applying: '更新を入れています。終わると起動し直します',
+      failed: '更新を確認できませんでした。ネットワークを確かめてください',
+      applyFailed: '更新を入れられませんでした。もう一度試してください',
+      check: '更新を確認',
+      apply: '更新して再起動'
+    }
   },
 
   overlay: {

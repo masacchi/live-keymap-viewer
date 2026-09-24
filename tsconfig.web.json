@@ -20,6 +20,5 @@
     "paths": {
       "@/*": ["./src/renderer/src/*"]
     }
-  },
-  "exclude": ["tests/main/**/*"]
+  }
 }

@@ -28,12 +28,30 @@
 | キーマップの変更 | (記述なし) | 「キーマップを読み直す」(デバイス名のメニュー)で読み直す。自動では読まない | Vial で編集しながら使うため。以前はウィンドウに戻るたびに自動で読んでいたが、BT では 30 秒以上かかるのでやめた |
 | Vial との同時起動 | (記述なし) | 応答を照合し、他アプリ宛てを捨てる | raw HID の応答は全プロセスに配られる |
 | エンコーダー | MVP の対象外 | **割り当てだけ**表示(キーの下に横一列)。回転は表示できない | 回転はプロトコルで観測できない(PROTOCOL.md §6) |
-| ビルド | electron-vite | **Vite を直接**使う(設定 3 つ + `scripts/dev.mjs`) | electron-vite の安定版が Vite 8 に対応していなかった(ARCHITECTURE.md §6) |
+| ビルド | electron-vite | 画面は **Vite だけ**、外側は **Tauri(Rust)**。Windows 版は Linux から cargo-xwin でクロスビルド | 2026-09-24 に Electron から Tauri に移した(ARCHITECTURE.md §6)。それまでは electron-vite の代わりに Vite を直接使っていた |
 | 画面(2026-09-22) | (記述なし) | Shift 中は Shift で入る文字を強調、レイヤーの一覧とプレビュー、レイヤー名、オーバーレイの自動フェード、読み込みの進み具合、狭いウィンドウ向けの詰め | 使ってみての要望と、BT で読み込みが数十秒かかることへの備え |
 | 画面(2026-09-22 その 2) | (記述なし) | 色の意味を 1 色 1 つに(色相はレイヤーだけ)、ボタンを `Button` に一本化、レイヤーの一覧をツールバーに入れて行き方(`Space 長押し`)と空レイヤーの畳みを付ける、乗せてプレビュー、Ctrl/Shift/Alt/Win の印、アンロックをキーの名前で案内、記号の出し方、設定パネル、オーバーレイのパネルを畳む・薄くしたときの濃さ・後ろのぼかし | 見やすさ・分かりやすさの見直し。Tailwind は `@theme` のトークンと `cn()`(clsx + tailwind-merge)、variant は cva |
-| 配布 | 後回し | NSIS のインストーラーとポータブル版の zip。GitHub Actions が main への push・`v*` のタグ・手動でビルドし、タグならリリースに載せる。手元の確認は `npm run deploy:win` でポータブル一式を置く | wine を使わずに Linux で Windows 版を作るため(NSIS も Linux の makensis で作れる)。DEVELOPMENT.md §5 |
+| 配布 | 後回し | **Velopack** のインストーラー(ワンクリック、13MB ほど)と、アプリの中からの更新(「このアプリ」→「更新して再起動」)。ポータブル版は exe 1 つ(6MB、自分では更新しない)。GitHub Actions が main への push・`v*` のタグ・手動でビルドし、タグならリリースに載せる(入っているアプリはここから更新する)。手元の確認は `npm run deploy:win` で exe を置く | wine を使わずに Linux で Windows 版を作るため(vpk は Linux から Windows 向けを作れる)。2026-09-24 に NSIS から替えた。DEVELOPMENT.md §5 |
+| アプリの土台 | Electron | **Tauri 2**(2026-09-24)。HID は Rust の hidapi を、画面からは WebHID の形で使う | 配布物の 369MB のうちアプリは 0.9MB で、残りは Chromium 一式だった。画面・プロトコル・接続の管理はそのまま使っている(ARCHITECTURE.md §2・§6) |
 
 ## 3. 分かっている制約
+
+- **Tauri 版は、実機(Windows)でまだ確かめていない**(2026-09-24 に移した)。Linux 版をコンテナの
+  仮想画面で動かし、起動・モック・モードの切り替え・`Ctrl+Alt+K`・設定の保存・オーバーレイの操作パネル
+  (クリック透過中のカーソルの転送)までは確かめた。Windows で確かめること:
+  - 実機に繋がる(USB / BT)。アンロック → 押下が光る。抜き差しで繋ぎ直す
+  - オーバーレイ: クリックが下に抜ける / 操作パネルにポインタを乗せると広がって押せる /
+    移動・リサイズ / アクリルのぼかし(入り切りで白い板が残らないか)
+  - 最小化・隠れているあいだもポーリングが止まらない(WebView2 に渡した Chromium のスイッチが効くか)
+  - ウィンドウの枠をドラッグしているあいだに「応答待ち」になるか(Electron では main が止まっていた)
+  - 設定・レイヤー名が Electron 版から引き継がれる(初回の起動で `%APPDATA%\Live Keymap Viewer` から
+    `%APPDATA%\live-keymap-viewer` に写す)。**Electron 版と同時に動かさない** ― 同じキーボードに
+    両方が話すと応答が混ざる
+  - インストーラー(Velopack): Setup.exe で `%LOCALAPPDATA%\live-keymap-viewer` に入り、スタートメニューと
+    デスクトップにショートカットができる。WebView2 が無い PC では先に入れる。先に Electron 版を
+    アンインストールしておく(DEVELOPMENT.md §5)
+  - 更新: **リポジトリを公開して、タグでリリースを 2 つ作ってから確かめる**(古い版を入れて、新しい版に
+    「更新して再起動」)。非公開のあいだは GitHub のリリースを読めず、「更新を確認できませんでした」になる
 
 - **Bluetooth は未確認。調査と実装計画は [BLUETOOTH.md](BLUETOOTH.md)。** 分かっていること:
   - 実機のファームは RMK v0.8.x で、**USB と BLE のどちらか一方しか動かさない**。USB が出力先の
@@ -78,10 +96,13 @@
   - `setOpacity` はぼかしごとウィンドウを薄くする。濃さ 90% なら残りの 10% に**ぼけていない後ろ**が
     透ける → 濃さは CSS で中身に掛ける(`App.tsx`)
   - 板(72%)がぼかしの上に乗っていて、ぼかしが 3 割弱しか見えない → ぼかし中は板を 35% にする
-  OS がライトテーマだとぼかしの色味もライトになるので、`nativeTheme.themeSource = 'dark'` で
-  暗い側に固定してある(画面は暗い配色だけで作ってある)。**直したあとの見え方は実機で未確認。**
-- **最小化中の取りこぼし対策(`backgroundThrottling: false`)は Windows で未確認。** WSLg では
-  ウィンドウを最小化できず確かめられなかった。最小化 → TG を押す → 戻す、で表示が合っていれば良い。
+  OS がライトテーマだとぼかしの色味もライトになるので、ウィンドウの配色を暗い側に固定してある
+  (画面は暗い配色だけで作ってある)。**直したあとの見え方は実機で未確認。**
+  Tauri に移してからは `set_effects`(アクリル)で掛けている。上の 1 つ目(白で塗り直す)は Electron の
+  癖なので、Tauri で同じことが起きるかは改めて確かめる
+- **最小化中の取りこぼし対策は Windows で未確認。** Tauri では WebView2 に Chromium のスイッチ
+  (`--disable-background-timer-throttling` など)を渡している(Electron では `backgroundThrottling: false`)。
+  最小化 → TG を押す → 戻す、で表示が合っていれば良い。
 - 対応は Vial protocol 6 / VIA protocol 9 のみ。
 
 ## 4. 今後の候補
@@ -92,9 +113,9 @@
 |---|---|---|
 | **Bluetooth 対応** | 次のセッション | [BLUETOOTH.md](BLUETOOTH.md) の P2(選択ダイアログ)→ P3(遅さへの対応)→ P4(抜き差し・切り替えへの追従)→ P5(アンロックの進捗)。P1 は OS レベルまで済み。結果を §1 と README に書く |
 | 出力先の切り替え(`SWITCH`)への追従を実機で確かめる | Bluetooth 対応と一緒に | 抜き差し・スリープ復帰での繋ぎ直しは入った(`KeyboardConnection`)。BT への切り替えは P3 が入るまで遅さで失敗するはず。BLUETOOTH.md P4 |
-| 本番ビルドに CSP を付ける | いつでも | 起動時に Electron の警告が出ている。xz の展開に WebAssembly を使うので `script-src` に `'wasm-unsafe-eval'` が要る。dev は Vite の都合で緩めたまま、build のときだけ付けるのが良い |
+| 本番ビルドに CSP を付ける | いつでも | いまは付けていない(`tauri.conf.json` の `csp: null`)。xz の展開に WebAssembly を使うので `script-src` に `'wasm-unsafe-eval'` が要る。Tauri は CSP に自分のスクリプトの分を足してくれる |
 | オーバーレイ中の読み直し | 要望があれば | オーバーレイには「キーマップを読み直す」が無い。左上のパネルにボタンを足す、など |
-| アイコン・署名 | 配布するとき | インストーラーは入った(NSIS)。exe のアイコンとバージョン情報の書き換えは rcedit が要り、Linux からだと wine が要る ― CI なら Windows のランナーで rcedit だけ流すのが軽い。署名は証明書が要る。無いあいだは SmartScreen の警告が出る |
+| 署名 | 配布するとき | exe のアイコンとバージョン情報は Tauri に移して入った。署名は証明書が要る。無いあいだは SmartScreen の警告が出る。Velopack は `--signTemplate` で任意の署名コマンドを使えるので、Linux からなら jsign などで署名できる |
 | ノブの回転を光らせる | ファームを触れるなら | ファームに独自の raw HID コマンドを足してエンコーダーのイベントを返させる |
 | Combo / Key Override の表示 | 要望があれば | Vial の dynamic entry で読める(`[0xFE, 0x0D, 0x03, idx]` / `[0xFE, 0x0D, 0x05, idx]`) |
 | ほかのキーボード | 持っている人がいれば | **モックでは確認済み**(tests/otherKeyboard.test.tsx)。行列・レイヤー数が違う / ノブ無し / レイアウトオプション無し / カスタムキーコード無し / Tap Dance 無しでも、読み込みから押下まで通る。残るのは実機での確認。DEVELOPMENT.md §6 |

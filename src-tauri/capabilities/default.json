@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "画面(WebView)に許すこと。アプリのコマンド(src/commands.rs)のほかは、イベントの受け取りだけ",
+  "windows": ["main-*"],
+  "permissions": ["core:event:default"]
+}

@@ -30,7 +30,12 @@ const out = resolve(values.out)
 rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 
-const server = await createServer({ clearScreen: false, logLevel: 'error' })
+// npm run dev が 5173 を使っていても撮れるように、空いている番号にずらす(vite.config.ts は固定)
+const server = await createServer({
+  clearScreen: false,
+  logLevel: 'error',
+  server: { strictPort: false }
+})
 await server.listen()
 const url = server.resolvedUrls?.local[0]
 if (!url) throw new Error('開発サーバーの URL が取れなかった')

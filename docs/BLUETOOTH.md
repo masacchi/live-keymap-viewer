@@ -23,6 +23,12 @@
    matrix の時間切れ(200ms)どころか、**読み込みの時間切れ(500ms)にも届く**。この遅さを再現すると、
    押下が 1 回ずれて表示される・取りこぼす・止まる、が起きる(§3)。**実装の本題はここ(P3)。**
 
+> **2026-09-24 に Electron から Tauri に移した。** アプリの HID は WebHID(Chromium)ではなく
+> Rust の hidapi(Windows の HID API)になった。§2.6 の Electron / WebHID の実測はそのころのもの。
+> P2 の「選択ダイアログ」は、いまは main ではなく画面の側(`hid/nativeHid.ts` の `requestDevice`)にある。
+> hidapi はデバイスのパスが取れるので、USB か BT かはパスで分かる(BT は `{00001812-…}` を含む)。
+> 往復・時間切れ・照合は Electron 版と同じ TypeScript(`transport.ts`)なので、§3 の問題と P3 はそのまま残る。
+
 ## 1. 何が起きたか
 
 - USB で繋いでいたのに「デバイスが応答しない」が出た
@@ -205,16 +211,16 @@ OS レベルでは答えることを確かめた(§2.6)。残りは**アプリ�
 §2.6 のとおり、今は「不明なデバイス(E118:0001)」と Keychron Link が並び、Cornix だと分からない。
 
 - **名前の無いデバイスに、覚えている名前を付けて出す。** `settings.json` の `grantedDevices` には、
-  USB で最初に繋いだときの名前が VID/PID ごとに残っている(`main/hid.ts` の `rememberDevice`)。
+  USB で最初に繋いだときの名前が VID/PID ごとに残っている(`src-tauri/src/settings.rs` の `remember_device`)。
   同じ VID/PID で名前が「不明なデバイス…」なら、その名前に「(名前なし・Bluetooth の可能性)」を添える。
   名前が無いかどうかは、Chromium の文言に頼らず「覚えている名前と違い、VID:PID を含む」くらいで判定する
 - **以前許可した VID/PID があれば、ダイアログを出さずにそれを選ぶ。** HANDOFF §3
   「以前許可したデバイスには自動で再接続する」にも沿う。許可済みが複数あるとき・無いときだけ選ばせる
 - **Vial でない機器を見分ける。** Keychron Link のような VIA だけの機器は `[0xFE, 0x00]` に `0xFF` を
   返す(§2.6)。`hid/deviceProbe.ts` の確かめで、応答の `data[0] === 0xFF` なら「答えたが Vial ではない」
-  として候補から外す。選択ダイアログは main が出すので、renderer で確かめた結果を使うなら、
-  確かめてから renderer 側で選ばせる形に寄せる(main は許可だけ出す)方が素直
-- テスト: `tests/main/main.test.ts` の `HidPermissions`、`tests/webhidTransport.test.ts` の選び方
+  として候補から外す。選択ダイアログはいまは画面の側(`nativeHid.ts`)にあるので、確かめた結果を
+  そのまま使える
+- テスト: `tests/nativeHid.test.ts` の選び方、`tests/webhidTransport.test.ts` の選び方
 
 ### P3. 往復時間に合わせて時間切れを伸ばし、ずれを防ぐ
 
@@ -297,8 +303,8 @@ vial-qmk(50 から減る)と RMK(キーの数から減る)の両方で正しく�
 ### P6. 接続の様子を画面に出す(診断用)
 
 BT は遅さが問題になるので、ツールバーに「往復 12ms」のような表示があると切り分けが早い。
-P3 で往復時間を記録するので、それを出すだけ。WebHID からは USB か BT かは分からないので、
-往復時間で見分ける(USB は数 ms、BT は十数 ms 以上)。
+P3 で往復時間を記録するので、それを出すだけ。WebHID からは USB か BT かは分からなかったので、
+往復時間で見分ける案だった(USB は数 ms、BT は十数 ms 以上)。Tauri 版は hidapi のデバイスのパスで分かる。
 
 ### P7. (P1 の結果しだい)BT で matrix が実用にならない場合
 
@@ -322,7 +328,7 @@ P3 で往復時間を記録するので、それを出すだけ。WebHID から�
 
 | ファイル | P |
 |---|---|
-| `src/main/hid.ts`(許可済みの VID/PID を自動で選ぶ、名前の無いデバイスに名前を付ける) | P2 |
+| `src/renderer/src/hid/nativeHid.ts`(許可済みの VID/PID を自動で選ぶ、名前の無いデバイスに名前を付ける) | P2 |
 | `src/renderer/src/components/DevicePicker.tsx`(名前の出し方) | P2 |
 | `src/renderer/src/hid/deviceProbe.ts`(`0xFF` を返す機器を Vial でないとして外す。候補 1 つでも往復を測る) | P2, P3 |
 | `src/renderer/src/hid/transport.ts`(`WebHidTransport`: 往復時間の記録、時間切れの伸長、取り残された応答の破棄) | P3 |
@@ -346,23 +352,23 @@ P3 で往復時間を記録するので、それを出すだけ。WebHID から�
   - `rmk/src/host/via/vial_lock.rs` — アンロックの判定と 100ms のタイムアウト
 - vial-gui: `src/main/python/unlocker.py`(進捗バーの最大値の扱い)、`util.py`(`hid_send` の時間切れ)
 - Cornix LP ファーム: https://github.com/jezailfunder/cornix-lp `cornix固件 V1.12/cornix-left.uf2`
-- §2.6 の実測: `npm run diag:hid`、`npm run diag:webhid`(§8)
+- §2.6 の実測: `npm run diag:hid`、`npm run diag:webhid`(§8。後者は Tauri に移したときに外した)
 - §3 の実験: 偽の HID デバイスの応答に遅延を入れ、`getMatrixState` を 4 回呼んだ
   (`tests/webhidTransport.test.ts` のスキップしたテストと同じ形)
 
 ## 8. 診断の道具
 
-どちらも WSL から Windows 側を調べる。**アプリの動作には触らない**(アプリを終了させる必要も無い)。
+WSL から Windows 側を調べる。**アプリの動作には触らない**(アプリを終了させる必要も無い)。
 
 | コマンド | 何が分かるか | 触るもの |
 |---|---|---|
 | `npm run diag:hid` | Windows の HID API から見た Cornix のインターフェース(用途・レポート長・開けるか)と、Vial の `[0xFE, 0x00]` への応答と往復時間。**Chromium を通さない**ので、「OS では動くのにアプリで駄目」を切り分けられる | Vial のインターフェースに `[0xFE, 0x00]` を 1 回送る(アプリが接続時に最初に送るのと同じ) |
 | `npm run diag:hid -- 3434` | 別の VID の機器(例: Keychron)。`0xFF` が返れば VIA だけの機器 | 同上 |
-| `npm run diag:webhid` | Electron(WebHID)の `select-hid-device` に何が並ぶか・名前がどう出るか。選択ダイアログの中身そのもの | 何も開かない。Windows の `%TEMP%` に診断用アプリを一時的に置いて、ウィンドウを出さずに動かし、終わったら消す。先に `npm run package:win` が要る |
+| ~~`npm run diag:webhid`~~ | (Tauri に移したときに外した。アプリが WebHID を使わなくなったため。Electron(WebHID)の `select-hid-device` に何が並ぶかを見ていた) | — |
 
 注意:
 
 - `scripts/diag/hid-probe.ps1` は **BOM 付き UTF-8** で保存すること。Windows PowerShell 5.1 は BOM が
   無いと Shift_JIS として読み、日本語のコメントが化けて `param(...)` を巻き込み、引数が空になる
-- `diag:webhid` の診断アプリは exe 名を変えてある(`LkvWebHidDiag.exe`)。本物と同じ名前だと、
-  `deploy:win` の「起動中か」の判定に引っかかるため
+- Tauri 版のアプリは `diag:hid` と同じ Windows の HID API(hidapi)で話す。`diag:hid` で答えるのに
+  アプリで繋がらなければ、アプリの側の問題

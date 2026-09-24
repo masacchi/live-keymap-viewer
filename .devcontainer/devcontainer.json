@@ -1,0 +1,27 @@
+// 開発環境(Rust + Node + Windows 向けのクロスビルド)。中身は Dockerfile。
+//
+// podman(rootless)で使う前提で書いてある。VS Code の設定で
+// "dev.containers.dockerPath": "podman" にしておくこと。
+// Docker で使うときは runArgs を消す(Docker はホストの uid をそのまま使うので要らない)。
+{
+  "name": "Live Keymap Viewer",
+  "build": { "dockerfile": "Dockerfile" },
+  // ホストの自分の uid を、コンテナの ubuntu(uid 1000)に合わせる。
+  // これが無いと、コンテナで作ったファイルがホスト側では別人の持ち物になる
+  "runArgs": ["--userns=keep-id"],
+  "containerUser": "ubuntu",
+  "updateRemoteUserUID": false,
+  "mounts": [
+    // crate と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK(1GB ほど)は作り直しても残す
+    "source=lkv-cargo-registry,target=/home/ubuntu/.cargo/registry,type=volume",
+    "source=lkv-xwin-cache,target=/home/ubuntu/.cache/cargo-xwin,type=volume"
+  ],
+  // npm run dev(Vite)。Windows のブラウザで http://localhost:5173 を開くと、モックで画面を触れる
+  "forwardPorts": [5173],
+  "postCreateCommand": "npm ci",
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer", "biomejs.biome", "tauri-apps.tauri-vscode"]
+    }
+  }
+}
