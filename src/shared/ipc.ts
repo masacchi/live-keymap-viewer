@@ -29,6 +29,15 @@ export interface AppInfo {
   logPath: string
 }
 
+/**
+ * アプリの更新の状態(src-tauri/src/updater.rs の UpdateStatus)。
+ * 更新はインストーラーで入れたときだけ使える。開発中や deploy:win で置いた exe は unsupported。
+ */
+export type UpdateStatus =
+  | { kind: 'unsupported' }
+  | { kind: 'latest'; current: string }
+  | { kind: 'available'; current: string; version: string }
+
 /** 繋ぐキーボードの候補が複数あったときに、選ばせるために並べるもの(hid/nativeHid.ts)。 */
 export interface HidCandidate {
   deviceId: string
@@ -103,4 +112,12 @@ export interface RendererApi {
   report(level: ReportLevel, message: string, detail?: string): void
   /** ログ(log.txt)を OS の既定のアプリで開く。 */
   openLog(): void
+
+  /**
+   * 新しい版があるかを見る(GitHub のリリース)。force でなければ、少し前に確かめた結果を使う
+   * ― モードを切り替えるたびにウィンドウごと作り直すので、そのたびに問い合わせないように。
+   */
+  checkForUpdate(force: boolean): Promise<UpdateStatus>
+  /** 新しい版を落として入れ替え、起動し直す。うまくいけばアプリが終わる。失敗したら reject。 */
+  applyUpdate(): Promise<void>
 }

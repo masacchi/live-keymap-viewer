@@ -5,6 +5,7 @@
 //!   commands.rs … 画面からの要求の受け口
 //!   settings.rs … settings.json の検証と読み書き
 //!   logfile.rs  … log.txt(実機で何が起きたかを残す)
+//!   updater.rs  … インストーラーで入れたときの更新(Velopack)
 
 // 配布ビルドでコンソールの窓を出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -13,6 +14,7 @@ mod commands;
 mod hid;
 mod logfile;
 mod settings;
+mod updater;
 mod windows;
 
 use std::sync::Arc;
@@ -36,6 +38,10 @@ const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
 const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 fn main() {
+    // いちばん先に動かす。インストール・アンインストール・更新の途中で Velopack が
+    // このプロセスを呼んだときは、ここで用を済ませて終わる(ウィンドウは出さない)
+    velopack::VelopackApp::build().run();
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
@@ -58,6 +64,8 @@ fn main() {
             commands::hid_close,
             commands::log_report,
             commands::log_open,
+            commands::update_check,
+            commands::update_apply,
         ])
         .setup(|app| {
             // いちばん先に入れる。これより前に転んだものは記録できない

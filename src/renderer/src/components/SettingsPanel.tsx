@@ -22,6 +22,7 @@ import {
   TAPPING_TERM_MAX,
   TAPPING_TERM_MIN
 } from '../../../shared/settings'
+import type { AppUpdate } from '../hooks/useAppUpdate'
 import { cn } from '../lib/cn'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
@@ -49,6 +50,54 @@ export interface SettingsPanelProps {
   blurSupported: boolean
   /** どのビルドが動いているか。取れていなければ欄を出さない(ブラウザで開いたとき)。 */
   appInfo?: AppInfo | null
+  /** アプリの更新(hooks/useAppUpdate.ts)。渡さなければ欄を出さない。 */
+  update?: AppUpdate
+  onCheckUpdate?: () => void
+  onApplyUpdate?: (version: string) => void
+}
+
+/** 更新の状態と、そのとき押せるボタン。 */
+function UpdateRow({
+  update,
+  onCheck,
+  onApply
+}: {
+  update: AppUpdate
+  onCheck?: () => void
+  onApply?: (version: string) => void
+}): JSX.Element {
+  const text = messages.settings.update
+  if (update.phase === 'unsupported') {
+    return <p className="text-2xs text-faint">{text.unsupported}</p>
+  }
+  const status = {
+    idle: '',
+    checking: text.checking,
+    latest: text.latest,
+    available: update.phase === 'available' ? text.available(update.version) : '',
+    applying: text.applying,
+    failed: text.failed,
+    applyFailed: text.applyFailed
+  }[update.phase]
+  const version = 'version' in update ? update.version : null
+  return (
+    <div className="flex items-center gap-2">
+      {version && (update.phase === 'available' || update.phase === 'applyFailed') ? (
+        <Button size="sm" variant="primary" onClick={() => onApply?.(version)}>
+          {text.apply}
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          disabled={update.phase === 'checking' || update.phase === 'applying'}
+          onClick={onCheck}
+        >
+          {text.check}
+        </Button>
+      )}
+      <span className="min-w-0 flex-1 text-2xs text-muted">{status}</span>
+    </div>
+  )
 }
 
 /** ビルドした時刻(ISO)を「2026-09-23 19:48」の形にする。読めなければ空。 */
@@ -75,7 +124,10 @@ export function SettingsPanel({
   onChange,
   onForgetDevice,
   blurSupported,
-  appInfo
+  appInfo,
+  update,
+  onCheckUpdate,
+  onApplyUpdate
 }: SettingsPanelProps): JSX.Element {
   return (
     // 項目が増えて、既定のウィンドウの高さには収まらない。はみ出す分はパネルの中だけで流す
@@ -250,6 +302,7 @@ export function SettingsPanel({
             {messages.settings.build(appInfo.version, formatBuildTime(appInfo.buildTime))}
           </p>
           <p className="text-2xs text-muted">{messages.settings.runtime(appInfo.runtime)}</p>
+          {update && <UpdateRow update={update} onCheck={onCheckUpdate} onApply={onApplyUpdate} />}
           <p className="break-all font-mono text-2xs text-faint">{appInfo.logPath}</p>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => window.api?.openLog()}>

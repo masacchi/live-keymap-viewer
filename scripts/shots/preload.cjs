@@ -26,6 +26,9 @@ window.api = {
     buildTime: '2026-01-01T00:00:00.000Z',
     logPath: 'C:\\Users\\shots\\AppData\\Roaming\\live-keymap-viewer\\log.txt'
   }),
+  // 撮るときはネットワークに出ない。インストーラーで入れていない扱いにする
+  checkForUpdate: async () => ({ kind: 'unsupported' }),
+  applyUpdate: async () => undefined,
   getSettings: async () => ({ ...settings }),
   updateSettings: async (patch) => Object.assign(settings, patch) && { ...settings },
   setLayerName: async (uid, layer, name) => {

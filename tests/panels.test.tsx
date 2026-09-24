@@ -13,6 +13,7 @@ import { UnlockPanel } from '@/components/UnlockPanel'
 import { Button } from '@/components/ui/Button'
 import { describeTrigger, type LayerSummary, type LayerTrigger } from '@/engine/layerSummary'
 import { routeSteps } from '@/engine/symbolRoutes'
+import { toAppUpdate } from '@/hooks/useAppUpdate'
 import { overlayFaded } from '@/hooks/useOverlayFade'
 import {
   decodeKeycode,
@@ -90,6 +91,11 @@ describe('Toolbar の接続の状態', () => {
       />
     )
   const spinning = (html: string): boolean => html.includes('animate-spin')
+
+  it('新しい版があるときだけ、設定ボタンに印を付ける', () => {
+    expect(toolbar({ settingsBadge: true })).toContain('新しい版があります')
+    expect(toolbar({})).not.toContain('新しい版があります')
+  })
 
   it('繋いでいる・読み込んでいる・読み直しているあいだは、丸ではなく回る印を出す', () => {
     // 以前は読み直し中も緑の丸のままで、読んでいる最中だと分からなかった
@@ -354,6 +360,51 @@ describe('SettingsPanel', () => {
 
   it('ビルドの情報が取れていなければ、その欄は出さない', () => {
     expect(panel()).not.toContain('このアプリ')
+  })
+
+  describe('更新', () => {
+    const appInfo = { version: '0.1.0', runtime: 'WebView2', buildTime: '', logPath: 'log.txt' }
+
+    it('インストーラーで入れていなければ、ボタンは出さずに理由だけ添える', () => {
+      const html = panel({ appInfo, update: { phase: 'unsupported' } })
+      expect(html).toContain('インストーラーで入れたときに使えます')
+      expect(html).not.toContain('更新を確認')
+    })
+
+    it('新しい版があれば、版と「更新して再起動」を出す', () => {
+      const html = panel({ appInfo, update: { phase: 'available', version: '0.2.0' } })
+      expect(html).toContain('v0.2.0 があります')
+      expect(html).toContain('更新して再起動')
+      expect(html).not.toContain('更新を確認')
+    })
+
+    it('確かめているあいだと入れているあいだは、確認のボタンを押せない', () => {
+      for (const update of [
+        { phase: 'checking' },
+        { phase: 'applying', version: '0.2.0' }
+      ] as const) {
+        expect(panel({ appInfo, update })).toMatch(/<button[^>]*disabled=""[^>]*>更新を確認/)
+      }
+      expect(panel({ appInfo, update: { phase: 'latest' } })).toContain('最新の版です')
+      expect(panel({ appInfo, update: { phase: 'latest' } })).not.toMatch(
+        /disabled=""[^>]*>更新を確認/
+      )
+    })
+
+    it('入れられなかったら、もう一度「更新して再起動」を押せる', () => {
+      const html = panel({ appInfo, update: { phase: 'applyFailed', version: '0.2.0' } })
+      expect(html).toContain('更新を入れられませんでした')
+      expect(html).toContain('更新して再起動')
+    })
+  })
+
+  it('Rust から来た更新の状態を、画面の状態に読み替える', () => {
+    expect(toAppUpdate({ kind: 'unsupported' })).toEqual({ phase: 'unsupported' })
+    expect(toAppUpdate({ kind: 'latest', current: '0.1.0' })).toEqual({ phase: 'latest' })
+    expect(toAppUpdate({ kind: 'available', current: '0.1.0', version: '0.2.0' })).toEqual({
+      phase: 'available',
+      version: '0.2.0'
+    })
   })
 
   it('中身のあるレイヤーに名前の欄を出し、行き方を薄く添える', () => {

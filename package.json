@@ -18,7 +18,7 @@
     "container": "node scripts/container.mjs",
     "package:win": "node scripts/container.mjs node scripts/package-win.mjs",
     "deploy:win": "npm run package:win && node scripts/deploy-win.mjs",
-    "installer:win": "npm run package:win && node scripts/container.mjs node scripts/installer-win.mjs",
+    "installer:win": "npm run package:win && node scripts/container.mjs node scripts/pack-win.mjs",
     "prepare": "husky",
     "diag:hid": "node scripts/diag/hid-probe.mjs",
     "shots": "node scripts/shots/run.mjs",

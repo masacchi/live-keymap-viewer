@@ -22,6 +22,7 @@ use crate::settings::{
     GrantedDevice, MAX_LAYERS, Settings, SettingsStore, WindowMode, is_granted, is_keyboard_uid,
     patch, pick_renderer_patch, with_layer_name,
 };
+use crate::updater::{self, UpdateStatus};
 use crate::windows::WindowManager;
 
 /// 画面から来たエラーの、残す長さの上限(文字数)。
@@ -224,4 +225,26 @@ pub fn log_open() {
     if let Err(error) = std::process::Command::new(opener).arg(&path).spawn() {
         logfile::warn("ログを開けなかった", Some(&error.to_string()));
     }
+}
+
+/// 新しい版があるかを見る(インストーラーで入れたときだけ。ほかは Unsupported)。
+/// `force` でなければ、少し前に確かめた結果を使う(updater.rs の CHECK_CACHE)。
+#[tauri::command]
+pub async fn update_check(force: bool) -> Result<UpdateStatus, String> {
+    spawn_blocking(move || updater::check(force)).await.map_err(|e| e.to_string())?
+}
+
+/// 新しい版を落として入れ替え、起動し直す。うまくいけばこのアプリは終わる。
+#[tauri::command]
+pub async fn update_apply(app: AppHandle) -> Result<(), String> {
+    let settings = Arc::clone(&app.state::<Arc<SettingsStore>>());
+    spawn_blocking(move || {
+        // まとめてある設定の書き込みを、終わる前に済ませる
+        updater::apply(|| settings.flush())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    logfile::info("更新を入れるために終わる", None);
+    app.exit(0);
+    Ok(())
 }

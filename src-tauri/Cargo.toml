@@ -13,6 +13,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# インストーラーと更新(src/updater.rs)。包みを作る vpk(.devcontainer/Dockerfile の VPK_VERSION)と
+# 同じ版に固定する ― 包みの形式と、更新の読み方が食い違わないように
+velopack = "=1.2.158"
 
 # HID は Rust で扱う(docs/ARCHITECTURE.md §2)。Windows は C のビルドが要らない純 Rust の実装を使う
 # ― Linux から cargo-xwin でクロスビルドするので、C のツールチェーンを気にしなくて済む

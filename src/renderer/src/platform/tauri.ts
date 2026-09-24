@@ -13,7 +13,7 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { type EventCallback, listen } from '@tauri-apps/api/event'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import type { AppInfo, HidCandidate, RendererApi } from '../../../shared/ipc'
+import type { AppInfo, HidCandidate, RendererApi, UpdateStatus } from '../../../shared/ipc'
 import type { GrantedDevice, Settings, WindowMode } from '../../../shared/settings'
 import { NativeHid, type NativeHidBackend, type NativeHidInfo } from '../hid/nativeHid'
 import type { HidLike } from '../session/keyboardConnection'
@@ -130,7 +130,10 @@ function createApi(chooser: DeviceChooser): RendererApi {
     hidReleased: () => send('hid_released'),
 
     report: (level, message, detail) => send('log_report', { level, message, detail }),
-    openLog: () => send('log_open')
+    openLog: () => send('log_open'),
+
+    checkForUpdate: (force) => invoke<UpdateStatus>('update_check', { force }),
+    applyUpdate: () => invoke('update_apply')
   }
 }
 

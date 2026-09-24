@@ -21,6 +21,7 @@ import { EmptyState, ErrorBanner } from './components/StatusViews'
 import { RouteChips, SymbolFinder } from './components/SymbolFinder'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
+import { useAppUpdate } from './hooks/useAppUpdate'
 import { useKeymapGuide } from './hooks/useKeymapGuide'
 import { FADE_DELAY_MS, overlayFaded, useOverlayBlurSync } from './hooks/useOverlayFade'
 import { usePreview } from './hooks/usePreview'
@@ -40,6 +41,7 @@ const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
 
 export default function App(): JSX.Element {
   const { settings, update: updateSettings, setLayerName, forgetDevice, canSave } = useSettings()
+  const appUpdate = useAppUpdate()
   const keyboard = useVialKeyboard(settings.tappingTerm)
   const [windowMode, setWindowMode] = useState<WindowMode>('normal')
   const [candidates, setCandidates] = useState<HidCandidate[] | null>(null)
@@ -195,8 +197,12 @@ export default function App(): JSX.Element {
               onForgetDevice={canSave ? forgetDevice : undefined}
               blurSupported={BLUR_SUPPORTED}
               appInfo={appInfo}
+              update={appInfo ? appUpdate.update : undefined}
+              onCheckUpdate={appUpdate.check}
+              onApplyUpdate={appUpdate.apply}
             />
           }
+          settingsBadge={appUpdate.update.phase === 'available'}
           symbols={
             live
               ? (close) => (
