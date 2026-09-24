@@ -1,13 +1,11 @@
 /**
  * 通常ウィンドウのツールバー。常に1行。
  *
- *   [● Cornix LP ▾] [L0] [L1 BS長押し] … +5空[Ctrl Shift Alt Win]   [JIS|US] [@ 記号の出し方] [オーバーレイへ] [設定]
+ *   [● Cornix LP ▾] [L0] [L1 BS 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [@ 記号の出し方] [オーバーレイへ] [設定]
  *
  * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
- * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
- *   大きな「L0」の札があり、下の段の一覧と同じことを2回言っていた。一覧をここに入れて1段減らし、
- *   そのぶん図を大きくする
- *   の横に、いま効いているモディファイア
+ * - 中: レイヤーの一覧(LayerStrip)と、いま効いているモディファイア。いま出しているレイヤーは
+ *   塗って輪を付ける。一覧をツールバーの中に置くのは、段を増やさずに図を大きく取るため
  * - 右: 表記の切り替え・記号の出し方・オーバーレイ・設定
  *
  * 接続の操作は、未接続なら画面の中央、エラーならエラー表示の中に出す(ここには置かない)。
@@ -82,9 +80,9 @@ export function Toolbar({
   const title = [statusText, stalled ? messages.status.stalledHint : null, deviceLabel]
     .filter(Boolean)
     .join(' ')
-  // 繋いでいる・読み込んでいる・読み直しているあいだは、丸の代わりに回る印にする。色は丸と同じで、
-  // 繋ぐ・読み込むあいだは黄、読み直しは繋がったままなので緑。以前は読み直し中も緑の丸のままで、
-  // 読んでいる最中だと分からなかった。応答待ちは詰まっている(読み進んでいない)ので、回さずに黄色の丸
+  // 接続中・読み込み中・読み直し中は、丸の代わりに回る印にする。色は丸と同じで、
+  // 接続中・読み込み中は黄、読み直しは接続したままなので緑。応答待ちは詰まっている
+  // (読み進んでいない)ので、回さずに黄色の丸
   const busy = !stalled && (status === 'connecting' || status === 'loading' || reloading)
   const statusLabel = (
     <>
@@ -123,7 +121,7 @@ export function Toolbar({
           <MenuItem onSelect={onReload} disabled={status !== 'ready' || reloading}>
             {messages.deviceMenu.reload}
           </MenuItem>
-          {/* エラーでも出す。繋ぎ直しを待っているときに、それを止める手段になる */}
+          {/* エラーでも出す。再接続を待っているときに、それを止める手段になる */}
           <MenuItem onSelect={onDisconnect}>{messages.deviceMenu.disconnect}</MenuItem>
         </Menu>
       )}

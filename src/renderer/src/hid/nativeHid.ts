@@ -1,11 +1,10 @@
 /**
- * Tauri版のHID。Rust(src-tauri/src/hid.rs)のhidapiを、WebHIDと同じ形に見せる。
+ * デスクトップ版のHID。Rust(src-tauri/src/hid.rs)のhidapiを、WebHIDと同じ形に見せる。
  *
- * Tauriの画面はWebView2で、WebHIDの許可や選択ダイアログを差し込む口が無い
- * (docs/ARCHITECTURE.md §2)。そこでHIDはRustで扱い、ここで`navigator.hid`と`HIDDevice`の
- * うち**アプリが使うところだけ**を作る。そうしておけば、接続の管理(session/keyboardConnection.ts)・
- * 候補の確かめ(deviceProbe.ts)・往復(transport.tsのWebHidTransport)は、ブラウザのWebHIDと
- * 同じコードのまま動く。
+ * 画面(WebView2)にはWebHIDの許可や選択ダイアログを差し込む口が無い(docs/ARCHITECTURE.md §2)。
+ * そこでHIDはRustで扱い、ここで`navigator.hid`と`HIDDevice`のうち**アプリが使うところだけ**を作る。
+ * そうしておけば、接続の管理(session/keyboardConnection.ts)・候補の確認(deviceProbe.ts)・
+ * 往復(transport.tsのWebHidTransport)は、ブラウザのWebHIDと同じコードのまま動く。
  *
  * Rustを呼ぶところはNativeHidBackendにまとめてある(platform/tauri.ts)。テストでは偽物に差し替える。
  */
@@ -24,18 +23,18 @@ export interface NativeHidInfo {
 }
 
 export interface NativeHidBackend {
-  /** Vialのインターフェースを並べる。grantedOnlyなら一度許可したもの(VID/PID)だけ。 */
+  /** Vialのインターフェースの一覧。grantedOnlyなら一度許可したもの(VID/PID)だけ。 */
   devices(grantedOnly: boolean): Promise<NativeHidInfo[]>
-  /** 選ばれたキーボードを覚える(次の起動から自動で繋ぐ)。 */
+  /** 選ばれたキーボードを覚える(次の起動から自動で接続する)。 */
   remember(device: NativeHidInfo): Promise<void>
-  /** 別々のキーボードが並んでいるとき、どれに繋ぐかを人に選ばせる。取り消されたらnull。 */
+  /** 別々のキーボードが並んでいるとき、どれに接続するかを選んでもらう。取り消されたらnull。 */
   choose(candidates: HidCandidate[]): Promise<string | null>
-  /** 開いて、入力レポート(32バイト)をonReportに流す。閉じるのに使う番号を返す。 */
+  /** 開いて、入力レポート(32バイト)をonReportに流す。閉じるときに使う番号を返す。 */
   open(path: string, onReport: (data: Uint8Array) => void): Promise<number>
   /** 1つのレポートを書く。先頭の1バイトはレポートID。 */
   write(handle: number, data: Uint8Array): Promise<void>
   close(handle: number): Promise<void>
-  /** 挿し抜きの知らせを受ける。戻り値を呼ぶと解除。 */
+  /** 抜き差しの知らせを受ける。戻り値を呼ぶと解除。 */
   subscribe(handlers: {
     connect(device: NativeHidInfo): void
     disconnect(device: NativeHidInfo): void
@@ -98,7 +97,7 @@ export class NativeHidDevice extends EventTarget {
   async sendReport(reportId: number, data: BufferSource): Promise<void> {
     const handle = this.handle
     // WebHIDと同じく、書けないときはTransportErrorではないErrorで失敗させる。
-    // セッションはTransportError(時間切れ)でなければ待たずに切る(session/keyboardSession.ts)
+    // セッションはTransportError(タイムアウト)でなければ待たずに切る(session/keyboardSession.ts)
     if (handle === null) throw new Error('デバイスが開かれていない')
     const body = toBytes(data)
     const report = new Uint8Array(body.length + 1)
@@ -145,11 +144,11 @@ export class NativeHid extends EventTarget {
   }
 
   /**
-   * 繋ぐキーボードを選ぶ。Electron版でmainがselect-hid-deviceでしていたことと同じ。
+   * 接続するキーボードを選ぶ(WebHIDの`requestDevice`にあたる)。
    *
    * 同じキーボードがUSBとBluetoothの両方で見えていると、候補が2つになる。
    * 名前もVID/PIDも同じで人には見分けられないし、許可はVID/PID単位なので
-   * どちらを選んでも両方が許可される。どちらが答えるかはdeviceProbe.tsが確かめる。
+   * どちらを選んでも両方が許可される。どちらが答えるかはdeviceProbe.tsが確認する。
    * 選ばせるのは、別々のキーボードが並んでいるときだけ。
    */
   async requestDevice(options: HIDDeviceRequestOptions): Promise<NativeHidDevice[]> {

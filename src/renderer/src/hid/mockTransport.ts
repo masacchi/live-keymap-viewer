@@ -2,13 +2,13 @@
  * 実機なしで動かすためのモックデバイス。
  *
  * ファーム(vial-qmkのvia.c / vial.c)と同じバイト並びで応答を組み立てる。
- * 既定で名乗るのはCornix LP ― キーマップとTap Danceはreference/Cornix_設定_LT.vil、
+ * 既定で名乗るのはCornix LP。キーマップとTap Danceはreference/Cornix_設定_LT.vil、
  * 定義JSONはCornix LP V1.12のファームから取り出した実物(XZ圧縮のまま)。
  *
  * **ほかのキーボードも名乗れる**(`MockOptions.keyboard`)。このアプリは固定データを持たず、
  * 配置もキーマップもキーボードから読むので、別の行列・レイヤー数・ノブ無し・
- * カスタムキーコード無しでも動くことを、ここで差し替えて確かめられる
- * (tests/otherKeyboard.test.ts)。
+ * カスタムキーコード無しでも動くことを、ここで差し替えて確認できる
+ * (tests/otherKeyboard.test.tsx)。
  */
 
 import { keyId } from '../layout/geometry'
@@ -122,7 +122,7 @@ export class MockTransport implements Transport {
   private readonly pressed = new Set<string>()
   private readonly definitionBytes: Uint8Array
 
-  /** 送られてきたリクエストの記録。テストで順序を確かめるのに使う。 */
+  /** 送られてきたリクエストの記録。テストで順序を確認するのに使う。 */
   readonly requests: Uint8Array[] = []
 
   /** 書き換えられるようにコピーを持つ。 */
@@ -153,7 +153,7 @@ export class MockTransport implements Transport {
     this.isOpen = false
   }
 
-  // --- テストから叩く操作---
+  // --- テストから呼ぶ操作 ---
 
   /** 物理キーを押す。 */
   press(row: number, col: number): void {

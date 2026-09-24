@@ -58,7 +58,7 @@ export class RequestQueue {
 }
 
 /**
- * 時間切れで諦めた要求への応答が、あとから届くかもしれない窓(ms)。
+ * タイムアウトで諦めた要求への応答が、あとから届くかもしれない窓(ms)。
  * これを過ぎても届かなければ、要求ごと失われたと見なして数え直す。
  */
 export const STALE_RESPONSE_WINDOW_MS = 2000
@@ -74,7 +74,7 @@ export class WebHidTransport implements Transport {
   /** 受け取ったパケットを渡す。引き取ったらtrue、自分宛てでなければfalse。 */
   private pending: ((data: Uint8Array) => boolean) | null = null
   /**
-   * 時間切れで諦めた要求の数。この数だけ、届いた応答を捨てる。
+   * タイムアウトで諦めた要求の数。この数だけ、届いた応答を捨てる。
    *
    * ファームは応答に要求IDを持たない(docs/PROTOCOL.md §7)。諦めた要求への応答が遅れて
    * 届くと、**投げ直した要求の応答として受け取ってしまい、以後ずっと1回ずつずれる**
@@ -90,7 +90,7 @@ export class WebHidTransport implements Transport {
         this.abandoned-- // 諦めた要求への応答。捨てて並びを戻す
         return
       }
-      this.abandoned = 0 // 窓を過ぎた。応答ごと失われたのだろう
+      this.abandoned = 0 // 窓を過ぎた。応答ごと失われたとみなす
     }
     const deliver = this.pending
     if (!deliver) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる

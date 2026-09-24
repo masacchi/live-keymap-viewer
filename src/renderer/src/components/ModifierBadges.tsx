@@ -1,8 +1,7 @@
 /**
  * いま効いているモディファイアの印(Ctrl / Shift / Alt / Win)。
  *
- * 以前はShiftだけを出していた。エンジンはCtrl / Alt / Winも追っている(LayerSnapshot.mods)ので、
- * 4つとも並べる。MT(長押しでCtrl)が確定したかどうかも、ここで分かる。
+ * エンジンはShiftのほかCtrl / Alt / Winも追っている(LayerSnapshot.mods)ので、4つとも並べる。MT(長押しでCtrl)が確定したかどうかも、ここで分かる。
  *
  * 効いていないものも薄く出しておく。点いたときに出てくる形だと、そのたびに横の要素がずれる。
  */

@@ -4,8 +4,8 @@ import { messages } from '../messages'
 import { Button } from './ui/Button'
 
 /**
- * プレビュー中の札。図の縁の上に重ねる。以前は一覧の横に小さく書いていて、図を見ていると
- * 気づかなかった。固定しているときだけ「戻る」を出す(乗せているだけなら外せば戻る)。
+ * プレビュー中のラベル。図を見ていても気づけるように、図の縁の上に重ねる。
+ * 固定しているときだけ「戻る」を出す(乗せているだけなら外せば戻る)。
  */
 export function PreviewNotice({
   layer,
@@ -18,7 +18,7 @@ export function PreviewNotice({
   name?: string
   pinned: boolean
   onExit: () => void
-  /** 「@ はL2 + W」のような案内。あれば「プレビュー中」の代わりにこれを出す(記号の出し方)。 */
+  /** 「@ は L2 + W」のような案内。あれば「プレビュー中」の代わりにこれを出す(記号の出し方)。 */
   hint?: ReactNode
 }): JSX.Element {
   return (

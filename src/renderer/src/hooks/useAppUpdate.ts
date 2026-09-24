@@ -2,8 +2,8 @@
  * アプリの更新をReactに渡す。更新は、インストーラーで入れたときだけ使える
  * (src-tauri/src/updater.rs。開発中やdeploy:winで置いたexeではunsupported)。
  *
- * 起動して少し待ってから1回確かめる。起動の直後はキーボードとの接続でいちばん忙しいので、
- * それと重ねない。このときはforceを付けない ― モードを切り替えるたびにウィンドウごと
+ * 起動して少し待ってから1回確認する。起動の直後はキーボードとの接続でいちばん忙しいので、
+ * それと重ねない。このときはforceを付けない。モードを切り替えるたびにウィンドウごと
  * 作り直すので、Rustが少し前の結果を使い回す。「更新を確認」を押したときは問い合わせ直す。
  *
  * ブラウザで開いたとき(window.apiが無い)は何もしない。
@@ -12,20 +12,20 @@ import { useCallback, useEffect, useState } from 'react'
 import type { UpdateStatus } from '../../../shared/ipc'
 import { reportError, reportInfo } from '../lib/report'
 
-/** 起動してから、最初に確かめるまでの待ち時間。 */
+/** 起動してから、最初に確認するまでの待ち時間。 */
 export const STARTUP_CHECK_DELAY_MS = 5000
 
 export type AppUpdate =
-  /** まだ確かめていない。 */
+  /** まだ確認していない。 */
   | { phase: 'idle' }
   /** インストーラーで入れていないので、更新できない。 */
   | { phase: 'unsupported' }
   | { phase: 'checking' }
   | { phase: 'latest' }
   | { phase: 'available'; version: string }
-  /** 落として入れ替えている。うまくいけばアプリが終わって起動し直す。 */
+  /** ダウンロードして入れ替えている。成功するとアプリが終了して起動し直す。 */
   | { phase: 'applying'; version: string }
-  /** 確かめられなかった(ネットワークなど)。 */
+  /** 確認できなかった(ネットワークなど)。 */
   | { phase: 'failed' }
   /** 入れられなかった。もう一度試せる。 */
   | { phase: 'applyFailed'; version: string }

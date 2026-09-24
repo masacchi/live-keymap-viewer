@@ -8,12 +8,11 @@
  * 乗せている方が固定より勝つ。
  *
  * 戻す規則:
- *   - キーを押したら全部やめる ― 打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違う
+ *   - キーを押したら全部やめる(打ち始めたのに違うレイヤーが出たままだと、押したキーと図が食い違う)
  *   - Escで固定と記号の案内をやめる(乗せているものは、外せば戻るのでそのまま)
  *   - レイヤーの数が変わったら(キーボードが替わった)、範囲外の番号と記号の案内を捨てる
  *
- * 規則はpreviewReducer / resolvePreviewの純粋な関数にしてあり、画面なしでテストできる
- * (以前はAppのuseState 3つとeffect 3つに散らばっていた)。
+ * 規則はpreviewReducer / resolvePreviewの純粋な関数にしてあり、画面なしでテストできる。
  */
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import type { LayerSnapshot } from '../engine/layerState'
@@ -50,7 +49,7 @@ export function previewReducer(state: PreviewState, action: PreviewAction): Prev
     case 'hover':
       return { ...state, hovered: action.layer }
     case 'pin':
-      // 一覧やプレビューの札から固定を変えたら、記号の案内は当てはまらなくなる
+      // 一覧やプレビューのラベルから固定を変えたら、記号の案内は当てはまらなくなる
       return { ...state, pinned: action.layer, lookup: null }
     case 'pickSymbol':
       return { hovered: null, pinned: pinnedFor(action.lookup), lookup: action.lookup }
@@ -69,7 +68,7 @@ export function previewReducer(state: PreviewState, action: PreviewAction): Prev
 export interface ResolvedPreview {
   /** 図に出すレイヤー(実際と違うときだけ)。プレビューしていなければnull。 */
   previewLayer: number | null
-  /** 固定のプレビューか(乗せているだけならfalse)。札に「戻る」を出すかどうか。 */
+  /** 固定のプレビューか(乗せているだけならfalse)。ラベルに「戻る」を出すかどうか。 */
   pinned: boolean
   /** いま効いている記号の案内。ほかのレイヤーに乗せたり固定を変えたりしたらnull。 */
   lookup: SymbolLookup | null
@@ -91,7 +90,7 @@ export function resolvePreview(
       ? state.lookup
       : null
   return {
-    // 実際に出ているレイヤーを「プレビュー」しても何も変わらないので、札や破線は出さない
+    // 実際に出ているレイヤーを「プレビュー」しても何も変わらないので、ラベルや破線は出さない
     previewLayer: requested === displayLayer ? null : requested,
     pinned: state.hovered === null,
     lookup

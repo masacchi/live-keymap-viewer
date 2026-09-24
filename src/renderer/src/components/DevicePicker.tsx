@@ -1,4 +1,4 @@
-/** Vialデバイスが複数見つかったときの選択。mainのselect-hid-deviceから呼ばれる。 */
+/** Vialデバイスが複数見つかったときの選択画面(hid/nativeHid.tsのrequestDeviceから出す)。 */
 import type { JSX } from 'react'
 import type { HidCandidate } from '../../../shared/ipc'
 import { messages } from '../messages'

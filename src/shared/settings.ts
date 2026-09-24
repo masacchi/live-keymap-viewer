@@ -2,7 +2,7 @@
  * 設定の型・既定値・範囲。画面が表示とスライダーの範囲を決めるのに使う。
  *
  * **検証と保存はRustの側**(src-tauri/src/settings.rs)。範囲や既定値はそちらにも同じものが
- * あるので、**変えるときは両方を直す。**画面はRustが確かめて返した値をそのまま使う。
+ * あるので、**変えるときは両方を直す。**画面はRustが確認して返した値をそのまま使う。
  */
 
 export type WindowMode = 'normal' | 'overlay'
@@ -35,7 +35,7 @@ export interface Settings {
   overlayFadedOpacity: number
   /**
    * オーバーレイの後ろの画面をすりガラスのようにぼかすか(Windows 11のアクリル)。
-   * ぼかしの強さはOSが決めるので、入り切りだけ。薄くしているあいだは外す。
+   * ぼかしの強さはOSが決めるので、オン/オフだけ。薄くしているあいだは外す。
    */
   overlayBlur: boolean
   /**
@@ -50,7 +50,7 @@ export interface Settings {
    * 早く / 遅くレイヤーが切り替わる。Tap Danceはキーボードに設定された時間を使う。
    */
   tappingTerm: number
-  /** 一度許可したHIDデバイス。次回から自動で繋ぐ。 */
+  /** 一度許可したHIDデバイス。次回から自動で接続する。 */
   grantedDevices: GrantedDevice[]
   /**
    * レイヤーの名前。キーボードのUIDごとに、レイヤー番号の順に並べる(''は名前なし)。
@@ -87,7 +87,7 @@ export type OverlaySettings = Pick<
 /** これより薄くすると、操作パネルごと見えなくなって戻せなくなる。 */
 export const OVERLAY_OPACITY_MIN = 0.2
 /**
- * 薄くしたときの濃さの上限。これより濃いと薄くした意味が無い。下限は0(消える)でよい ―
+ * 薄くしたときの濃さの上限。これより濃いと薄くした意味が無い。下限は0(見えなくなる)でよい。
  * 薄くするのは図だけで、操作パネルは残るので戻せる。
  */
 export const OVERLAY_FADED_OPACITY_MAX = 0.8

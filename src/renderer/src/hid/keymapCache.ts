@@ -1,12 +1,12 @@
 /**
  * キーマップのキャッシュをlocalStorageに置く(hid/vial.tsのKeymapCache)。
  *
- * 置き場所をlocalStorageにする理由は定義のキャッシュ(hid/definitionCache.ts)と同じ ―
- * 通常ウィンドウとオーバーレイはウィンドウごと作り直すので、rendererのメモリでは消える。
+ * 置き場所をlocalStorageにする理由は定義のキャッシュ(hid/definitionCache.ts)と同じ。
+ * 通常ウィンドウとオーバーレイはウィンドウごと作り直すので、画面のメモリに置くと消える。
  *
  * キーボードごとに1件(UIDで引く)。中身は信用せず、形が崩れていれば無いものとして扱う
  * (読み直せば済む)。キーマップはVialで編集され得るので、**これで出した表示は必ず裏で
- * 読み直して確かめる**(session/keyboardSession.ts)。
+ * 読み直して確認する**(session/keyboardSession.ts)。
  */
 import type { TapDanceEntry } from '../keycodes/tapDance'
 import type { CachedKeymap, KeymapCache } from './vial'
@@ -39,7 +39,7 @@ function isTapDance(value: unknown): value is Array<TapDanceEntry | undefined> {
   return Array.isArray(value)
 }
 
-/** このアプリが使うところだけ、形を確かめる。 */
+/** このアプリが使うところだけ、形を確認する。 */
 function looksLikeCachedKeymap(value: unknown): value is CachedKeymap {
   if (typeof value !== 'object' || value === null) return false
   const entry = value as Partial<CachedKeymap>
@@ -81,7 +81,7 @@ export class LocalStorageKeymapCache implements KeymapCache {
     try {
       this.storage?.setItem(KEY_PREFIX + uid, JSON.stringify(value))
     } catch {
-      // 容量不足など。次に繋いだときは普通に読めば済む
+      // 容量不足など。次に接続したときに普通に読めば済む
     }
   }
 }

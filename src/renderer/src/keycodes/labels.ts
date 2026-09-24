@@ -3,7 +3,7 @@
  *
  * JISモードは「Windowsを日本語キーボード設定にしたまま使ったときに実際に入る文字」、
  * USモードは素のUS配列の表記。表の出発点はreference/keymap-preview.htmlの
- * JIS / NAMEDオブジェクト(HANDOFF §7)。
+ * JIS / NAMEDオブジェクト。
  */
 import type { Keycode } from './decode'
 import {
@@ -242,7 +242,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
       return basicLabel(kc.name, mode)
 
     case 'mods': {
-      // Shift +印字キーは、そのShift面の文字そのものを出す(JISの記号レイヤー対策)
+      // Shift+印字キーは、そのShift面の文字そのものを出す(JISの記号レイヤー対策)
       if (kc.mods === MOD_SHIFT && kc.inner.kind === 'basic') {
         const printable = printableTable(mode)[kc.inner.name]
         if (printable?.[1]) return { main: printable[1], category: 'sym' }

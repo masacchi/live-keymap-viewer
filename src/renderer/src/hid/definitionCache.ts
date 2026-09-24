@@ -1,8 +1,8 @@
 /**
  * キーボード定義のキャッシュをlocalStorageに置く(hid/vial.tsのDefinitionCache)。
  *
- * 通常ウィンドウとオーバーレイの切り替えはウィンドウごと作り直すので、rendererのメモリに
- * 持っても消えてしまう。localStorageなら両方のウィンドウ(同じfile:// のオリジン)で共有でき、
+ * 通常ウィンドウとオーバーレイの切り替えはウィンドウごと作り直すので、画面のメモリに
+ * 持っても消えてしまう。localStorageなら両方のウィンドウ(同じオリジン)で共有でき、
  * アプリを閉じても残る。
  *
  * キーボードごとに1件だけ持つ(UIDで引く)。バイト数が違えば別物とみなして読み直させる。
@@ -18,7 +18,7 @@ function isCount(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) > 0
 }
 
-/** このアプリが使うところだけ、形を確かめる。 */
+/** このアプリが使うところだけ、形を確認する。 */
 function looksLikeDefinition(value: unknown): value is VialDefinition {
   if (typeof value !== 'object' || value === null) return false
   const { matrix, layouts } = value as Partial<VialDefinition>

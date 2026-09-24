@@ -41,7 +41,7 @@ export const VIAL_PROTOCOL_MATRIX_TESTER = 3
 /** Tap Dance / Comboが入ったのは4から。 */
 export const VIAL_PROTOCOL_DYNAMIC = 4
 
-/** 本アプリが対応するバージョン(HANDOFFの方針どおりv6のみ)。 */
+/** このアプリが対応するバージョン(v6のみ)。 */
 export const SUPPORTED_VIAL_PROTOCOL = 6
 export const SUPPORTED_VIA_PROTOCOL = 9
 

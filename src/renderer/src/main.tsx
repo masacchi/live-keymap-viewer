@@ -7,7 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { reportError } from './lib/report'
 import './styles.css'
 
-// Reactの外で起きたもの(非同期の失敗など)もmainのログに残す。
+// Reactの外で起きたエラー(非同期の失敗など)もログに残す。
 // 配布ビルドではDevToolsを開けないので、実機で何が起きたかはこれでしか分からない
 window.addEventListener('error', (event) => {
   reportError(event.message, event.error instanceof Error ? event.error.stack : undefined)

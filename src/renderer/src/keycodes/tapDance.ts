@@ -19,7 +19,7 @@ export interface TapDanceEntry {
 /**
  * このキーコードを長押ししたときに出るレイヤー。出さないならnull。
  *
- * 対象はHANDOFF §6のMVP範囲:
+ * 対象:
  *   - `MO(n)`
  *   - `LT(n, kc)`
  *   - on_holdが`MO(n)`のTap Dance

@@ -400,7 +400,7 @@ export type UnlockAction = 'done' | 'wait' | 'restart'
  *
  * `in_progress`が落ちているのに未アンロック、という状態が起き得る
  * (`vial_lock`が呼ばれた、キーボードが挿し直された、など)。そのときは
- * `unlock_start`からやり直す。放っておくと永遠に進まないので。
+ * `unlock_start`からやり直す。放っておくといつまでも進まないため。
  */
 export function nextUnlockAction(progress: UnlockProgress): UnlockAction {
   if (progress.unlocked) return 'done'
@@ -457,7 +457,7 @@ export function isMatrixTestSupported(vialProtocol: number, rows: number, cols: 
 /**
  * 読み込んだ定義の置き場所。キーボードのUIDと、圧縮した定義のバイト数で引く。
  *
- * 定義はファームを焼き直さない限り変わらないので、繋ぐたびに読まなくてよい。読まずに済めば、
+ * 定義はファームを焼き直さない限り変わらないので、接続するたびに読まなくてよい。読まずに済めば、
  * 応答を照合できない0xFE系の要求(Bluetoothでは取り違えると定義の展開が壊れる)も減る。
  * 焼き直して中身が変わってもバイト数が同じ、ということはあり得るので、手動の再読み込みでは
  * キャッシュを使わずに読み直す(LoadOptions.refreshDefinition)。
@@ -470,11 +470,11 @@ export interface DefinitionCache {
 /**
  * キーマップ側のキャッシュ。キーボードのUIDで引く。
  *
- * 定義(物理配置)はDefinitionCacheが持つ。こちらは**Vialで編集され得るところ** ―
- * キーマップ・Tap Dance・エンコーダー・レイアウトオプション ― を覚えておき、
- * 繋いだ直後に**まずキャッシュで画面を出す**ために使う。裏で読み直して、違っていれば差し替える。
+ * 定義(物理配置)はDefinitionCacheが持つ。こちらは**Vialで編集され得るところ**
+ * (キーマップ・Tap Dance・エンコーダー・レイアウトオプション)を覚えておき、
+ * 接続した直後に**まずキャッシュで画面を出す**ために使う。裏で読み直して、違っていれば差し替える。
  *
- * これが無いと、モードを切り替えるたび・繋ぎ直すたびに70往復ほど待つことになる
+ * これが無いと、モードを切り替えるたび・再接続するたびに70往復ほど待つことになる
  * (USBで数秒、Bluetoothでは30秒)。そのあいだ画面には何も出ない。
  */
 export interface CachedKeymap {
@@ -516,9 +516,9 @@ export interface CacheSet {
 /**
  * キャッシュだけでスナップショットを組み立てる。使えなければnull(呼んだ側が普通に読む)。
  *
- * 読むのは身元だけ ― VIAの版・Vialの版とUID・定義のバイト数の**3往復**。
+ * 読むのは身元だけ(VIAの版・Vialの版とUID・定義のバイト数の**3往復**)。
  * 定義とキーマップの両方がキャッシュにあり、バイト数も行列の大きさも合っているときだけ返す。
- * 中身が古い可能性は残るので、呼んだ側が裏で読み直して確かめる(session/keyboardSession.ts)。
+ * 中身が古い可能性は残るので、呼んだ側が裏で読み直して確認する(session/keyboardSession.ts)。
  */
 export async function loadCachedKeyboard(
   transport: Transport,
@@ -655,9 +655,9 @@ export async function loadKeyboard(
  * キーマップまわりだけ読み直す。
  *
  * 物理配置・customKeycodesが入っている定義JSONは、ファームを焼き直さないと
- * 変わらない(焼き直せばUSBごと繋ぎ直しになる)。なので定義は使い回して、
- * Vialで編集され得るところ ― キーマップ、Tap Dance、エンコーダー、
- * レイアウトオプション ― だけを取り直す。図が組み直されないので描画も跳ねない。
+ * 変わらない(焼き直せばUSBごと再接続になる)。そこで定義は使い回し、Vialで編集され得るところ
+ * (キーマップ、Tap Dance、エンコーダー、レイアウトオプション)だけを読み直す。
+ * 図を組み直さないので描画も跳ねない。
  */
 export async function reloadKeymap(
   transport: Transport,
@@ -683,7 +683,7 @@ export async function reloadKeymap(
 
 /**
  * 読み直した結果が前と同じか(Vialで編集され得るところだけを比べる)。
- * 読み直しても(接続直後の確かめ・手動の読み直し)、たいていは何も変わっていない。
+ * 読み直しても(接続直後の確認・手動の読み直し)、たいていは何も変わっていない。
  */
 export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
   const editable = (s: KeyboardSnapshot) =>

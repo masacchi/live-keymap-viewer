@@ -13,7 +13,7 @@ export function ErrorBanner({
   onRetry
 }: {
   message: string
-  /** 自動で繋ぎ直そうとしているか。そのあいだはボタンを出さない。 */
+  /** 自動で再接続しようとしているか。そのあいだはボタンを出さない。 */
   reconnecting: boolean
   onRetry: () => void
 }): JSX.Element {

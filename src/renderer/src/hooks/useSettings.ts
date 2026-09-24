@@ -1,11 +1,10 @@
 /**
  * 設定(settings.json)をReactに渡す。
  *
- * 読むのは起動時の1回、変えるのはupdate(patch)の1つだけ。以前はAppが項目ごとにuseStateと
- * 変更関数を持ち、mainにも項目ごとのIPCがあって、設定を1つ足すたびに9か所ほど触っていた。
+ * 読むのは起動時の1回、変えるのはupdate(patch)の1つだけ。
  *
- * 変えた値はすぐ画面に出し(スライダーを動かしているあいだ待たせない)、mainが保存して返した
- * 設定で置き換える。範囲外の値はmainが丸めるので、返ってきた方が正しい。スライダーを速く
+ * 変えた値はすぐ画面に出し(スライダーを動かしているあいだ待たせない)、Rust側が保存して返した
+ * 設定で置き換える。範囲外の値はRust側が丸めるので、返ってきた方が正しい。スライダーを速く
  * 動かすと返事が追いつかず、古い値に一瞬戻るので、最後に送った変更の返事だけを使う。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,9 +16,9 @@ export interface SettingsHandle {
   update: (patch: SettingsPatch) => void
   /** キーボード(UID)のレイヤーに名前を付ける。空で消す。 */
   setLayerName: (uid: string, layer: number, name: string) => void
-  /** 一度許可したキーボードを忘れる(次の起動で自動では繋がなくなる)。 */
+  /** 一度許可したキーボードを忘れる(次の起動から自動では接続しない)。 */
   forgetDevice: (vendorId: number, productId: number) => void
-  /** 保存できるか(preloadがある = Electronの中)。ブラウザで開いたときは保存しない。 */
+  /** 保存できるか(`window.api`がある = デスクトップ版)。ブラウザで開いたときは保存しない。 */
   canSave: boolean
 }
 

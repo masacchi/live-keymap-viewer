@@ -34,7 +34,7 @@ import { messages } from './messages'
 type WindowMode = 'normal' | 'overlay'
 
 /**
- * 後ろの画面のぼかし(Windows 11のアクリル)が使えるか。mainはWindowsでしか効かせないので、
+ * 後ろの画面のぼかし(Windows 11のアクリル)が使えるか。Rust側はWindowsでしか効かせないので、
  * ほかでは欄を出さない / 押せなくする。Windows 10でも欄は出るが、効かないだけ。
  */
 const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
@@ -52,8 +52,8 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.body.classList.toggle('overlay', windowMode === 'overlay')
   }, [windowMode])
-  // mainからのモード変更(グローバルショートカット)はウィンドウ再生成で反映されるので、
-  // 起動時に現在のモードを聞き直す
+  // Rust側からのモード変更(グローバルショートカット)はウィンドウを作り直して反映するので、
+  // 起動時にいまのモードを聞き直す
   useEffect(() => {
     void window.api?.getMode().then(setWindowMode)
   }, [])
@@ -141,8 +141,8 @@ export default function App(): JSX.Element {
         overlay && settings.overlayBlur && BLUR_SUPPORTED && !faded && 'blurred',
         faded && 'faded'
       )}
-      // オーバーレイの濃さは、ウィンドウ(setOpacity)ではなく中身に掛ける。ウィンドウに掛けると
-      // 後ろのぼかしごと薄くなり、ぼけていない後ろの画面が透けてしまう(main/windows.ts)。
+      // オーバーレイの濃さは、ウィンドウではなく中身に掛ける。ウィンドウごと薄くすると
+      // 後ろのぼかしまで薄くなり、ぼけていない後ろの画面が透けてしまう(src-tauri/src/windows.rs)。
       // --faded-opacityはL0で薄くしたときの背景の板の濃さ(図と同じだけ薄くする。styles.css)
       style={
         overlay

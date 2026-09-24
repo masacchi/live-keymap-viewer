@@ -5,7 +5,7 @@
  * - 記号ごとの打ち方(engine/symbolRoutes.ts)
  * - キーの名前(ベースレイヤーでの表示。「Wの位置」「TabとQを押し続ける」の言い方に使う)
  *
- * どれもキーマップと表記(JIS / US)だけで決まり、押下には左右されない。以前はAppに並んでいた。
+ * どれもキーマップと表記(JIS / US)だけで決まり、押下には左右されない。
  */
 import { useCallback, useMemo } from 'react'
 import { describeTrigger, type LayerSummary, summarizeLayers } from '../engine/layerSummary'

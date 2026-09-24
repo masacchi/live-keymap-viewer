@@ -1,12 +1,11 @@
 /**
  * Tauri(デスクトップ版)で動いているときに、`window.api`とHIDを用意する。
  *
- * 画面のほかの部分はElectron版のころと同じく`window.api`(shared/ipc.tsのRendererApi)と
- * WebHIDの形だけを知っていて、Tauriを直接は呼ばない。ここがその2つをRustのコマンド
- * (src-tauri/src/commands.rs)に繋ぐ。
+ * 画面のほかの部分は`window.api`(shared/ipc.tsのRendererApi)とWebHIDの形だけを知っていて、
+ * Tauriを直接は呼ばない。ここがその2つをRustのコマンド(src-tauri/src/commands.rs)につなぐ。
  *
  * ブラウザで開いたとき(`npm run dev`)は何もしない。`window.api`はundefinedのままで、
- * HIDはブラウザのWebHIDを使う(Chrome / Edgeなら実機にも繋がる)。
+ * HIDはブラウザのWebHIDを使う(Chrome / Edgeなら実機にも接続できる)。
  *
  * **このファイルはいちばん先に読み込む**(main.tsxの先頭)。部品は最初の描画から`window.api`を使う。
  */
@@ -26,8 +25,8 @@ const BUILD_TIME = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : ''
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 /**
- * 候補が複数あったときの選択。Electron版ではmainから候補が飛んできて、選んだ結果をmainに
- * 返していた。いまは選ぶのも待つのも画面の中(nativeHid.tsのrequestDevice)なので、ここで繋ぐ。
+ * 候補が複数あったときの選択。候補を出すのも選ばれるのを待つのも画面の中
+ * (nativeHid.tsのrequestDevice)なので、選択画面の部品とここでつなぐ。
  */
 class DeviceChooser {
   private readonly handlers = new Set<(devices: HidCandidate[]) => void>()
@@ -41,7 +40,7 @@ class DeviceChooser {
   }
 
   request(candidates: HidCandidate[]): Promise<string | null> {
-    // 前の選択が宙に浮いていたら、取り消してから次へ(放っておくと前の要求が永遠に終わらない)
+    // 前の選択が終わっていなければ取り消してから次へ(放っておくと前の要求がいつまでも終わらない)
     this.resolve(null)
     return new Promise((resolve) => {
       this.pending = resolve
@@ -60,7 +59,7 @@ class DeviceChooser {
  * Rustからのイベントを受ける。戻り値を呼ぶと解除。
  *
  * `own`はこのウィンドウ宛ての知らせ(emit_toで送るもの)。全ウィンドウ宛ての`listen`で受けると、
- * ほかのウィンドウ宛てのもの(モード切り替え中の古いウィンドウへの「手放して」など)まで届く。
+ * ほかのウィンドウ宛てのもの(モード切り替え中の古いウィンドウへの解放の依頼など)まで届く。
  */
 function subscribe<T>(event: string, handler: EventCallback<T>, own = false): () => void {
   const unlisten = own ? getCurrentWebviewWindow().listen(event, handler) : listen(event, handler)
@@ -99,7 +98,7 @@ function createHidBackend(chooser: DeviceChooser): NativeHidBackend {
 }
 
 function createApi(chooser: DeviceChooser): RendererApi {
-  // 戻り値を待たないもの(ドラッグ中に毎フレーム飛ぶものなど)。失敗しても画面は止めない
+  // 戻り値を待たない呼び出し(ドラッグ中に毎フレーム送るものなど)。失敗しても画面は止めない
   const send = (command: string, args?: Record<string, unknown>): void => {
     void invoke(command, args).catch(() => undefined)
   }
@@ -140,10 +139,10 @@ function createApi(chooser: DeviceChooser): RendererApi {
 /**
  * クリック透過中にRustから届くカーソルの位置を、mousemoveとして流す。
  *
- * Electronはクリック透過中でもmousemoveを画面に届けてくれた(`forward: true`)。
- * 操作パネル(components/OverlayControls.tsx)はそれを見て、ポインタが乗ったときだけ透過を切る。
- * Tauriにはその機能が無いので、Rustがカーソルの位置を送ってくる(src-tauri/src/windows.rsの
- * start_cursor_forwarding)。同じ形のmousemoveにしておけば、操作パネルはそのまま動く。
+ * 操作パネル(components/OverlayControls.tsx)はmousemoveを見て、ポインタが乗ったときだけ透過を切る。
+ * ところがクリック透過中はウィンドウにmousemoveが届かないので、Rustがカーソルの位置を送ってくる
+ * (src-tauri/src/windows.rsのstart_cursor_forwarding)。同じ形のmousemoveにしておけば、
+ * 操作パネルは透過中かどうかを気にしなくてよい。
  */
 function forwardOverlayCursor(): void {
   subscribe<[number, number]>(

@@ -66,8 +66,8 @@ export function Slider({
 export type PercentSliderProps = Omit<SliderProps, 'step' | 'format'>
 
 /**
- * 割合(0〜1)を5%刻みで選ぶ。スライダーには整数の%で渡す ― 0.05刻みの小数のままだと
- * 0.35000000000000003のような値が戻ってくる。
+ * 割合(0〜1)を5%刻みで選ぶ。スライダーには整数の%で渡す(0.05刻みの小数のままだと
+ * 0.35000000000000003のような値が戻ってくる)。
  */
 export function PercentSlider({ value, min, max, onChange, ...props }: PercentSliderProps) {
   return (

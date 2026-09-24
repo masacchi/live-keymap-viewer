@@ -5,14 +5,14 @@
  *                                                  ‖ 止めずに並べて読む
  *                                              reload(変わっていたらポーリングを入れ替える)
  *
- * Reactから切り離してあるのは、非同期の後始末を確実にするため。
- * 以前はフックの中でsetIntervalとrefを組み合わせていて、
+ * Reactから切り離してあるのは、非同期の後始末を確実にするため。フックの中でsetIntervalと
+ * refを組み合わせると、次のことが起きやすい。
  *
- *   - 切断・再接続の直後に、旧接続の応答が遅れて届くと新しい画面に書き込めた
- *   - アンロックの応答が重なると、ポーリングが二重に始まり得た
- *   - 接続を連打すると、片方の接続が閉じられずに残った
+ *   - 切断・再接続の直後に、古い接続の応答が遅れて届き、新しい画面に書き込む
+ *   - アンロックの応答が重なり、ポーリングが二重に始まる
+ *   - 接続を連打すると、片方の接続が閉じられずに残る
  *
- * という問題があった。ここでは次の2つで防ぐ。
+ * ここでは次の2つで防ぐ。
  *
  *   1. 接続ごとに別のインスタンスを作り、破棄したら以後の通知を一切出さない
  *   2. ループはsetIntervalではなくawaitで回し、世代番号(generation)で止める。
@@ -49,26 +49,25 @@ export const UNLOCK_POLL_MS = 200
 /**
  * 応答が返らないまま、これだけ続いたら切れたと見なす(ms)。
  *
- * 以前は「連続5回失敗」で数えていて、合計3秒ほどで切れていた。これだと
- * **ウィンドウの枠をドラッグしているあいだに切断される**。Windowsでは移動・リサイズの
- * ドラッグ中、ブラウザ(main)プロセスのメッセージループが止まり、WebHIDの往復は
- * mainを通るので応答が返らない。数秒のドラッグで切断 → 繋ぎ直し → キーマップの丸ごと
- * 読み直し、になっていた。OSやファームの省電力で一瞬詰まるのも同じ。
+ * 短くすると、**ウィンドウの枠をドラッグしているあいだに切断される**おそれがある。Windowsでは
+ * 移動・リサイズのドラッグ中にウィンドウのメッセージループが止まり、応答が画面に届かなくなる
+ * ことがある(数秒のドラッグで切断 → 再接続 → キーマップの丸ごと読み直し、になる)。
+ * OSやファームの省電力で一瞬詰まるのも同じ。
  *
  * 回数ではなく時間で数えるのは、往復が遅いほど1回の失敗に時間がかかるため
  * (USBは600ms/回、BTではもっと)。待っているあいだは最後の表示のまま読み続ける。
  *
- * 長く待てるのは、**時間切れ以外の失敗は待たずに切る**から(isTimeout)。ケーブルが抜けた・
- * デバイスが消えたときは書き込みそのものが失敗し、時間切れを待たずに即座に返る。
+ * 長く待てるのは、**タイムアウト以外の失敗は待たずに切る**から(isTimeout)。ケーブルが抜けた・
+ * デバイスが消えたときは書き込みそのものが失敗し、タイムアウトを待たずにすぐ返る。
  */
 export const STALL_LIMIT_MS = 15_000
 /** 読み取りに失敗したあと、次を投げるまでの待ち。詰まっている相手に間を置く。 */
 export const POLL_RETRY_MS = 100
 
 /**
- * 時間切れ(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
+ * タイムアウト(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
  *
- * WebHidTransportは時間切れだけをTransportErrorにし、書き込みそのものの失敗
+ * WebHidTransportはタイムアウトだけをTransportErrorにし、書き込みそのものの失敗
  * (デバイスが消えた・開けていない)は元の例外をそのまま投げる(hid/transport.ts)。
  */
 function isTimeout(error: unknown): boolean {
@@ -112,9 +111,9 @@ export interface SessionOptions {
   now?: () => number
   /** 待ち。テストで差し替える。 */
   sleep?: (ms: number) => Promise<void>
-  /** キーボード定義のキャッシュ。無ければ繋ぐたびに読む。 */
+  /** キーボード定義のキャッシュ。無ければ接続するたびに読む。 */
   definitionCache?: DefinitionCache
-  /** キーマップのキャッシュ。定義のキャッシュと両方あるときだけ、繋いだ直後の即表示に使う。 */
+  /** キーマップのキャッシュ。定義のキャッシュと両方あるときだけ、接続した直後の表示に使う。 */
   keymapCache?: KeymapCache
   /** 長押しと見なすまでの時間(ms、LTの既定)。無ければエンジンの既定(200ms)。 */
   tappingTerm?: number
@@ -165,7 +164,7 @@ export class KeyboardSession {
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
   private readonly keymapCache: KeymapCache | undefined
-  /** キャッシュで始めたときに、裏で確かめるキーマップ。ポーリングに入ったら消える。 */
+  /** キャッシュで始めたときに、裏で確認するキーマップ。ポーリングに入ったら消える。 */
   private pendingVerify: KeyboardSnapshot | null = null
   private tappingTerm: number | undefined
 
@@ -273,13 +272,12 @@ export class KeyboardSession {
   /**
    * キーマップを読み直す。Vialで編集したあとに呼ぶ。
    *
-   * **ポーリングは止めない。**裏の確かめ(verifyCached)と同じく、要求は1本のキューに並ぶので、
+   * **ポーリングは止めない。**裏の確認(verifyCached)と同じく、要求は1本のキューに並ぶので、
    * 読んでいるあいだはmatrixの間隔が延びるだけで、押下の表示は生きたままになる。
-   * 以前は読み終わるまでポーリングを止めていた。読み直しは68往復かかり、BT(1往復 約470ms)
-   * では30秒ほどになる。ウィンドウに戻るたびにそのあいだ押下が出ず「読み直し中…」が続くので、
-   * 繋ぎ直しているように見えていた。
+   * 止めてしまうと、BT(1往復 約470ms)では読み直しの68往復に30秒ほどかかり、
+   * そのあいだ押下が出なくなる。
    *
-   * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
+   * 定義(物理配置)は読み直さない。ファームを焼き直さない限り変わらないため。
    * 中身が変わっていなければ、エンジンも画面もそのまま使う。変わっていれば新しいキーマップで
    * エンジンを作り直してポーリングを入れ替え、TGの固定や押しているキーは前のエンジンから
    * 引き継ぐ(キーボード側は覚えたままなので、捨てると表示がずれる)。
@@ -313,10 +311,9 @@ export class KeyboardSession {
       this.replaceKeymap(next, sameDefinition)
     } catch (error) {
       if (!this.alive(gen)) return
-      // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま続ける
+      // 読み直しの失敗でセッションまで落とさない。タイムアウトなら、前のキーマップのまま続ける
       // (ポーリングは止めていないので表示もそのまま。また手動で読み直せる)。
-      // 以前はここでerrorにしていたので、1回詰まっただけで接続が切れ、
-      // 繋ぎ直しで丸ごと読み直していた
+      // ここでerrorにすると、1回詰まっただけで接続が切れ、再接続で丸ごと読み直すことになる
       if (isTimeout(error)) {
         this.update({ reloading: false })
         return
@@ -334,7 +331,7 @@ export class KeyboardSession {
     await this.transport.close().catch(() => undefined)
   }
 
-  // --- 内部---
+  // --- 内部 ---
 
   private alive(gen: number): boolean {
     return !this.disposed && gen === this.generation
@@ -388,7 +385,7 @@ export class KeyboardSession {
             rows: snapshot.rows,
             cols: snapshot.cols
           })
-    // 次に繋いだとき(モードの切り替え・繋ぎ直し)に、すぐ図を出せるようにしておく
+    // 次に接続したとき(モードの切り替え・再接続)に、すぐ図を出せるようにしておく
     if (this.keymapCache && snapshot.definitionSize > 0) {
       this.keymapCache.set(snapshot.uid, toCachedKeymap(snapshot))
     }
@@ -445,13 +442,13 @@ export class KeyboardSession {
   }
 
   /**
-   * キャッシュで出した表示を、裏で読み直して確かめる。
+   * キャッシュで出した表示を、裏で読み直して確認する。
    *
-   * ポーリングは止めない。要求は1本のキューに並ぶ(hid/transport.ts)ので、確かめている
+   * ポーリングは止めない。要求は1本のキューに並ぶ(hid/transport.ts)ので、確認している
    * あいだはmatrixの間隔が延びるだけで、押下の表示は生きたままになる。
    * 違っていたら新しいキーマップでエンジンを作り直し、ポーリングを入れ替える。
    *
-   * 失敗しても表示は壊さない ― キャッシュのまま使い続け、手動の読み直しに任せる。
+   * 失敗しても表示は壊さない。キャッシュのまま使い続け、手動の読み直しに任せる。
    */
   private async verifyCached(gen: number, cached: KeyboardSnapshot): Promise<void> {
     this.update({ reloading: true })
@@ -469,7 +466,7 @@ export class KeyboardSession {
   }
 
   /**
-   * 裏で読み直したキーマップに差し替え、ポーリングを入れ替える(読み直し・裏の確かめ)。
+   * 裏で読み直したキーマップに差し替え、ポーリングを入れ替える(読み直し・裏の確認)。
    * レイヤーの状態は、それまで動いていたエンジンから引き継ぐ。
    */
   private replaceKeymap(next: KeyboardSnapshot, reuseGeometry: boolean): void {
@@ -490,7 +487,7 @@ export class KeyboardSession {
   ): Promise<void> {
     this.lastSignature = ''
     this.update({ status: 'ready', unlock: null, stalled: false })
-    // キャッシュで始めていたら、ここから裏で読み直して確かめる
+    // キャッシュで始めていたら、ここから裏で読み直して確認する
     // (アンロックが要るキーボードでは、それが済んでここに来る)
     const verify = this.pendingVerify
     this.pendingVerify = null
@@ -505,7 +502,7 @@ export class KeyboardSession {
           matrix = await getMatrixState(this.transport, snapshot.rows, snapshot.cols)
         } catch (error) {
           if (!this.alive(gen)) return
-          // 時間切れ以外(デバイスが消えた・書き込みに失敗した)は待っても直らない
+          // タイムアウト以外(デバイスが消えた・書き込みに失敗した)は待っても直らない
           if (!isTimeout(error)) throw error
           if (stalledSince === null) stalledSince = started
           if (started - stalledSince >= STALL_LIMIT_MS) throw error

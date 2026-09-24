@@ -52,8 +52,8 @@ const GAP = 0.08
 const SKIRT = 3
 const BAND_HEIGHT = 17
 /**
- * 色帯をキーの縁から内側へ寄せる幅(px)。以前はキーの外枠いっぱいに描いていて、
- * 帯がキーからはみ出しそうに見えた。少し寄せると、キーキャップの中にある札に見える
+ * 色帯をキーの縁から内側へ寄せる幅(px)。外枠いっぱいに描くと帯がキーからはみ出しそうに
+ * 見えるので、少し寄せてキーキャップの中のラベルに見せる
  */
 const BAND_INSET = 2
 /** ノブの割り当ての文字の縦中心を、キーの縁(下は厚みの縁)からどれだけ離すか(px)。 */
@@ -76,9 +76,9 @@ function textWidth(text: string, fontSize: number): number {
 /**
  * 長押しの色帯の文字。行き先のレイヤーだけを書く(「L2記号」→「記号」→「L2」の順に、入るもの)。
  *
- * 以前は「長押し→L2」と書いていたが、9pxでも1uにぎりぎりで、傾いた親指キーでは読めなかった。
- * 「長押しで」の部分はツールバーの一覧(L2 Space長押し)とツールチップが言うので、帯は行き先だけに
- * して字を大きくする。色でもどのレイヤーかは分かる。
+ * 「長押し→L2」まで書くと9pxでも1uにぎりぎりで、傾いた親指キーでは読めない。「長押しで」の部分は
+ * ツールバーの一覧(L2 Space長押し)とツールチップで分かるので、帯は行き先だけにして字を大きくする。
+ * 色でもどのレイヤーかは分かる。
  */
 function bandText(layer: number, name: string | undefined, width: number): string {
   for (const text of name ? [`L${layer} ${name}`, name] : []) {
@@ -127,7 +127,7 @@ interface FittedText {
 
 /**
  * 主文字をキーの幅に収める。1行で入らなければ空白で2行に割り、それでも入らなければ
- * 字を小さくする。カスタムキーの名前("Switch Output"など)がキーの外にはみ出していた。
+ * 字を小さくする(カスタムキーの名前("Switch Output"など)がキーの外にはみ出さないように)。
  */
 function fitMain(text: string, width: number, maxFont = Number.POSITIVE_INFINITY): FittedText {
   const room = width - TEXT_PADDING
@@ -150,8 +150,8 @@ function subFontSize(text: string, width: number): number {
 }
 
 /**
- * 長押し中のキーの補足。キーの名前も添えたいが、1uには「Space長押し中」が収まらない
- * (はみ出していた)。入らなければ「長押し中」だけにする。キーの名前はツールチップにある。
+ * 長押し中のキーの補足。キーの名前も添えたいが、1uには「Space長押し中」が収まらないことがある。
+ * 入らなければ「長押し中」だけにする。キーの名前はツールチップにある。
  */
 function holdingSub(keyName: string, width: number): string {
   const full = messages.keyCap.holdingKey(keyName)
@@ -249,7 +249,7 @@ export function KeyCap({
   const radius = knob ? Math.min(width, height) / 2 : 7
   // ノブの割り当ての文字は、キーの幅に収まればキーの真上・真下に中央揃えで置く
   // (キーどうしの隙間のぶんまでは、はみ出してよい)。収まらなければ図の中央の側へ伸ばす。
-  // 外側は隣のキーとぶつかりやすい(Cornixの右手のホイールの割り当てが、隣のH・Nにかかっていた)
+  // 外側は隣のキーとぶつかりやすい(Cornixの右手のホイールの割り当ては、外側に伸ばすと隣のH・Nにかかる)
   const knobLabel = (text: string): { x: number; style: React.CSSProperties } => {
     if (!knob || textWidth(text, KNOB_FONT) <= width + GAP * unit) return { x: cx, style: {} }
     return knob.inward === 'left'
@@ -262,8 +262,8 @@ export function KeyCap({
   // 色帯を除いた、文字を置ける範囲の真ん中
   const contentBottom = y + height - (showBand ? BAND_HEIGHT + BAND_INSET : 0)
   const contentCenter = (y + contentBottom) / 2
-  // Shift側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
-  // 左上に小さく出していたときは見落としやすかった。
+  // Shift側の文字は、キーキャップの印字と同じように主文字の「上」に置く
+  // (左上に小さく出すと見落としやすい)
   const shiftY = y + 13
   const fitted = fitMain(mainText, room)
   // 2行に割ったときは、補足行を2行目の下まで下げる

@@ -3,8 +3,8 @@
  *
  * matrix stateはアンロックしないと取れない(docs/PROTOCOL.md §2)。
  * 押下を読むにはこれしか道が無いので、ロックを見つけたら自動で始める。
- * ここは押すべきキーと進み具合を見せるだけ ― ボタンは置かない。
- * (オーバーレイはクリックが透過するので、そもそも押せない)
+ * ここは押すべきキーと進み具合を見せるだけで、ボタンは置かない
+ * (オーバーレイはクリックが透過するので、そもそも押せない)。
  */
 import { Fragment, type JSX } from 'react'
 import { messages } from '../messages'
@@ -13,8 +13,8 @@ import type { UnlockState } from '../session/keyboardSession'
 export interface UnlockPanelProps {
   unlock: UnlockState
   /**
-   * 押すキーの名前(ベースレイヤーの表示)。以前は「図で色が付いているキー」とだけ書いていて、
-   * 実際には白い枠だったので、どれのことか分かりにくかった。渡さなければ図を指す言い方に戻る。
+   * 押すキーの名前(ベースレイヤーの表示)。渡さなければ「図で白い破線が回っているキー」と、
+   * 図を指す言い方にする。
    */
   keyNames?: readonly string[]
   /** モックのとき。キーはクリックで押したままにできる。 */

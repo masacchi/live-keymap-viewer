@@ -1,5 +1,5 @@
 /**
- * 押下状態から「いまどのレイヤーが有効か」を決める(HANDOFF §6)。
+ * 押下状態から「いまどのレイヤーが有効か」を決める(規則はdocs/ARCHITECTURE.md「レイヤーの判定」)。
  *
  * QMKの厳密な再現ではなく、表示のための近似。
  * - キーコードは**押した瞬間**のレイヤー状態で確定させる
@@ -85,11 +85,10 @@ export class LayerEngine {
   private held = new Map<string, HeldKey>()
 
   constructor(config: LayerEngineConfig) {
-    // tappingTermを「渡さない」と「undefinedを渡す」を同じに扱う。
-    // 以前は既定値にconfigをそのまま重ねていたので、undefinedを渡されると既定値が
-    // **上書きされてundefinedになり**、`now - pressedAt >= undefined`が常に偽 ―
-    // つまりLT / Tap Danceの長押しが永遠に確定しなかった。
-    // セッションは設定を受け取る前`tappingTerm: undefined`で作られることがある
+    // tappingTermを「渡さない」と「undefinedを渡す」を同じに扱う。セッションは設定を受け取る前に
+    // `tappingTerm: undefined`で作られることがある。既定値にconfigをそのまま重ねるとundefinedで
+    // 上書きされ、`now - pressedAt >= undefined`が常に偽になって、LT / Tap Danceの長押しが
+    // いつまでも確定しない
     this.config = { ...config, tappingTerm: config.tappingTerm ?? DEFAULT_TAPPING_TERM }
   }
 
@@ -116,7 +115,7 @@ export class LayerEngine {
    * (キーコードは押した瞬間に確定する扱い)。捨てると次のポーリングで押し直されたことになり、
    * 押しっぱなしのTGがもう一度効いてしまう。
    *
-   * レイヤー数が違えば何も引き継がない。ファームが変わったということなので。
+   * レイヤー数が違えば何も引き継がない(ファームが変わったということなので)。
    */
   inheritFrom(previous: LayerEngine): void {
     if (previous.config.layers !== this.config.layers) return

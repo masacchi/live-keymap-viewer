@@ -84,7 +84,7 @@ export function KeyboardView({
     [geometry.keys, layoutOptions]
   )
 
-  // ノブの割り当ては"↑"だけだと何の ↑ か分からないので、短いものには補足を足す
+  // ノブの割り当ては"↑"だけだと何の↑か分からないので、短いものには補足を足す
   const labelOf = useMemo(
     () =>
       (raw: number): string => {
@@ -178,7 +178,7 @@ export function KeyboardView({
         const held = layers.held.get(id)
         // 押しているキーは、押した瞬間に確定したキーコードで描く(QMKと同じく、離すまで変わらない)。
         // 表示中のレイヤーで引き直すと、TDでL4に入ったときL4のその位置(TDではない)を引いてしまい、
-        // 長押しレイヤーが分からず「Lnull長押し中」になっていた
+        // 長押しレイヤーが分からなくなる(「Lnull長押し中」と出てしまう)
         const keycode = held?.keycode ?? resolved.effective
         const label = labelForKeycode(keycode, labelMode, labelContext)
         const holdLayer = held ? held.holdLayer : holdLayerOf(keycode, snapshot.tapDance)

@@ -88,7 +88,7 @@ export type RouteStep =
 
 /**
  * 経路を手順に分ける。レイヤーは行き方(「Space長押し」)で言い、無ければ番号。
- * キーはベースレイヤーでの名前(L2の@ でも「W」)。キーの位置はふだんの文字で覚えているので。
+ * キーはベースレイヤーでの名前で言う(L2の@でも「W」)。キーの位置はふだんの文字で覚えているため。
  */
 export function routeSteps(route: SymbolRoute, keyName: string, how: string | null): RouteStep[] {
   const steps: RouteStep[] = []

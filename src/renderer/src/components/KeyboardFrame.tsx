@@ -3,7 +3,7 @@
  *
  * ベース以外のレイヤーが出ているあいだは、図全体をそのレイヤーの色で縁取り、背景にも薄く同じ色を
  * 敷く。視線がキーの上にあっても気づけるように。プレビュー中は縁を破線にして、実際の状態では
- * ないことを示す(縁の上の札はnoticeで渡す)。
+ * ないことを示す(縁の上のラベルはnoticeで渡す)。
  */
 import type { JSX, ReactNode } from 'react'
 import { layerColor } from '../lib/theme'
@@ -18,7 +18,7 @@ export function KeyboardFrame({
   shownLayer: number
   /** プレビュー中か。 */
   preview: boolean
-  /** 縁の上に重ねる札。 */
+  /** 縁の上に重ねるラベル。 */
   notice?: ReactNode
   children: ReactNode
 }): JSX.Element {
