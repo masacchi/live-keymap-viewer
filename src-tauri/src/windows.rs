@@ -245,7 +245,8 @@ impl WindowManager {
             state.ignoring_cursor = ignore;
             state.window.clone()
         };
-        if let Some(window) = window {
+        // 出す前のウィンドウには掛けない(Linux の tao は落ちる)。出すときに透過を掛ける(create)
+        if let Some(window) = window.filter(|w| w.is_visible().unwrap_or(false)) {
             let _ = window.set_ignore_cursor_events(ignore);
         }
     }
@@ -360,6 +361,11 @@ impl WindowManager {
                         return;
                     }
                     let _ = window.show();
+                    if overlay {
+                        // クリックを下のウィンドウに通す。操作パネルの上でだけ画面が一時的に切る。
+                        // 出してから掛ける ― Linux(tao)は出す前のウィンドウに掛けると落ちる
+                        let _ = window.set_ignore_cursor_events(true);
+                    }
                     // 新しい方が出てから古い方を消す(ちらつかせない)
                     if let Some(old) = replacing.lock().unwrap().take() {
                         let _ = old.destroy();
@@ -377,8 +383,6 @@ impl WindowManager {
         };
 
         if overlay {
-            // クリックを下のウィンドウに通す。操作パネルの上でだけ画面が一時的に切る
-            let _ = window.set_ignore_cursor_events(true);
             set_backdrop(&window, settings.overlay_blur);
         }
 
