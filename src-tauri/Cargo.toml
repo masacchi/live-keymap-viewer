@@ -1,7 +1,7 @@
 [package]
 name = "live-keymap-viewer"
 version = "0.1.0"
-description = "Vial キーボードの押下キーとアクティブレイヤーをリアルタイム表示するデスクトップアプリ"
+description = "Vialキーボードの押しているキーといまのレイヤーをリアルタイムに表示するデスクトップアプリ"
 edition = "2024"
 publish = false
 
@@ -13,24 +13,24 @@ tauri = { version = "2", features = [] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# インストーラーと更新(src/updater.rs)。包みを作るvpk(.devcontainer/DockerfileのVPK_VERSION)と
-# 同じ版に固定する ― 包みの形式と、更新の読み方が食い違わないように
+# インストーラーと更新(src/updater.rs)。パッケージを作るvpk(.devcontainer/DockerfileのVPK_VERSION)と
+# 同じ版に固定する。パッケージの形式と、アプリ側の読み方が食い違わないように
 velopack = "=1.2.158"
 
-# HIDはRustで扱う(docs/ARCHITECTURE.md §2)。WindowsはCのビルドが要らない純Rustの実装を使う
-# ― Linuxからcargo-xwinでクロスビルドするので、Cのツールチェーンを気にしなくて済む
+# HIDはRustで扱う(docs/ARCHITECTURE.md §2)。Windowsでは、Cのビルドが要らないRustだけの実装を使う。
+# Linuxからcargo-xwinでクロスビルドするので、Cのツールチェーンを用意しなくて済む
 [target.'cfg(windows)'.dependencies]
 hidapi = { version = "2.6", default-features = false, features = ["windows-native"] }
 
-# Linuxは開発用(コンテナ内のcargo testと、WSLgでLinux版を出すとき)。WSLからは実機は見えない
+# Linuxは開発用(コンテナ内のcargo testと、Linux版を動かすとき)。WSLからは実機は見えない
 [target.'cfg(not(windows))'.dependencies]
 hidapi = { version = "2.6" }
 
 [profile.release]
-# 配布サイズを小さく。速さが要る処理は無い(重いのは画面で、それはWebViewの中)
+# 配布サイズを小さくする。Rust側に速さが要る処理は無い(重いのは画面で、それはWebViewの中)
 codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
-# panicはunwindのまま(abortにしない)。HIDの読み取りなど裏のスレッドが1つ転んでも、
+# panicはunwindのまま(abortにしない)。HIDの読み取りなど裏のスレッドが1つpanicしても、
 # アプリごと落とさず、ログに残して画面は動かし続ける(src/logfile.rs)

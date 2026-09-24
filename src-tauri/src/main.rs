@@ -2,7 +2,7 @@
 //!
 //!   windows.rs  … 通常ウィンドウ / クリック透過オーバーレイの作り分けと切り替え
 //!   hid.rs      … キーボードとのraw HID(画面からはWebHIDと同じ形に見せる)
-//!   commands.rs … 画面からの要求の受け口
+//!   commands.rs … 画面から呼ばれるコマンド
 //!   settings.rs … settings.jsonの検証と読み書き
 //!   logfile.rs  … log.txt(実機で何が起きたかを残す)
 //!   updater.rs  … インストーラーで入れたときの更新(Velopack)
@@ -30,11 +30,12 @@ use crate::windows::WindowManager;
 /// パスに半角スペースを入れない(コマンドラインやスクリプトで扱うときに引用符が要らないように)。
 const DATA_DIR_NAME: &str = "live-keymap-viewer";
 
-/// Electron版が設定を置いていたフォルダの名前。新しい方に設定が無ければ、ここから写す
-/// (レイヤー名・ウィンドウの位置・許可したキーボードを引き継ぐ)。
+/// 以前の版が設定を置いていたフォルダ(名前にスペースが入っていた)。新しい方に設定が無ければ、
+/// 初回の起動でここから写す(レイヤー名・ウィンドウの位置・許可したキーボードを引き継ぐ)。
 const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
 
-/// 通常ウィンドウ ⇄ オーバーレイの切り替え。オーバーレイ中の最後の逃げ道でもある。
+/// 通常ウィンドウとオーバーレイの切り替え。オーバーレイ中はクリックが下に抜けるので、
+/// キー操作で戻れるようにしておく。
 const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 fn main() {
@@ -68,7 +69,7 @@ fn main() {
             commands::update_apply,
         ])
         .setup(|app| {
-            // いちばん先に入れる。これより前に転んだものは記録できない
+            // ログはいちばん先に用意する。これより前に起きたエラーは記録できない
             let config = app.path().config_dir()?;
             let dir = config.join(DATA_DIR_NAME);
             logfile::init(dir.join("log.txt"));
@@ -78,10 +79,10 @@ fn main() {
                 None,
             );
             match settings::migrate_legacy(&dir, &config.join(LEGACY_DATA_DIR_NAME)) {
-                Ok(true) => logfile::info("Electron 版の設定を引き継いだ", None),
+                Ok(true) => logfile::info("以前の版の設定を引き継いだ", None),
                 Ok(false) => {}
                 Err(error) => {
-                    logfile::warn("Electron 版の設定を写せなかった", Some(&error.to_string()))
+                    logfile::warn("以前の版の設定を写せなかった", Some(&error.to_string()))
                 }
             }
 
@@ -118,7 +119,7 @@ fn main() {
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
-            // 設定の書き込みはまとめてあるので、最後のぶんをここで落とさずに書く
+            // 設定はまとめて書き込んでいるので、終了時に残りを書き出す
             app.state::<Arc<SettingsStore>>().flush();
         }
     });

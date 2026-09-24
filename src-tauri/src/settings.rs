@@ -1,13 +1,13 @@
 //! 設定の検証と、settings.jsonの読み書き。
 //!
-//! 設定ファイルは人が手で直すこともあるし、古い版のアプリ(Electron版を含む)が書いたものが
-//! 残っていることもある。読み込んだ値は信用せず、項目ごとに検証して、ダメなものだけ既定値に戻す。
+//! 設定ファイルは人が手で直すこともあるし、古い版のアプリが書いたものが残っていることもある。
+//! 読み込んだ値は信用せず、項目ごとに検証し、不正な項目だけ既定値に戻す。
 //!
 //! 型・既定値・範囲は画面側のsrc/shared/settings.tsにもある(画面はそれで表示とスライダーの
 //! 範囲を決める)。**範囲や既定値を変えるときは両方を直す。**検証そのものはこちらだけが行う。
 //!
-//! **ディスクへの書き込みはまとめる。**設定はスライダーからも来る ― つまみを1回動かすと
-//! 十数回飛んでくる。値はその場でメモリに載せ、ファイルにはFLUSH_DELAYごとにまとめて書く。
+//! **ディスクへの書き込みはまとめる。**設定はスライダーからも来るので、つまみを1回動かすだけで
+//! 十数回届く。値はその場でメモリに反映し、ファイルにはFLUSH_DELAYごとにまとめて書く。
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -60,7 +60,7 @@ pub enum LabelMode {
     Us,
 }
 
-/// ウィンドウの位置と大きさ(論理ピクセル。Electron版のDIPと同じ)。
+/// ウィンドウの位置と大きさ(論理ピクセル)。
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Bounds {
     pub x: i32,
@@ -121,7 +121,7 @@ fn clamp_tapping_term(value: Option<&Value>) -> i64 {
     number(value).map_or(200, |n| n.clamp(TAPPING_TERM_MIN, TAPPING_TERM_MAX).round() as i64)
 }
 
-/// 数値として壊れていないか、最小サイズを満たすか。ダメならNone。
+/// 4つとも数値ならBoundsにする(幅と高さは最小サイズまで広げる)。数値でなければNone。
 fn sanitize_bounds(value: Option<&Value>) -> Option<Bounds> {
     let object = value?.as_object()?;
     let x = number(object.get("x"))?;
@@ -166,7 +166,7 @@ fn sanitize_layer_name(value: &Value) -> String {
         .unwrap_or_default()
 }
 
-/// 1台ぶんの名前の並び。末尾の名前なしは落とす。何も残らなければNone。
+/// キーボード1台ぶんの名前の並びを整える。末尾の名前なしは落とす。何も残らなければNone。
 fn sanitize_name_list(value: &Value) -> Option<Vec<String>> {
     let mut names: Vec<String> =
         value.as_array()?.iter().take(MAX_LAYERS).map(sanitize_layer_name).collect();
@@ -303,7 +303,7 @@ impl SettingsStore {
     }
 
     fn read(&self) -> Settings {
-        // 無い・壊れている → 既定値で始める
+        // ファイルが無い・壊れているときは既定値で始める
         let raw = std::fs::read_to_string(&self.path)
             .ok()
             .and_then(|text| serde_json::from_str(&text).ok())
@@ -311,7 +311,7 @@ impl SettingsStore {
         sanitize(&raw)
     }
 
-    /// 今の設定にpatchを重ねて、検証してから保存する。保存した設定を返す。
+    /// いまの設定にpatchを重ねて、検証してから保存する。保存した設定を返す。
     pub fn save(self: &Arc<Self>, patch: Map<String, Value>) -> Settings {
         let mut state = self.state.lock().unwrap();
         let current = state.cached.get_or_insert_with(|| self.read());
@@ -334,8 +334,8 @@ impl SettingsStore {
         next
     }
 
-    /// 溜めていた変更をディスクに書く。終了時にも呼ぶ(最後の400msぶんを落とさないため)。
-    /// 書けなくてもアプリは止めない ― 設定が1回保存されないだけなので、記録して次に任せる。
+    /// 溜めていた変更をディスクに書く。終了時にも呼ぶ(最後の400msぶんを失わないため)。
+    /// 書けなくてもアプリは止めない。設定が1回保存されないだけなので、ログに残して次に任せる。
     pub fn flush(&self) {
         let snapshot = {
             let mut state = self.state.lock().unwrap();
@@ -384,11 +384,10 @@ impl SettingsStore {
     }
 }
 
-/// 前の置き場所(`legacy`)のsettings.jsonを、新しい置き場所(`dir`)に写す。
-/// 新しい方にもう設定があれば何もしない(写したらtrue)。
+/// 以前の置き場所(`legacy`)のsettings.jsonを、いまの置き場所(`dir`)に写す。
+/// いまの方にもう設定があれば何もしない(写したらtrue)。
 ///
-/// 写すだけで、前の置き場所は消さない ― Electron版もそこを使っているので、並べて使えるように。
-/// ログは写さない(診断用で、新しい置き場所で一から始めてよい)。
+/// 以前の置き場所は消さない。ログは写さない(診断用なので、新しい置き場所で一から始めてよい)。
 pub fn migrate_legacy(dir: &Path, legacy: &Path) -> std::io::Result<bool> {
     let target = dir.join("settings.json");
     let source = legacy.join("settings.json");

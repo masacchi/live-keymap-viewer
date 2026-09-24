@@ -1,15 +1,15 @@
 //! 配布ビルドの診断用ログ(設定と同じフォルダのlog.txt)。
 //!
 //! 開発はWSL、動かすのはWindowsなので、実機で何かが起きても開発側の端末には何も残らない。
-//! 配布ビルドではDevToolsも開けない。そこで「まれにしか起きない出来事」だけをファイルに残す:
+//! 配布ビルドではDevToolsも開けない。そこで、まれにしか起きない出来事だけをファイルに残す:
 //!
 //!   - 起動(版とWebViewの版。どのビルドが動いていたかが分かる)
 //!   - 警告(ショートカットの登録失敗、ぼかしの切り替え失敗、設定の保存失敗)
 //!   - Rust側のpanic
 //!   - 画面から報告されたエラー(components/ErrorBoundary.tsxなど)
 //!
-//! ポーリングのような毎秒起きることは書かない。まれなので書き込みは同期でよく、そのぶん
-//! 落ちる直前の1行を取りこぼさない。無限に伸びないよう、MAX_LINESを超えたら古い方から捨てる。
+//! ポーリングのように毎秒起きることは書かない。まれなので書き込みは同期でよく、そのぶん
+//! 落ちる直前の1行も取りこぼさない。際限なく伸びないよう、MAX_LINESを超えたら古い方から捨てる。
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -22,7 +22,7 @@ const MAX_LINES: usize = 500;
 
 struct LogFile {
     path: PathBuf,
-    /// 直近のログ(メモリ側の控え)。書き直すときの元になる。読むまではNone。
+    /// 直近のログ(メモリ上の控え)。ファイルを書き直すときの元になる。まだ読んでいなければNone。
     kept: Mutex<Option<Vec<String>>>,
 }
 
@@ -60,7 +60,7 @@ fn write(level: &str, message: &str, detail: Option<&str>) {
     let Some(log) = LOG.get() else { return };
     let mut kept = log.kept.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let lines = kept.get_or_insert_with(|| {
-        // 無い・読めない → 空から始める
+        // ファイルが無い・読めないときは空から始める
         let text = std::fs::read_to_string(&log.path).unwrap_or_default();
         let all: Vec<String> = text.lines().filter(|l| !l.is_empty()).map(str::to_owned).collect();
         all[all.len().saturating_sub(MAX_LINES)..].to_vec()
@@ -82,20 +82,20 @@ fn write(level: &str, message: &str, detail: Option<&str>) {
     })();
 }
 
-/// 拾われなかったpanicを残す。
+/// 処理されなかったpanicをログに残す。
 ///
 /// panicしてもアプリは終わらせない(Cargo.tomlでunwindのまま)。キーボードの表示はほとんど
-/// 画面の側で動いていて、裏のスレッドが1つ転んでも画面は使えることが多い。
+/// 画面の側で動いていて、裏のスレッドが1つpanicしても画面は使えることが多い。
 /// 黙って消えるより、記録を残して動き続ける方がよい。
 pub fn install_panic_hook() {
     let default = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        error("Rust 側で処理されない panic", Some(&info.to_string()));
+        error("Rust側で処理されなかったpanic", Some(&info.to_string()));
         default(info);
     }));
 }
 
-/// いまの時刻をISO 8601(UTC、ミリ秒まで)で。Electron版のログと同じ形にそろえる。
+/// いまの時刻をISO 8601(UTC、ミリ秒まで)で返す。
 fn iso_now() -> String {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     format_iso(now.as_secs() as i64, now.subsec_millis())

@@ -1,12 +1,11 @@
-//! キーボードとのraw HID(hidapi)。Electron版で画面のWebHIDがしていたことの代わり。
+//! キーボードとのraw HID(hidapi)。
 //!
-//! Tauriの画面はWebView2で、WebHIDの許可や選択ダイアログを差し込む口が無い
-//! (docs/ARCHITECTURE.md §2)。そこでHIDはRustで扱い、画面(TS)からはWebHIDと同じ形に
-//! 見せる(src/renderer/src/hid/nativeHid.ts)。プロトコル(hid/vial.ts)・直列化と照合
-//! (hid/transport.ts)・接続の管理(session/)はElectron版のものをそのまま使う。
+//! 画面(WebView2)にはWebHIDの許可や選択ダイアログを差し込む口が無いので、HIDはRustで扱い、
+//! 画面からはWebHIDと同じ形に見せる(src/renderer/src/hid/nativeHid.ts)。プロトコル(hid/vial.ts)・
+//! 直列化と照合(hid/transport.ts)・接続の管理(session/)はTS側にある(docs/ARCHITECTURE.md §2)。
 //!
-//! ここがするのは、Vialのインターフェースを並べる・開く・書く・届いたものを画面へ流す・
-//! 挿し抜きを知らせる、だけ。応答の照合や時間切れはTS側の仕事。
+//! ここでするのは、Vialのインターフェースの一覧・開く・書く・届いたレポートを画面へ流す・
+//! 抜き差しを知らせる、だけ。応答の照合やタイムアウトはTS側で扱う。
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -29,10 +28,10 @@ const VIAL_USAGE: u16 = 0x61;
 /// Vialのレポートの長さ。
 const MSG_LEN: usize = 32;
 
-/// 挿し抜きを見に行く間隔。hidapiには挿し抜きの通知が無いので、一覧を取り直して比べる。
-/// 抜けたこと(使っていたもの)は読み取りの失敗ですぐ分かるので、これは主に「挿された」のため。
+/// 抜き差しを確認する間隔。hidapiには抜き差しの通知が無いので、一覧を取り直して比べる。
+/// 使っていたデバイスが抜けたことは読み取りの失敗ですぐ分かるので、これは主に「挿された」ことを知るため。
 const SCAN_INTERVAL: Duration = Duration::from_secs(2);
-/// 読み取りスレッドが、閉じられたかを確かめる間隔(ms)。閉じてから止まるまでの最長。
+/// 読み取りスレッドが、閉じられたかを確認する間隔(ms)。閉じてからスレッドが止まるまで最長でこれだけかかる。
 const READ_POLL_MS: i32 = 100;
 
 /// 画面に渡すデバイスの情報。WebHIDのHIDDeviceのうち、アプリが使うところ。
@@ -64,9 +63,9 @@ impl HidDeviceInfo {
 
 /// 開いているデバイス1つぶん。
 ///
-/// hidapiのデバイスは1つのハンドルを複数のスレッドから同時に使えない(読むスレッドが
-/// readで待っているあいだに書けない)。なので**読む用と書く用に2回開く**。
-/// 入力レポートはOSがハンドルごとに配る(書く用に溜まるぶんは、OSの輪状のバッファが
+/// hidapiのデバイスは、1つのハンドルを複数のスレッドから同時に使えない(読むスレッドが
+/// readで待っているあいだは書けない)。そこで**読む用と書く用に2回開く**。
+/// 入力レポートはOSがハンドルごとに配る(書く用のハンドルに溜まるぶんは、OSのリングバッファが
 /// 古い方から捨てる)。
 struct OpenDevice {
     /// 開いたウィンドウ。ウィンドウが消えたら、そのウィンドウが開いたものを閉じる。
@@ -81,9 +80,9 @@ pub struct HidBridge {
     api: Mutex<Option<HidApi>>,
     open: Mutex<HashMap<u32, OpenDevice>>,
     next_handle: AtomicU32,
-    /// 前回並べたときの一覧。挿し抜きはこれとの差で知らせる。まだ並べていなければNone。
+    /// 前回取った一覧。抜き差しはこれとの差で知らせる。まだ一度も取っていなければNone。
     known: Mutex<Option<Vec<HidDeviceInfo>>>,
-    /// 挿し抜きを見に行くスレッドを、待たずに起こす。
+    /// 抜き差しを確認するスレッドを、間隔を待たずに起こす。
     rescan: Mutex<Option<Sender<()>>>,
 }
 
@@ -99,7 +98,7 @@ impl HidBridge {
         })
     }
 
-    /// 挿し抜きを見に行くスレッドを動かす。挿されたら`hid-connect`、
+    /// 抜き差しを確認するスレッドを動かす。挿されたら`hid-connect`、
     /// 抜かれたら`hid-disconnect`を全部のウィンドウに送る(中身はHidDeviceInfo)。
     pub fn start_monitor(self: &Arc<Self>) {
         let (sender, receiver) = mpsc::channel();
@@ -112,17 +111,17 @@ impl HidBridge {
                     bridge.devices();
                     match receiver.recv_timeout(SCAN_INTERVAL) {
                         Ok(()) | Err(RecvTimeoutError::Timeout) => {
-                            // まとめて来た「起こして」は1回で足りる
+                            // 続けて届いた起こす合図は、1回ぶんで足りる
                             while receiver.try_recv().is_ok() {}
                         }
                         Err(RecvTimeoutError::Disconnected) => break,
                     }
                 }
             })
-            .expect("hid-monitor のスレッドを作れなかった");
+            .expect("hid-monitorのスレッドを作れなかった");
     }
 
-    /// いま繋がっているVialのインターフェースを並べる。前回との差を挿し抜きとして知らせる。
+    /// いま接続されているVialのインターフェースの一覧を返す。前回との差は抜き差しとして知らせる。
     pub fn devices(&self) -> Vec<HidDeviceInfo> {
         let list = self.scan();
         self.notify_changes(&list);
@@ -135,7 +134,7 @@ impl HidBridge {
             return Vec::new();
         };
         if let Err(error) = api.refresh_devices() {
-            logfile::warn("HID の一覧を取り直せなかった", Some(&error.to_string()));
+            logfile::warn("HIDの一覧を取り直せなかった", Some(&error.to_string()));
         }
         let mut list: Vec<HidDeviceInfo> = api
             .device_list()
@@ -149,7 +148,7 @@ impl HidBridge {
 
     fn notify_changes(&self, list: &[HidDeviceInfo]) {
         let mut known = self.known.lock().unwrap();
-        // 初めて並べたときは比べる相手が無い(起動時に挿さっていたものは「挿された」ではない)
+        // 初回は比べる相手が無い(起動時に挿さっていたものは「挿された」として知らせない)
         let Some(previous) = known.replace(list.to_vec()) else { return };
         for gone in previous.iter().filter(|d| !list.iter().any(|now| now.path == d.path)) {
             let _ = self.app.emit("hid-disconnect", gone);
@@ -159,7 +158,7 @@ impl HidBridge {
         }
     }
 
-    /// 開いて、届いた入力レポートを`on_report`に流す。閉じるときに使う番号を返す。
+    /// デバイスを開き、届いた入力レポートを`on_report`に流す。閉じるときに使う番号を返す。
     pub fn open(
         &self,
         owner: &str,
@@ -169,7 +168,7 @@ impl HidBridge {
         let c_path = CString::new(path).map_err(|_| "デバイスのパスが正しくない".to_owned())?;
         let (reader, writer) = {
             let mut api = self.api.lock().unwrap();
-            let api = ensure_api(&mut api).ok_or("HID を使えない")?;
+            let api = ensure_api(&mut api).ok_or("HIDを使えない")?;
             let reader = api.open_path(&c_path).map_err(|e| e.to_string())?;
             let writer = api.open_path(&c_path).map_err(|e| e.to_string())?;
             (reader, writer)
@@ -209,8 +208,8 @@ impl HidBridge {
         }
     }
 
-    /// ウィンドウが消えたときに、そのウィンドウが開いていたものを閉じる。
-    /// 画面が閉じ忘れても(落ちた・リロードした)、ハンドルが残り続けないように。
+    /// ウィンドウが閉じたときに、そのウィンドウが開いていたデバイスを閉じる。
+    /// 画面が閉じずに終わっても(エラーやリロード)、ハンドルが残り続けないようにするため。
     pub fn close_owned_by(&self, owner: &str) {
         let mut open = self.open.lock().unwrap();
         open.retain(|_, device| {
@@ -228,7 +227,7 @@ fn ensure_api(api: &mut Option<HidApi>) -> Option<&mut HidApi> {
     if api.is_none() {
         match HidApi::new() {
             Ok(created) => *api = Some(created),
-            Err(error) => logfile::warn("HID を初期化できなかった", Some(&error.to_string())),
+            Err(error) => logfile::warn("HIDを初期化できなかった", Some(&error.to_string())),
         }
     }
     api.as_mut()
@@ -251,8 +250,8 @@ fn read_loop(
                 }
             }
             Err(_) => {
-                // 抜かれた・消えた。一覧を待たずに取り直して「抜かれた」を知らせる
-                // (知らせを受けた画面は、待たずに切って繋ぎ直しに入る)
+                // 抜かれたか、デバイスが消えた。次の確認を待たずに一覧を取り直して画面に知らせる
+                // (画面はすぐに切断して再接続を始める)
                 if let Some(rescan) = &rescan {
                     let _ = rescan.send(());
                 }
@@ -262,7 +261,7 @@ fn read_loop(
     }
 }
 
-/// レポートIDの0が先頭に付いて来たら外す。画面のWebHIDと同じく、中身の32バイトだけを渡す。
+/// 先頭にレポートIDの0が付いていたら外す。WebHIDと同じく、中身の32バイトだけを画面に渡す。
 fn strip_report_id(data: &[u8]) -> Vec<u8> {
     match data {
         [0, rest @ ..] if rest.len() == MSG_LEN => rest.to_vec(),

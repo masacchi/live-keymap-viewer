@@ -1,7 +1,7 @@
-//! 画面(WebView)から呼ばれるコマンド。Electron版のipc.tsにあたる。
+//! 画面(WebView)から呼ばれるコマンド。
 //!
-//! 画面から来た値は、ここで範囲を確かめてから使う。型はTauriが確かめる(合わなければ
-//! 呼び出しが失敗する)。画面が使うものだけを置く ― 対になるTSはsrc/renderer/src/platform/tauri.ts。
+//! 画面から来た値は、ここで範囲を確認してから使う(型はTauriが確認し、合わなければ
+//! 呼び出しが失敗する)。画面が使うものだけを置く。呼び出す側はsrc/renderer/src/platform/tauri.ts。
 //!
 //! 引数の名前は画面からはcamelCaseで渡す(`vendor_id`なら`vendorId`)。
 //!
@@ -62,7 +62,7 @@ pub fn settings_get(settings: State<'_, Arc<SettingsStore>>) -> Settings {
     settings.load()
 }
 
-/// 変えてよい項目だけを取り出し、値は保存するときに確かめる。ウィンドウに効くものはその場で反映する。
+/// 変えてよい項目だけを取り出し、値は保存するときに確認する。ウィンドウに効くものはその場で反映する。
 #[tauri::command]
 pub fn settings_update(
     patch: Value,
@@ -140,14 +140,14 @@ pub fn window_resize_by(dw: f64, dh: f64, windows: State<'_, Arc<WindowManager>>
     }
 }
 
-/// 「手放した」の返事。待っているモード切り替えがあれば、そこで先へ進む。
+/// 画面がキーボードを解放したという知らせ。待っているモード切り替えがあれば、ここで先へ進める。
 #[tauri::command]
 pub fn hid_released(windows: State<'_, Arc<WindowManager>>) {
     windows.note_hid_released();
 }
 
-/// Vialのインターフェースを並べる。`granted_only`なら一度許可したもの(VID/PID)だけ
-/// ― WebHIDのgetDevices()と同じく、自動で繋ぐのは許可したものに限る。
+/// Vialのインターフェースの一覧を返す。`granted_only`なら、一度許可したもの(VID/PID)に絞る。
+/// 自動で接続するのは許可したものに限るため(WebHIDの`getDevices()`と同じ)。
 #[tauri::command]
 pub async fn hid_devices(app: AppHandle, granted_only: bool) -> Result<Vec<HidDeviceInfo>, String> {
     let hid = Arc::clone(&app.state::<Arc<HidBridge>>());
@@ -162,7 +162,7 @@ pub async fn hid_devices(app: AppHandle, granted_only: bool) -> Result<Vec<HidDe
         .collect())
 }
 
-/// 選ばれたキーボードを覚える(次の起動から自動で繋ぐ)。
+/// 選ばれたキーボードを覚える(次の起動から自動で接続する)。
 #[tauri::command]
 pub fn hid_remember(
     vendor_id: i64,
@@ -173,7 +173,7 @@ pub fn hid_remember(
     settings.remember_device(vendor_id, product_id, &name);
 }
 
-/// 開いて、入力レポートを`on_report`に流す。閉じるのに使う番号を返す。
+/// デバイスを開き、届いた入力レポートを`on_report`に流す。閉じるときに使う番号を返す。
 #[tauri::command]
 pub async fn hid_open(
     app: AppHandle,
@@ -198,7 +198,8 @@ pub fn hid_close(handle: u32, hid: State<'_, Arc<HidBridge>>) {
     hid.close(handle);
 }
 
-/// 画面側の出来事。長いスタックがそのまま来るので、ログが1件で埋まらないように切る。
+/// 画面で起きたことをログに残す。スタックトレースが長いまま来るので、
+/// 1件でログが埋まらないように切り詰める。
 #[tauri::command]
 pub fn log_report(level: String, message: String, detail: Option<String>) {
     if message.is_empty() {
@@ -217,7 +218,7 @@ fn truncate(text: &str, max: usize) -> String {
     text.chars().take(max).collect()
 }
 
-/// 設定パネルからログを開く。パスを出すだけでは、エクスプローラーを辿る手間が残る。
+/// 設定パネルからログを開く。パスを見せるだけだと、エクスプローラーでたどる手間が残るため。
 #[tauri::command]
 pub fn log_open() {
     let Some(path) = logfile::path() else { return };
@@ -228,23 +229,23 @@ pub fn log_open() {
 }
 
 /// 新しい版があるかを見る(インストーラーで入れたときだけ。ほかはUnsupported)。
-/// `force`でなければ、少し前に確かめた結果を使う(updater.rsのCHECK_CACHE)。
+/// `force`でなければ、少し前に確認した結果を使う(updater.rsのCHECK_CACHE)。
 #[tauri::command]
 pub async fn update_check(force: bool) -> Result<UpdateStatus, String> {
     spawn_blocking(move || updater::check(force)).await.map_err(|e| e.to_string())?
 }
 
-/// 新しい版を落として入れ替え、起動し直す。うまくいけばこのアプリは終わる。
+/// 新しい版をダウンロードして入れ替え、起動し直す。成功するとこのプロセスは終了する。
 #[tauri::command]
 pub async fn update_apply(app: AppHandle) -> Result<(), String> {
     let settings = Arc::clone(&app.state::<Arc<SettingsStore>>());
     spawn_blocking(move || {
-        // まとめてある設定の書き込みを、終わる前に済ませる
+        // まだ書き込んでいない設定を、終了する前に書き出す
         updater::apply(|| settings.flush())
     })
     .await
     .map_err(|e| e.to_string())??;
-    logfile::info("更新を入れるために終わる", None);
+    logfile::info("更新を適用するため終了する", None);
     app.exit(0);
     Ok(())
 }
