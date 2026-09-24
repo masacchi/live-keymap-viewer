@@ -1,0 +1,5 @@
+# Windows 向けのクロスビルド(cargo-xwin)で、MSVC の CRT のデバッグ情報(.pdb)が無いという
+# 警告(LNK4099)がライブラリの数だけ出て、ほかの警告が読めなくなる。.pdb は xwin が落としてこない
+# もので、exe の動作には関係しないので黙らせる
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/ignore:4099"]

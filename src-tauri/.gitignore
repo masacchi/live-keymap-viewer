@@ -1,0 +1,4 @@
+# cargo のビルド結果
+/target/
+# tauri-build が作る(capabilities の JSON スキーマなど)
+/gen/schemas

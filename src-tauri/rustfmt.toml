@@ -1,0 +1,3 @@
+# 行の幅は画面側(biome.json の lineWidth)と同じ 100。短い構造体や引数は 1 行に収める
+max_width = 100
+use_small_heuristics = "Max"
