@@ -24,10 +24,13 @@ use crate::hid::HidBridge;
 use crate::settings::SettingsStore;
 use crate::windows::WindowManager;
 
-/// 設定とログを置くフォルダの名前(OS の設定の置き場所の下)。
-/// Electron 版(userData = %APPDATA%\Live Keymap Viewer)と同じにして、乗り換えても
-/// レイヤー名・ウィンドウの位置・許可したキーボードをそのまま使えるようにする。
-const DATA_DIR_NAME: &str = "Live Keymap Viewer";
+/// 設定とログを置くフォルダの名前(OS の設定の置き場所 = Windows なら %APPDATA% の下)。
+/// パスに半角スペースを入れない(コマンドラインやスクリプトで扱うときに引用符が要らないように)。
+const DATA_DIR_NAME: &str = "live-keymap-viewer";
+
+/// Electron 版が設定を置いていたフォルダの名前。新しい方に設定が無ければ、ここから写す
+/// (レイヤー名・ウィンドウの位置・許可したキーボードを引き継ぐ)。
+const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
 
 /// 通常ウィンドウ ⇄ オーバーレイの切り替え。オーバーレイ中の最後の逃げ道でもある。
 const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
@@ -58,13 +61,21 @@ fn main() {
         ])
         .setup(|app| {
             // いちばん先に入れる。これより前に転んだものは記録できない
-            let dir = app.path().config_dir()?.join(DATA_DIR_NAME);
+            let config = app.path().config_dir()?;
+            let dir = config.join(DATA_DIR_NAME);
             logfile::init(dir.join("log.txt"));
             logfile::install_panic_hook();
             logfile::info(
                 &format!("起動 v{} ({})", app.package_info().version, commands::runtime_label()),
                 None,
             );
+            match settings::migrate_legacy(&dir, &config.join(LEGACY_DATA_DIR_NAME)) {
+                Ok(true) => logfile::info("Electron 版の設定を引き継いだ", None),
+                Ok(false) => {}
+                Err(error) => {
+                    logfile::warn("Electron 版の設定を写せなかった", Some(&error.to_string()))
+                }
+            }
 
             let settings = SettingsStore::new(dir.join("settings.json"));
             let hid = HidBridge::new(app.handle().clone());
