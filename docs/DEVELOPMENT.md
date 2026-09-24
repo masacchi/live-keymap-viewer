@@ -278,6 +278,11 @@ Electron 版の置き場所(`%APPDATA%\Live Keymap Viewer`)から写す。
 (exe 単体)も置く。ツールは Dockerfile と同じものを直に入れる(CI ではコンテナを通さない)。
 Rust のビルド結果と MSVC の CRT / SDK はキャッシュする。キャッシュが無い初回は 10 分ほどかかる。
 
+cargo-xwin は、配布されているバイナリ(`taiki-e/install-action` などが入れる musl 版)を**使わない**。
+メモリの取り回しが遅く、キャッシュの無いときの「Downloading MSVC CRT...」が 10 分以上進まなくなる。
+crates.io から `cargo install` した glibc 版なら十数秒で終わる。版は Dockerfile の `CARGO_XWIN_VERSION` を
+CI も読む(入れた cargo-xwin もキャッシュに残るので、ビルドし直すのは初回だけ)。
+
 | きっかけ | やること |
 |---|---|
 | main への push(PR のマージを含む) | ビルドして、GitHub のリリース **dev-build**(プレリリース)にインストーラーとポータブル版を置く。プレリリースなので、入っているアプリの更新の対象にはならない |

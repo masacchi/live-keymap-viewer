@@ -38,9 +38,13 @@ ENV RUSTUP_HOME=/home/ubuntu/.rustup \
     # scripts/container.mjs が「もう中にいる」と分かるように
     LKV_DEVCONTAINER=1
 
+# cargo-xwin は crates.io からビルドして入れる(glibc 版)。配布されているバイナリは musl 版で、
+# メモリの取り回しが遅く、MSVC の CRT / SDK の初回ダウンロードが 10 分以上かかって止まったように見える
+# (glibc 版なら十数秒)。CI(.github/workflows/build-windows.yml)もこの版を読んで同じように入れる
+ARG CARGO_XWIN_VERSION=0.23.1
 RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
       --component clippy,rustfmt --target x86_64-pc-windows-msvc \
-  && cargo install --locked cargo-xwin \
+  && cargo install --locked cargo-xwin --version "${CARGO_XWIN_VERSION}" \
   && rm -rf /home/ubuntu/.cargo/registry \
   # ボリュームを被せる場所を先に作っておく(無いと root の持ち物で作られて書けない)
   && mkdir -p /home/ubuntu/.cargo/registry /home/ubuntu/.cache/cargo-xwin

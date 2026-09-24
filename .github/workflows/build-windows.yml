@@ -96,9 +96,21 @@ jobs:
             --component clippy,rustfmt --target x86_64-pc-windows-msvc
           rustup default stable
 
-      - uses: taiki-e/install-action@v2
+      # crate のビルド結果と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK を残す。
+      # 下で cargo install する cargo-xwin(~/.cargo/bin)も残るので、2 回目からはビルドし直さない
+      # (rustc の版がキャッシュの鍵に入るので、Rust を入れた後に置く)
+      - uses: Swatinem/rust-cache@v2
         with:
-          tool: cargo-xwin
+          workspaces: src-tauri
+          cache-directories: ~/.cache/cargo-xwin
+
+      - name: cargo-xwin を入れる
+        run: |
+          # 配布されているバイナリ(install-action などが入れる musl 版)は使わない。メモリの取り回しが遅く、
+          # MSVC の CRT の初回ダウンロードが 10 分以上かかる。crates.io からビルドした glibc 版なら十数秒。
+          # 版は .devcontainer/Dockerfile の CARGO_XWIN_VERSION に合わせる(同じ版ならビルドを飛ばす)
+          version=$(sed -n 's/^ARG CARGO_XWIN_VERSION=//p' .devcontainer/Dockerfile)
+          cargo install --locked cargo-xwin --version "$version"
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -110,12 +122,6 @@ jobs:
           version=$(sed -n 's/^ARG VPK_VERSION=//p' .devcontainer/Dockerfile)
           dotnet tool install --global vpk --version "$version"
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-
-      # crate のビルド結果と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK を残す
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-          cache-directories: ~/.cache/cargo-xwin
 
       - run: npm ci
 
