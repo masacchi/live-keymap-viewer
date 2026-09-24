@@ -15,7 +15,7 @@ Vial キーボード(まずは Cornix LP)の **押しているキー** と **い
 
 ## 使う
 
-GitHub のリリース(または Actions の実行結果の Artifacts)から、どちらかを取ってくる(Windows x64 向け):
+GitHub のリリースから、どちらかを取ってくる(Windows x64 向け。開発中の版は `dev-build`):
 
 - **インストーラー**(`live-keymap-viewer-win-Setup.exe`)… 実行するとそのまま入って起動する。
   入る場所は `%LOCALAPPDATA%\live-keymap-viewer`、スタートメニューとデスクトップにショートカットができる。
