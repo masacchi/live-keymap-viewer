@@ -1,5 +1,5 @@
 /**
- * SVGの描画を、実際にマークアップへ落として確かめる。
+ * SVGの描画を、実際にマークアップへ落として確認する。
  * ブラウザは要らないのでreact-dom/serverで静的に描く。
  */
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -132,7 +132,7 @@ describe('KeyboardView', () => {
 
   it('押しているキーは、表示中のレイヤーではなく押した瞬間のキーコードで描く', () => {
     // 右下のTD(3)は長押しでL4。L4のその位置は透過ではないので、表示中のレイヤーで
-    // 引き直すとTDが見えなくなり、以前は「Lnull長押し中」と出ていた
+    // 引き直すとTDが見えなくなり、「Lnull長押し中」と出てしまう
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[7][0] = true
@@ -157,7 +157,7 @@ describe('KeyboardView', () => {
     )
     // L4の(0,0)はUSER06 = SWITCH(shortName "Switch\nOutput")
     expect(html).toMatch(/<tspan[^>]*>Switch<\/tspan><tspan[^>]*>Output<\/tspan>/)
-    // 説明(title)はキーの中に書かない。はみ出していた
+    // 説明(title)は長いのでキーの中に書かない(はみ出す)
     expect(html).not.toMatch(/<text[^>]*>Switch default output mode/)
     expect(html).toContain('Switch default output mode between USB/BLE')
   })
@@ -373,7 +373,7 @@ describe('KeyboardView', () => {
   })
 
   it('長押しの色帯は、キーの縁から少し内側に描く(キーキャップの中の札に見えるように)', () => {
-    // 以前はキーの外枠いっぱいで、帯がキーからはみ出しそうに見えた
+    // キーの外枠いっぱいに描くと、帯がキーからはみ出しそうに見える
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)

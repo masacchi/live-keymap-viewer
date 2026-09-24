@@ -191,7 +191,7 @@ describe('KeyboardSession: ポーリング', () => {
   })
 
   it('単発の取りこぼしでは落とさず、応答が戻れば黙って続ける', async () => {
-    // OSやファームの省電力で応答が一瞬詰まることがある。以前はこれで切断していた
+    // OSやファームの省電力で応答が一瞬詰まることがある。それだけで切断しない
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     let failuresLeft = 3
@@ -216,8 +216,8 @@ describe('KeyboardSession: ポーリング', () => {
   })
 
   it('応答が返らないあいだは粘り、限界を超えたら切る', async () => {
-    // Windowsではウィンドウの枠をドラッグしているあいだmainのメッセージループが止まり、
-    // WebHIDの往復が返らない。数秒で切っていたので、ドラッグのたびに繋ぎ直していた
+    // Windowsではウィンドウの枠をドラッグしているあいだ、応答が画面に届かなくなることがある。
+    // 数秒で切ると、ドラッグのたびに再接続になる
     const opts = options()
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, opts)
@@ -243,7 +243,7 @@ describe('KeyboardSession: ポーリング', () => {
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
-      // 書き込みそのものの失敗。待っても直らないので、時間切れの粘りには入れない
+      // 書き込みそのものの失敗。待っても直らないので、タイムアウトのように待たない
       if (request[0] === 0x02) throw new Error('ケーブルが抜けた')
       return original(request, opts)
     }
@@ -284,7 +284,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     }
   }
 
-  /** キャッシュを満たすために1回繋いで切る。 */
+  /** キャッシュを満たすために1回接続して切る。 */
   async function warmUp(caches: ReturnType<typeof memoryCaches>): Promise<void> {
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, { ...options(), ...caches })
@@ -298,7 +298,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     mock.requests.filter((request) => request[0] === 0x12).length
 
   it('2 回目は読まずに図を出し、裏で読み直して確かめる', async () => {
-    // モードの切り替えや繋ぎ直しのたびに70往復待たされていた(BTでは30秒)
+    // キャッシュが無いと、モードの切り替えや再接続のたびに70往復待つことになる(BTでは30秒)
     const caches = memoryCaches()
     await warmUp(caches)
 
@@ -321,7 +321,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     await warmUp(caches)
 
     const mock = new MockTransport({ unlocked: true })
-    mock.setKeycode(0, 0, 1, 0x001d) // 繋いでいない間にVialでQ → Zに変えた
+    mock.setKeycode(0, 0, 1, 0x001d) // 接続していない間にVialでQ → Zに変えた
     const session = new KeyboardSession(mock, { ...options(), ...caches })
     await session.start()
     await waitFor(session, (s) => s.status === 'ready')
@@ -393,8 +393,7 @@ describe('KeyboardSession: 読み直し', () => {
   })
 
   it('読み直しのあいだもポーリングを止めず、押下を出し続ける', async () => {
-    // 以前は読み終わるまで止めていた。BT(68往復 × 約470ms)ではウィンドウに戻るたびに
-    // 30秒ほど押下が出なくなり、繋ぎ直しているように見えた
+    // 読み終わるまで止めると、BT(68往復 × 約470ms)では30秒ほど押下が出なくなる
     const { session, mock } = await readySession()
     let resume!: () => void
     const gate = new Promise<void>((resolve) => {

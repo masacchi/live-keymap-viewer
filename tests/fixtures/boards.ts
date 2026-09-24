@@ -1,8 +1,8 @@
 /**
  * モックが名乗る「Cornix以外のキーボード」。
  *
- * このアプリは固定データを持たない ― 配置もキーマップもレイヤー数もキーボードから読む
- * (docs/ARCHITECTURE.md §1)。その前提が本当かを、別の機種で実際に動かして確かめるための
+ * このアプリは固定データを持たない。配置もキーマップもレイヤー数もキーボードから読む
+ * (docs/ARCHITECTURE.md §1)。その前提が本当かを、別の機種で実際に動かして確認するための
  * 材料(tests/otherKeyboard.test.tsx)。定義JSONはscripts/gen-test-boards.pyで作る。
  */
 import type { MockKeyboard } from '@/hid/mockTransport'
@@ -29,7 +29,7 @@ function plainKeymap(): number[] {
   const at = (layer: number, row: number, col: number): number =>
     layer * PLAIN_ROWS * PLAIN_COLS + row * PLAIN_COLS + col
 
-  // L0はAから順の英字で埋める(ラベルが出ることを確かめられればよい)
+  // L0はAから順の英字で埋める(ラベルが出ることを確認できればよい)
   for (let row = 0; row < PLAIN_ROWS; row++) {
     for (let col = 0; col < PLAIN_COLS; col++) {
       keymap[at(0, row, col)] = KC_A + ((row * PLAIN_COLS + col) % 26)

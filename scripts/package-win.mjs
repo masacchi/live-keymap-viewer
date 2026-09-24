@@ -3,17 +3,15 @@
  *
  *   npm run package:win      # WSLから打てば、コンテナの中で動く(scripts/container.mjs)
  *
- * できたものはdist/win32-x64/LiveKeymapViewer.exeに置く。deploy-win.mjsと
- * installer-win.mjsはそこから取る。
+ * できたものはdist/win32-x64/LiveKeymapViewer.exeに置く。deploy-win.mjsとpack-win.mjsは
+ * そこから取る。
  *
- * Tauriのexeは1つで完結する。画面はWindowsに入っているWebView2で描くので、
- * ElectronのころのようにChromium一式(DLL・pak・locales)を横に置く必要は無い。
- * アイコンとバージョン情報もビルドのときにexeに入る(Electronのころはrceditが要り、
- * Linuxからだとwineが要るので入れていなかった)。
+ * exeは1つで完結する。画面はWindowsに入っているWebView2で描くので、ほかのファイルを横に
+ * 置く必要は無い。アイコンとバージョン情報もビルドのときにexeに入る。
  *
  * Tauriのインストーラー作り(bundle)は使わない(tauri.conf.jsonのbundle.active: false)。
- * インストーラーはscripts/installer-win.nsiを使い続ける ― 入れる場所や「起動中なら止めずに
- * 断る」などの方針をそのまま保つため。
+ * インストーラーはVelopackで作る(pack-win.mjs)。Tauri標準のNSISは製品名から入れる場所を決め、
+ * パスに半角スペースが入るため。
  */
 
 import { execFileSync } from 'node:child_process'

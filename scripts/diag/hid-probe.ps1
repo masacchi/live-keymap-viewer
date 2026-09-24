@@ -1,5 +1,5 @@
 ﻿# 注意: このファイルはBOM付きUTF-8で保存すること(Windows PowerShell 5.1はBOMが無いとShift_JISとして読み、日本語が化けて壊れる)。
-# WindowsのHID APIで、Vialのインターフェースに直接問い合わせる(Chromiumを通さない)。
+# WindowsのHID APIで、Vialのインターフェースに直接問い合わせる(アプリを通さない)。
 #
 #   npm run diag:hid                 # 既定はVID E118(Cornix)
 #   npm run diag:hid -- 3434         # 別のVID
@@ -8,8 +8,7 @@
 # usagePage 0xFF60のものには、Vialの「キーボードIDの問い合わせ」[0xFE, 0x00]を1回だけ送り、
 # 応答と往復時間を出す(アプリが接続時に最初に送るのと同じ無害な問い合わせ)。
 #
-# 「OSからは答えるのにアプリでは駄目」なら、原因はChromium / Electronかアプリ側にある。
-# docs/BLUETOOTH.md §2.6。
+# 「OSからは答えるのにアプリでは駄目」なら、原因はアプリ側にある。docs/BLUETOOTH.md §2.6。
 param([string]$VendorId = 'e118')
 $ErrorActionPreference = 'Stop'
 # WSLの端末に日本語が化けずに出るように

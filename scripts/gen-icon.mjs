@@ -8,7 +8,7 @@
  * SVGを描けるものが要るが、依存を増やさないよう、開発用に入っているElectronの画面のcanvasで
  * 描く(Nodeから起動すると、自分をElectronで動かし直す)。画面は出さない。
  * ICOは書式が単純なので自前で組み立てる。各サイズはPNGを詰めず、昔ながらの32bit BMPで入れる
- * ― インストーラーを作るNSISや古いツールでも読めるように。
+ * (古いツールでも読めるように)。
  */
 
 import { spawn } from 'node:child_process'

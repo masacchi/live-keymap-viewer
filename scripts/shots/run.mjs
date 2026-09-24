@@ -5,12 +5,12 @@
  *   npm run shots -- --out .shots/before        … 撮る先を変える
  *   npm run shots -- --compare .shots/before    … 撮ったあと、前の結果と画素で比べる
  *
- * WSLからは実機が見えないので、見た目の変更はこれで確かめる。リファクタの前後で撮って
- * --compareすれば、見た目が変わっていないことを画素単位で確かめられる。撮るあいだは
+ * WSLからは実機が見えないので、見た目の変更はこれで確認する。リファクタの前後で撮って
+ * --compareすれば、見た目が変わっていないことを画素単位で確認できる。撮るあいだは
  * アニメーションとtransitionを止めるので、同じコードなら毎回同じ絵になる。
  *
  * 画面は出さない(オフスクリーンで描いて撮る)。Windows側で動いているアプリには触らない。
- * 撮る場面はelectron.mjsのSCENES。
+ * 撮る場面はelectron.mjsのnormalScenes / overlayScenes。
  */
 
 import { spawn } from 'node:child_process'

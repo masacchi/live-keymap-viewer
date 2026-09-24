@@ -77,8 +77,8 @@ class Board {
 describe('LayerEngine の作り方', () => {
   it('tappingTerm に undefined を渡しても、既定値で長押しが確定する', () => {
     // セッションは、設定を受け取る前はtappingTerm: undefinedでエンジンを作る。
-    // 以前は既定値をconfigで上書きしていたのでundefinedになり、
-    // `now - pressedAt >= undefined`が常に偽 ― LT / TDの長押しが永遠に確定しなかった
+    // 既定値をconfigで上書きするとundefinedになり、`now - pressedAt >= undefined`が常に偽で、
+    // LT / TDの長押しがいつまでも確定しない
     const engine = new LayerEngine({
       layers: MOCK_LAYERS,
       rows: MOCK_ROWS,
@@ -250,7 +250,7 @@ describe('透過キーの解決', () => {
   })
 })
 
-/** MO / TG / TOはCornixのキーマップに無いので、小さな合成キーマップで確かめる。 */
+/** MO / TG / TOはCornixのキーマップに無いので、小さな合成キーマップで確認する。 */
 describe('MO / TG / TO', () => {
   const MO2 = 0x5222
   const TG1 = 0x5261

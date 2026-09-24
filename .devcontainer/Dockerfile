@@ -2,7 +2,7 @@
 #
 # Windows版はLinuxからcargo-xwinでクロスビルドする。wineもWindowsも要らない
 # (docs/DEVELOPMENT.md「Windowsに置く」)。実機はWSL / コンテナから見えないので、
-# 動作確認はモック、実機はWindows側で行う(これはElectronのころと同じ)。
+# 動作確認はモック、実機はWindows側で行う。
 FROM docker.io/library/ubuntu:26.04
 
 # ホスト(WSL)と同じ版にそろえる。node_modulesをホストと共有するため
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libudev-dev \
       # Windows向けのクロスビルド(cargo-xwinはclangとlld、exeのリソースにllvm-rcを使う)
       clang lld llvm \
-      # インストーラーと更新の包みを作るvpk(Velopack)を動かす
+      # インストーラーと更新用のパッケージを作るvpk(Velopack)を動かす
       dotnet-sdk-10.0 \
       # Linux版をWSLgで出したときに日本語が豆腐にならないように
       fonts-noto-cjk \
@@ -50,6 +50,6 @@ RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile min
   && mkdir -p /home/ubuntu/.cargo/registry /home/ubuntu/.cache/cargo-xwin
 
 # vpk(VelopackのCLI)。アプリが使うvelopack crate(src-tauri/Cargo.toml)と同じ版にそろえる
-# ― 包みの形式と、アプリ側の更新の読み方が食い違わないように
+# (パッケージの形式と、アプリ側の更新の読み方が食い違わないように)
 ARG VPK_VERSION=1.2.158
 RUN dotnet tool install --global vpk --version "${VPK_VERSION}"

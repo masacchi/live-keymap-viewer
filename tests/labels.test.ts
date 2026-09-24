@@ -15,7 +15,7 @@ function labelAt(layer: number, row: number, col: number, mode: 'jis' | 'us' = '
 }
 
 /**
- * reference/keymap-preview.htmlのL0と一致すること(HANDOFF §8の受け入れ基準)。
+ * reference/keymap-preview.htmlのL0と一致すること(docs/STATUS.mdの確認項目)。
  * 値は同ファイルのLAYOUT[0]とJIS / NAMEDテーブルから起こした。
  */
 const L0_JIS_MAIN: string[][] = [

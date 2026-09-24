@@ -1,8 +1,8 @@
 /**
  * Tauri版のHID(hid/nativeHid.ts)。RustのhidapiをWebHIDと同じ形に見せる層。
  *
- * 接続の管理・候補の確かめ・往復はWebHID用のコードをそのまま使うので、ここでは
- * 「WebHIDと同じにふるまうか」を確かめる。Rustの側(NativeHidBackend)は偽物に差し替え、
+ * 接続の管理・候補の確認・往復はWebHID用のコードをそのまま使うので、ここでは
+ * 「WebHIDと同じにふるまうか」を確認する。Rustの側(NativeHidBackend)は偽物に差し替え、
  * 裏にMockTransportのファーム模擬を置いて、WebHidTransport越しに読み込みまで通す。
  */
 import { describe, expect, it } from 'vitest'

@@ -1,8 +1,8 @@
 /**
- * 接続の持ち方と、切れたときの繋ぎ直し(session/keyboardConnection.ts)。
+ * 接続の持ち方と、切れたときの再接続(session/keyboardConnection.ts)。
  *
  * navigator.hidの代わりに偽物を使う。デバイスを開くとMockTransport(ファーム模擬)に
- * 繋がるようにして、抜き差しは「偽物の一覧から消す / 足してconnectイベントを出す」、
+ * つながるようにして、抜き差しは「偽物の一覧から消す / 足してconnectイベントを出す」、
  * 通信の途切れは「そのtransportのsendを失敗させる」で作る。
  */
 import { describe, expect, it } from 'vitest'
@@ -63,7 +63,7 @@ function breakTransport(transport: MockTransport): void {
 
 function setup(overrides: ConnectionOptions = {}) {
   const hid = new FakeHid()
-  /** 開かれた順のtransport。繋ぎ直しのたびに増える。 */
+  /** 開かれた順のtransport。再接続のたびに増える。 */
   const opened: MockTransport[] = []
   const connection = new KeyboardConnection({
     hid: hid as unknown as HidLike,
@@ -103,7 +103,7 @@ const pause = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 describe('KeyboardConnection: ログ', () => {
   it('どの相手に繋いだかを残す(名前・ID・往復時間・候補の数)', async () => {
-    // 実機で「繋がらない」ときの切り分けの初手。BTでは名前が取れず、往復も桁が違う
+    // 実機で接続できないときの切り分けの手がかり。BTでは名前が取れず、往復時間も桁が違う
     const lines: string[] = []
     const devices = [fakeDevice(), fakeDevice()]
     const { hid, connection } = setup({
@@ -187,7 +187,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
 
   it('抜かれたら、通信の失敗を待たずに切って繋ぎ直しに入る', async () => {
     // 通信の失敗を待つと、詰まっているだけ(ウィンドウのドラッグ中など)と区別が付かず、
-    // セッションが時間切れをこらえるぶん「応答待ち」に見えてしまう
+    // セッションがタイムアウトを待つあいだ「応答待ち」に見えてしまう
     const { hid, connection, opened } = setup()
     const device = fakeDevice()
     hid.devices = [device]
@@ -218,7 +218,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
   })
 
   it('デバイスが無いあいだは待ち、挿されたら(connect イベントで)すぐ繋ぐ', async () => {
-    // タイマーでは間に合わない長さにして、イベントで繋がることを確かめる
+    // タイマーでは間に合わない長さにして、イベントで接続することを確認する
     const { hid, connection, opened } = setup({ reconnectDelayMs: 60_000 })
     const device = fakeDevice()
     hid.devices = [device]
@@ -289,7 +289,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     connection.start()
     await waitFor(connection, (s) => s.status === 'ready')
 
-    hid.plug(fakeDevice()) // USBで使っているところにBT側が繋がった、など
+    hid.plug(fakeDevice()) // USBで使っているところにBT側が接続された、など
     await pause(50)
     expect(opened).toHaveLength(1)
     expect(connection.state.status).toBe('ready')

@@ -1,4 +1,4 @@
-/** ツールバーや案内など、キーボード図以外の部品を静的に描いて確かめる。 */
+/** ツールバーや案内など、キーボード図以外の部品を静的に描いて確認する。 */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { LayerStrip } from '@/components/LayerStrip'
@@ -98,14 +98,14 @@ describe('Toolbar の接続の状態', () => {
   })
 
   it('繋いでいる・読み込んでいる・読み直しているあいだは、丸ではなく回る印を出す', () => {
-    // 以前は読み直し中も緑の丸のままで、読んでいる最中だと分からなかった
+    // 緑の丸のままだと、読んでいる最中だと分からない
     expect(spinning(toolbar({ status: 'connecting' }))).toBe(true)
     const loading = toolbar({ status: 'loading' })
     expect(spinning(loading)).toBe(true)
     expect(loading).toContain('text-warn') // 色は丸と同じ(読み込みは黄)
     const reloading = toolbar({ reloading: true })
     expect(spinning(reloading)).toBe(true)
-    expect(reloading).toContain('text-ok') // 読み直しは繋がったままなので緑
+    expect(reloading).toContain('text-ok') // 読み直しは接続したままなので緑
     expect(reloading).not.toContain('bg-ok') // 丸は出さない
   })
 

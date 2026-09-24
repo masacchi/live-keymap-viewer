@@ -156,7 +156,7 @@ describe('答えるインターフェースを選ぶ(USB と Bluetooth の両方
     const { device, results } = await pickResponsiveDevice([asHid(silent), asHid(live)])
     expect(device).toBe(live)
     expect(results.map((r) => r.latencyMs === null)).toEqual([true, false])
-    // 確かめたあとは閉じてある(このあとセッションが開き直す)
+    // 確認したあとは閉じてある(このあとセッションが開き直す)
     expect(silent.opened).toBe(false)
     expect(live.opened).toBe(false)
   })
@@ -211,12 +211,9 @@ describe('時間切れのメッセージ', () => {
 })
 
 /**
- * docs/BLUETOOTH.md §3の再現。RMKのBLEはスレーブレイテンシ30なので、往復が
- * 最悪240msほどかかる。今はmatrixの時間切れ(200ms)で再送し、遅れて届いた応答が
- * 次の回の応答として受け取られて、押下が1回ずれる。
- *
- * TODO(BLUETOOTH.md P2): 往復に合わせた時間切れと、取り残された応答の破棄を実装したら
- * `it.skip`を`it`に戻す。これが通ればP2は完了。
+ * タイムアウトで諦めた要求への応答が、遅れて届いたときの扱い(docs/BLUETOOTH.md §3)。
+ * RMKのBLEはスレーブレイテンシ30なので往復が最悪240msほどかかり、matrixのタイムアウト(200ms)で
+ * 再送が起きる。遅れて届いた応答をそのまま受け取ると、押下が1回ずれる。
  */
 describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => {
   const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -229,7 +226,7 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
     const transport = new WebHidTransport(device as unknown as HIDDevice)
     await transport.open()
 
-    device.stallNextMs = 300 // 1往復目だけ、matrixの時間切れ(200ms)を超えて詰まる
+    device.stallNextMs = 300 // 1往復目だけ、matrixのタイムアウト(200ms)を超えて詰まる
     // 投げ直すまでのあいだに押す。諦めた応答を受け取ると「離している」に見える
     setTimeout(() => device.firmware.press(0, 1), 100)
 
@@ -253,6 +250,10 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
   }, 10000)
 })
 
+/**
+ * 往復そのものがタイムアウトより長いとき(docs/BLUETOOTH.md §3)。往復に合わせてタイムアウトを
+ * 延ばす(P3(a))までは通らないので、スキップしてある。P3(a)を入れたら`it.skip`を`it`に戻す。
+ */
 describe('BLE 並みの遅さ(docs/BLUETOOTH.md §3)', () => {
   it.skip('BLE 並みの往復でも、押したキーを正しい回に読む', async () => {
     const device = new FirmwareBackedDevice(true)

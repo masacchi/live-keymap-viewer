@@ -77,7 +77,7 @@ process.exit(
     // ホストと同じパスに置く。ビルドの出力や、エラーに出るパスがそのまま通じるように
     `--volume=${ROOT}:${ROOT}`,
     `--workdir=${cwd}`,
-    // crateと、cargo-xwinが落としてくるMSVCのCRT / Windows SDKは作り直しても残す
+    // crateと、cargo-xwinがダウンロードするMSVCのCRT / Windows SDKは、コンテナを作り直しても残す
     '--volume=lkv-cargo-registry:/home/ubuntu/.cargo/registry',
     '--volume=lkv-xwin-cache:/home/ubuntu/.cache/cargo-xwin',
     image,

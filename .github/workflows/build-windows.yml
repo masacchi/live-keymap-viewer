@@ -1,19 +1,19 @@
 # Windows版をビルドする。
 #
-#   mainにpush(マージ)   → ビルドして、GitHubのリリース(dev-build。プレリリース)に置く
-#   v*のタグをpush        → ビルドして、GitHubの正式リリースに載せる。入っているアプリはここから更新する
-#   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
-#                              (タグが無ければ、dev-buildリリースを更新)
+#   - mainへのpush(マージを含む): ビルドして、GitHubのリリース「dev-build」(プレリリース)に置く
+#   - v*のタグのpush: ビルドして正式リリースに載せる。インストール済みのアプリはここから更新する
+#   - 手動(Run workflow): 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
+#     (書かなければdev-buildを更新する)
 #
-# 作るもの: インストーラー(VelopackのSetup)と更新の包み、ポータブル版(exe単体)。
+# 作るもの: インストーラー(VelopackのSetup)と更新用のパッケージ、ポータブル版(exe単体)。
 #
 # Ubuntuで作る。package-win.mjs(cargo-xwinでクロスビルド)もpack-win.mjs(vpk)もLinuxで
-# Windows版を作る作りで(wineもWindowsも要らない)、手元のコンテナと同じ手順・同じ結果になるため。
-# ツールは.devcontainer/Dockerfileと同じものを直に入れる(CIではコンテナを通さない ―
+# Windows版を作れるので(wineもWindowsも要らない)、手元のコンテナと同じ手順・同じ結果になる。
+# ツールは.devcontainer/Dockerfileと同じものを直に入れる(CIではコンテナを通さない。
 # scripts/container.mjsはCIならそのまま動かす)。
 # 詳しくはdocs/DEVELOPMENT.md「GitHub Actionsでのビルド」。
 
-name: Windows 版のビルド
+name: Windows版のビルド
 
 on:
   push:
@@ -63,7 +63,7 @@ jobs:
           if [ -z "$tag" ]; then
             # リリースしないビルドは、どのcommitのものか分かるように名前に入れる
             label="$version-${GITHUB_SHA::7}"
-            # 包みの版はSemVerでないといけない。commitが数字だけで0から始まるとSemVerとして
+            # パッケージの版はSemVerでないといけない。commitが数字だけで0から始まるとSemVerとして
             # 正しくないので、git describeと同じくgを前に付ける
             pack_version="$version-g${GITHUB_SHA::7}"
           else
@@ -87,7 +87,7 @@ jobs:
           echo "pack_version=$pack_version" >> "$GITHUB_OUTPUT"
           echo "版: $label / リリース: ${tag:-しない(dev-buildを更新)}"
 
-      - name: ビルドの道具を入れる(.devcontainer/Dockerfile と同じもの)
+      - name: ビルドの道具を入れる(.devcontainer/Dockerfileと同じもの)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -96,7 +96,7 @@ jobs:
             --component clippy,rustfmt --target x86_64-pc-windows-msvc
           rustup default stable
 
-      # crateのビルド結果と、cargo-xwinが落としてくるMSVCのCRT / Windows SDKを残す。
+      # crateのビルド結果と、cargo-xwinがダウンロードするMSVCのCRT / Windows SDKを残す。
       # 下でcargo installするcargo-xwin(~/.cargo/bin)も残るので、2回目からはビルドし直さない
       # (rustcの版がキャッシュの鍵に入るので、Rustを入れた後に置く)
       - uses: Swatinem/rust-cache@v2
@@ -104,7 +104,7 @@ jobs:
           workspaces: src-tauri
           cache-directories: ~/.cache/cargo-xwin
 
-      - name: cargo-xwin を入れる
+      - name: cargo-xwinを入れる
         run: |
           # 配布されているバイナリ(install-actionなどが入れるmusl版)は使わない。メモリの取り回しが遅く、
           # MSVCのCRTの初回ダウンロードが10分以上かかる。crates.ioからビルドしたglibc版なら十数秒。
@@ -116,7 +116,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: vpk(Velopack の CLI)を入れる
+      - name: vpk(VelopackのCLI)を入れる
         run: |
           # 版は.devcontainer/DockerfileのVPK_VERSIONに合わせる(Cargo.tomlのvelopackとも同じ)
           version=$(sed -n 's/^ARG VPK_VERSION=//p' .devcontainer/Dockerfile)
@@ -128,13 +128,13 @@ jobs:
       - name: 検査(型チェック・lint・テスト)
         run: npm run check
 
-      - name: 検査(Rust の整形・clippy・テスト)
+      - name: 検査(Rustの整形・clippy・テスト)
         run: npm run check:rust
 
-      - name: Windows 版を作る(dist/win32-x64/LiveKeymapViewer.exe)
+      - name: Windows版を作る(dist/win32-x64/LiveKeymapViewer.exe)
         run: npm run package:win
 
-      - name: インストーラーと更新の包み、ポータブル版を作る
+      - name: インストーラーと更新用のパッケージ、ポータブル版を作る
         env:
           LABEL: ${{ steps.meta.outputs.label }}
           PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
@@ -150,8 +150,8 @@ jobs:
           ls -l dist/releases dist/artifacts
 
       # 入っているアプリは、最新の正式リリースのreleases.win.jsonを見て更新する
-      # (src-tauri/src/updater.rs)。正式リリースに載せるのはvpk upload github ― 目録と包みを、
-      # アプリが読む名前のまま載せる。dev-buildはプレリリースなので、更新の対象にならない
+      # (src-tauri/src/updater.rs)。正式リリースに載せるのはvpk upload github。リリースの一覧と
+      # パッケージを、アプリが読む名前のまま載せる。dev-buildはプレリリースなので、更新の対象にならない
       - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
@@ -160,7 +160,7 @@ jobs:
         run: |
           if [ -n "$TAG" ]; then
             flags=()
-            # v0.2.0-beta.1のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
+            # v0.2.0-beta.1のように「-」の付くものはプレリリースにする(アプリの更新の対象にならない)
             if [[ "$TAG" == *-* ]]; then
               flags+=(--pre)
             fi
