@@ -1,7 +1,7 @@
 /**
  * アンロック中の案内。
  *
- * matrix state はアンロックしないと取れない(docs/PROTOCOL.md §2)。
+ * matrix stateはアンロックしないと取れない(docs/PROTOCOL.md §2)。
  * 押下を読むにはこれしか道が無いので、ロックを見つけたら自動で始める。
  * ここは押すべきキーと進み具合を見せるだけ ― ボタンは置かない。
  * (オーバーレイはクリックが透過するので、そもそも押せない)
@@ -21,12 +21,12 @@ export interface UnlockPanelProps {
   mock?: boolean
 }
 
-/** [Tab] と [Q]、[A]・[B] と [C] のように、キーを 1 つずつ枠に入れて並べる。 */
+/** [Tab]と[Q]、[A]・[B]と[C]のように、キーを1つずつ枠に入れて並べる。 */
 function KeyNames({ names }: { names: readonly string[] }): JSX.Element {
   return (
     <>
       {names.map((name, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: 同じ名前のキーが 2 つあり得る。並びは変わらない
+        // biome-ignore lint/suspicious/noArrayIndexKey: 同じ名前のキーが2つあり得る。並びは変わらない
         <Fragment key={i}>
           {i > 0 && (i === names.length - 1 ? messages.unlock.and : messages.unlock.separator)}
           <kbd className="rounded-md border border-unlock px-1.5 font-sans">{name}</kbd>

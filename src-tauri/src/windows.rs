@@ -3,7 +3,7 @@
 //! 透明ウィンドウは作った後から切り替えられないので、モードを変えるたびに
 //! ウィンドウを作り直し、位置とサイズを引き継ぐ。
 //!
-//! **ロックを持ったままウィンドウの操作を呼ばない。** Tauri のウィンドウ操作は、メインスレッド
+//! **ロックを持ったままウィンドウの操作を呼ばない。** Tauriのウィンドウ操作は、メインスレッド
 //! 以外から呼ぶとメインスレッドに頼んで返事を待つ。ロックを持ったまま待つと、メインスレッドで
 //! 同じロックを待つ処理(コマンドやウィンドウのイベント)と互いに待ち合って止まる。
 //! 状態はロックの中で読み書きし、ウィンドウの操作はロックを放してから行う。
@@ -32,23 +32,23 @@ use crate::settings::{
 /// 返事が無くても先へ進む(画面が応答できない状態でも切り替えは効かせる)。
 const HID_RELEASE_TIMEOUT: Duration = Duration::from_millis(600);
 
-/// クリック透過中に、カーソルの位置を画面へ送る間隔(下の start_cursor_forwarding)。
+/// クリック透過中に、カーソルの位置を画面へ送る間隔(下のstart_cursor_forwarding)。
 const CURSOR_FORWARD_INTERVAL: Duration = Duration::from_millis(33);
 
-/// 通常ウィンドウの背景(styles.css の地の色)。読み込むまでの一瞬に白が出ないように。
+/// 通常ウィンドウの背景(styles.cssの地の色)。読み込むまでの一瞬に白が出ないように。
 const NORMAL_BACKGROUND: Color = Color(0x11, 0x15, 0x1a, 0xff);
 
-/// WebView2 に渡す起動オプション。
+/// WebView2に渡す起動オプション。
 ///
-/// 隠れていてもタイマーを間引かせない。Chromium の既定では、最小化や完全に隠れたときに
-/// タイマーが 1 秒に 1 回まで間引かれ、20ms の matrix ポーリングが止まったも同然になる。
-/// その間の TG / DF を取りこぼし、戻ったときに表示するレイヤーがずれる(Electron 版の
-/// backgroundThrottling: false と同じ目的)。Tauri の background_throttling は Windows では
-/// 効かないので、Chromium のスイッチで止める。
+/// 隠れていてもタイマーを間引かせない。Chromiumの既定では、最小化や完全に隠れたときに
+/// タイマーが1秒に1回まで間引かれ、20msのmatrixポーリングが止まったも同然になる。
+/// その間のTG / DFを取りこぼし、戻ったときに表示するレイヤーがずれる(Electron版の
+/// backgroundThrottling: falseと同じ目的)。Tauriのbackground_throttlingはWindowsでは
+/// 効かないので、Chromiumのスイッチで止める。
 ///
-/// 先頭の --disable-features は wry が既定で渡しているもの。ここで上書きすると消えるので書き直す
-/// (IntensiveWakeUpThrottling は隠れて 5 分たつと 1 分に 1 回まで間引く仕組み)。
-/// 全ウィンドウで同じにすること ― WebView2 は同じデータフォルダを違うオプションで開けない。
+/// 先頭の--disable-featuresはwryが既定で渡しているもの。ここで上書きすると消えるので書き直す
+/// (IntensiveWakeUpThrottlingは隠れて5分たつと1分に1回まで間引く仕組み)。
+/// 全ウィンドウで同じにすること ― WebView2は同じデータフォルダを違うオプションで開けない。
 const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,IntensiveWakeUpThrottling \
     --disable-background-timer-throttling --disable-renderer-backgrounding \
     --disable-backgrounding-occluded-windows";
@@ -64,7 +64,7 @@ struct State {
     /// いま表示しているウィンドウ。モードの切り替え中は、新しいものができるまで古い方。
     window: Option<WebviewWindow>,
     current_mode: WindowMode,
-    /// いま画面に出ているウィンドウを作ったときのモード。切り替えの途中は current_mode と食い違う。
+    /// いま画面に出ているウィンドウを作ったときのモード。切り替えの途中はcurrent_modeと食い違う。
     live_mode: WindowMode,
     /// 古いウィンドウの「手放した」を待っているあいだ、その知らせを送る口。
     handover: Option<Sender<()>>,
@@ -72,7 +72,7 @@ struct State {
     handover_generation: u64,
     /// 画面が図を濃く出しているか(薄くしているあいだは後ろをぼかさない)。
     blur_active: bool,
-    /// いまウィンドウに掛けているぼかし。掛けていない(通常ウィンドウ)なら None。
+    /// いまウィンドウに掛けているぼかし。掛けていない(通常ウィンドウ)ならNone。
     blur_on: Option<bool>,
     /// オーバーレイがクリックを透過させているか。
     ignoring_cursor: bool,
@@ -135,8 +135,8 @@ impl WindowManager {
     /// 位置とサイズを引き継いだままモードを切り替える。
     ///
     /// 透明ウィンドウは作り直すしかないので、新しいウィンドウの画面は、できた瞬間から
-    /// 同じキーボードを開きに行く。古い方はまだ 20ms ごとに matrix を読んでいて、raw HID の
-    /// 応答は同じデバイスを開いている**全員**に配られる。Vial コマンド(`0xFE`)は応答を
+    /// 同じキーボードを開きに行く。古い方はまだ20msごとにmatrixを読んでいて、raw HIDの
+    /// 応答は同じデバイスを開いている**全員**に配られる。Vialコマンド(`0xFE`)は応答を
     /// 照合できない(hid/vial.ts)ので、両方が話していると新しい方の読み込みが壊れる。
     /// 先に古い方へ手放させてから作る。
     pub fn set_mode(self: &Arc<Self>, next: WindowMode) {
@@ -225,7 +225,7 @@ impl WindowManager {
             let Some(window) = state.window.clone() else { return };
             let on = settings.overlay_blur && state.blur_active;
             // 同じ材質を掛け直さない。濃さのスライダーを動かすと設定の更新が毎回ここに来るが、
-            // OS 側の切り替えは安くない
+            // OS側の切り替えは安くない
             if state.blur_on == Some(on) {
                 return;
             }
@@ -245,7 +245,7 @@ impl WindowManager {
             state.ignoring_cursor = ignore;
             state.window.clone()
         };
-        // 出す前のウィンドウには掛けない(Linux の tao は落ちる)。出すときに透過を掛ける(create)
+        // 出す前のウィンドウには掛けない(Linuxのtaoは落ちる)。出すときに透過を掛ける(create)
         if let Some(window) = window.filter(|w| w.is_visible().unwrap_or(false)) {
             let _ = window.set_ignore_cursor_events(ignore);
         }
@@ -254,11 +254,11 @@ impl WindowManager {
     /// クリック透過中も、カーソルの位置を画面へ送り続ける。
     ///
     /// 画面は、ポインタが操作パネル(`data-interactive`)の上に来たときだけ透過を切る
-    /// (components/OverlayControls.tsx)。Electron は透過中でも mousemove を画面に届けて
-    /// くれた(`setIgnoreMouseEvents(true, { forward: true })`)が、Tauri にはその機能が無い。
-    /// 透過中は画面に何も届かないので、ここでカーソルの位置を読んで `overlay-cursor` で送り、
-    /// 画面側で mousemove として流す(src/renderer/src/platform/tauri.ts)。
-    /// 透過を切っているあいだは本物の mousemove が届くので送らない。
+    /// (components/OverlayControls.tsx)。Electronは透過中でもmousemoveを画面に届けて
+    /// くれた(`setIgnoreMouseEvents(true, { forward: true })`)が、Tauriにはその機能が無い。
+    /// 透過中は画面に何も届かないので、ここでカーソルの位置を読んで`overlay-cursor`で送り、
+    /// 画面側でmousemoveとして流す(src/renderer/src/platform/tauri.ts)。
+    /// 透過を切っているあいだは本物のmousemoveが届くので送らない。
     pub fn start_cursor_forwarding(self: &Arc<Self>) {
         let manager = Arc::clone(self);
         thread::Builder::new()
@@ -314,7 +314,7 @@ impl WindowManager {
         ));
     }
 
-    /// ウィンドウを作る。`replacing` は、新しい方が出たら消す古いウィンドウ(ちらつかせない)。
+    /// ウィンドウを作る。`replacing`は、新しい方が出たら消す古いウィンドウ(ちらつかせない)。
     fn create(
         self: &Arc<Self>,
         mode: WindowMode,
@@ -348,11 +348,11 @@ impl WindowManager {
                 .resizable(true)
                 .decorations(!overlay)
                 .transparent(overlay)
-                // 枠の無いウィンドウに付く影と 1px の縁を消す(オーバーレイは透明なので縁だけが浮く)
+                // 枠の無いウィンドウに付く影と1pxの縁を消す(オーバーレイは透明なので縁だけが浮く)
                 .shadow(!overlay)
                 .skip_taskbar(overlay)
                 .always_on_top(overlay)
-                // 画面は暗い配色だけで作ってある。OS がライトテーマだと、後ろのぼかし(アクリル)まで
+                // 画面は暗い配色だけで作ってある。OSがライトテーマだと、後ろのぼかし(アクリル)まで
                 // ライトの色味で描かれるので、ウィンドウの配色を暗い方に固定する
                 .theme(Some(Theme::Dark))
                 .additional_browser_args(BROWSER_ARGS)
@@ -411,7 +411,7 @@ fn bounds_key(mode: WindowMode) -> &'static str {
     }
 }
 
-/// ウィンドウの位置(外枠の左上)と大きさ(中身)を論理ピクセルで。最小化していれば None。
+/// ウィンドウの位置(外枠の左上)と大きさ(中身)を論理ピクセルで。最小化していればNone。
 fn bounds_of(window: &WebviewWindow) -> Option<Bounds> {
     if window.is_minimized().unwrap_or(false) {
         return None;
@@ -464,12 +464,12 @@ fn cursor_in(window: &WebviewWindow) -> Option<(i32, i32)> {
     Some(((x / scale).round() as i32, (y / scale).round() as i32))
 }
 
-/// オーバーレイの後ろの画面をすりガラスにする(Windows 11 のアクリル)。
+/// オーバーレイの後ろの画面をすりガラスにする(Windows 11のアクリル)。
 ///
-/// CSS の backdrop-filter では、透明なウィンドウの後ろ(ほかのアプリ)はぼかせない ―
-/// WebView が重ねられるのは自分の中身だけなので、OS に描いてもらう。ぼかしの強さは OS が
-/// 決めるので、アプリでは入り切りしかできない。ほかの OS では何もしない。
-/// 呼ぶのはオーバーレイ(transparent で作ったウィンドウ)だけ。
+/// CSSのbackdrop-filterでは、透明なウィンドウの後ろ(ほかのアプリ)はぼかせない ―
+/// WebViewが重ねられるのは自分の中身だけなので、OSに描いてもらう。ぼかしの強さはOSが
+/// 決めるので、アプリでは入り切りしかできない。ほかのOSでは何もしない。
+/// 呼ぶのはオーバーレイ(transparentで作ったウィンドウ)だけ。
 fn set_backdrop(window: &WebviewWindow, on: bool) {
     #[cfg(windows)]
     {

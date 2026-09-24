@@ -1,12 +1,12 @@
-//! 画面(WebView)から呼ばれるコマンド。Electron 版の ipc.ts にあたる。
+//! 画面(WebView)から呼ばれるコマンド。Electron版のipc.tsにあたる。
 //!
-//! 画面から来た値は、ここで範囲を確かめてから使う。型は Tauri が確かめる(合わなければ
-//! 呼び出しが失敗する)。画面が使うものだけを置く ― 対になる TS は src/renderer/src/platform/tauri.ts。
+//! 画面から来た値は、ここで範囲を確かめてから使う。型はTauriが確かめる(合わなければ
+//! 呼び出しが失敗する)。画面が使うものだけを置く ― 対になるTSはsrc/renderer/src/platform/tauri.ts。
 //!
-//! 引数の名前は画面からは camelCase で渡す(`vendor_id` なら `vendorId`)。
+//! 引数の名前は画面からはcamelCaseで渡す(`vendor_id`なら`vendorId`)。
 //!
-//! 待つ処理(HID の読み書き・一覧・ウィンドウの作り直し)は async にしてメインスレッドの外で動かす。
-//! async でないコマンドはメインスレッドで動くので、そこで待つと画面ごと止まる。
+//! 待つ処理(HIDの読み書き・一覧・ウィンドウの作り直し)はasyncにしてメインスレッドの外で動かす。
+//! asyncでないコマンドはメインスレッドで動くので、そこで待つと画面ごと止まる。
 
 use std::sync::Arc;
 
@@ -108,7 +108,7 @@ pub fn window_get_mode(windows: State<'_, Arc<WindowManager>>) -> WindowMode {
     windows.mode()
 }
 
-/// ウィンドウを作り直すので async にする(メインスレッドで作ろうとすると止まる)。
+/// ウィンドウを作り直すのでasyncにする(メインスレッドで作ろうとすると止まる)。
 #[tauri::command]
 pub async fn window_toggle_mode(app: AppHandle) -> WindowMode {
     let windows = app.state::<Arc<WindowManager>>();
@@ -146,8 +146,8 @@ pub fn hid_released(windows: State<'_, Arc<WindowManager>>) {
     windows.note_hid_released();
 }
 
-/// Vial のインターフェースを並べる。`granted_only` なら一度許可したもの(VID/PID)だけ
-/// ― WebHID の getDevices() と同じく、自動で繋ぐのは許可したものに限る。
+/// Vialのインターフェースを並べる。`granted_only`なら一度許可したもの(VID/PID)だけ
+/// ― WebHIDのgetDevices()と同じく、自動で繋ぐのは許可したものに限る。
 #[tauri::command]
 pub async fn hid_devices(app: AppHandle, granted_only: bool) -> Result<Vec<HidDeviceInfo>, String> {
     let hid = Arc::clone(&app.state::<Arc<HidBridge>>());
@@ -173,7 +173,7 @@ pub fn hid_remember(
     settings.remember_device(vendor_id, product_id, &name);
 }
 
-/// 開いて、入力レポートを `on_report` に流す。閉じるのに使う番号を返す。
+/// 開いて、入力レポートを`on_report`に流す。閉じるのに使う番号を返す。
 #[tauri::command]
 pub async fn hid_open(
     app: AppHandle,
@@ -186,7 +186,7 @@ pub async fn hid_open(
     spawn_blocking(move || hid.open(&owner, &path, on_report)).await.map_err(|e| e.to_string())?
 }
 
-/// 1 つのレポートを書く(先頭はレポート ID)。Bluetooth では書き終わるまで数十 ms 待つことがある。
+/// 1つのレポートを書く(先頭はレポートID)。Bluetoothでは書き終わるまで数十ms待つことがある。
 #[tauri::command]
 pub async fn hid_write(app: AppHandle, handle: u32, data: Vec<u8>) -> Result<(), String> {
     let hid = Arc::clone(&app.state::<Arc<HidBridge>>());
@@ -198,7 +198,7 @@ pub fn hid_close(handle: u32, hid: State<'_, Arc<HidBridge>>) {
     hid.close(handle);
 }
 
-/// 画面側の出来事。長いスタックがそのまま来るので、ログが 1 件で埋まらないように切る。
+/// 画面側の出来事。長いスタックがそのまま来るので、ログが1件で埋まらないように切る。
 #[tauri::command]
 pub fn log_report(level: String, message: String, detail: Option<String>) {
     if message.is_empty() {
@@ -227,8 +227,8 @@ pub fn log_open() {
     }
 }
 
-/// 新しい版があるかを見る(インストーラーで入れたときだけ。ほかは Unsupported)。
-/// `force` でなければ、少し前に確かめた結果を使う(updater.rs の CHECK_CACHE)。
+/// 新しい版があるかを見る(インストーラーで入れたときだけ。ほかはUnsupported)。
+/// `force`でなければ、少し前に確かめた結果を使う(updater.rsのCHECK_CACHE)。
 #[tauri::command]
 pub async fn update_check(force: bool) -> Result<UpdateStatus, String> {
     spawn_blocking(move || updater::check(force)).await.map_err(|e| e.to_string())?

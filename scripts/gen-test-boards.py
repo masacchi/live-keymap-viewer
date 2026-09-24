@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""テスト用の「Cornix 以外のキーボード」の定義 JSON を作る。
+"""テスト用の「Cornix以外のキーボード」の定義JSONを作る。
 
     python3 scripts/gen-test-boards.py   # → tests/fixtures/boards.generated.ts
 
 このアプリは固定データを持たない(配置もキーマップもキーボードから読む)。その前提が
 本当かを、別の機種を名乗るモックで確かめるためのもの(tests/otherKeyboard.test.tsx)。
 
-定義は実機と同じく **XZ で固めた JSON** として渡る(docs/PROTOCOL.md §3)ので、ここで
-圧縮して base64 にしておく。JS 側には展開する口しか無いので、作るのは Python でやる。
+定義は実機と同じく**XZで固めたJSON**として渡る(docs/PROTOCOL.md §3)ので、ここで
+圧縮してbase64にしておく。JS側には展開する口しか無いので、作るのはPythonでやる。
 
 作るもの:
-  - plain60   … 5 行 14 列・ノブ無し・レイアウトオプション無し・カスタムキーコード無し
-  - bigMatrix … 10 行 20 列。matrix state が 1 パケット(28 バイト)に収まらない大きさ
+  - plain60   … 5行14列・ノブ無し・レイアウトオプション無し・カスタムキーコード無し
+  - bigMatrix … 10行20列。matrix stateが1パケット(28バイト)に収まらない大きさ
 """
 
 import base64
@@ -24,7 +24,7 @@ OUT = ROOT / "tests" / "fixtures" / "boards.generated.ts"
 
 
 def grid(rows: int, cols: int) -> list[list[str]]:
-    """KLE の最小形。1 行を 1 配列にして "行,列" を並べるだけ。"""
+    """KLEの最小形。1行を1配列にして"行,列"を並べるだけ。"""
     return [[f"{row},{col}" for col in range(cols)] for row in range(rows)]
 
 
@@ -34,8 +34,8 @@ def definition(name: str, rows: int, cols: int) -> dict:
         "vendorId": "0xFEED",
         "productId": "0x0001",
         "matrix": {"rows": rows, "cols": cols},
-        # labels(レイアウトオプション)も customKeycodes も置かない。
-        # どちらも Cornix には有るので、無い機種の経路をここで通す
+        # labels(レイアウトオプション)もcustomKeycodesも置かない。
+        # どちらもCornixには有るので、無い機種の経路をここで通す
         "layouts": {"keymap": grid(rows, cols)},
     }
 
@@ -46,7 +46,7 @@ def packed(value: dict) -> str:
 
 
 def wrap(name: str, base64_text: str) -> str:
-    """80 桁くらいで折り返して TS の文字列にする。"""
+    """80桁くらいで折り返してTSの文字列にする。"""
     chunks = [base64_text[i : i + 76] for i in range(0, len(base64_text), 76)]
     body = "\n".join(f"  '{chunk}' +" for chunk in chunks)
     return f"export const {name} =\n{body[:-2]}\n"

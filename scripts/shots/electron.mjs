@@ -1,11 +1,11 @@
 /**
- * 撮影の Electron 側(run.mjs から起動する)。
+ * 撮影のElectron側(run.mjsから起動する)。
  *
  *   electron electron.mjs shoot normal|overlay <出力先>
  *   electron electron.mjs compare <前> <後>
  *
- * モックに繋ぎ、図のキーをクリックして押下を作り、場面ごとに撮る。キーは <title> の文字
- * (「Space / 長押しで L2 / raw …」の先頭)で探し、押したときの位置で離す(押すと表示が変わるので)。
+ * モックに繋ぎ、図のキーをクリックして押下を作り、場面ごとに撮る。キーは<title>の文字
+ * (「Space / 長押しでL2 / raw …」の先頭)で探し、押したときの位置で離す(押すと表示が変わるので)。
  */
 
 import { existsSync, readdirSync, writeFileSync } from 'node:fs'
@@ -18,7 +18,7 @@ const HEIGHT = 620
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 const log = (...args) => console.error('[shots]', ...args)
 
-/** 1 つのページを操作する道具。 */
+/** 1つのページを操作する道具。 */
 function pageOf(win, out) {
   const js = (code) => win.webContents.executeJavaScript(code)
   let titles = []
@@ -38,7 +38,7 @@ function pageOf(win, out) {
         b.click()
       })()`),
     clickSelector: (selector) => js(`document.querySelector(${JSON.stringify(selector)}).click()`),
-    /** いまの図のキーの並び(<title> の文字)を覚える。キーを押す前に呼ぶ。 */
+    /** いまの図のキーの並び(<title>の文字)を覚える。キーを押す前に呼ぶ。 */
     async readKeys() {
       titles = await js(`[...document.querySelectorAll('g.key title')].map((t) => t.textContent)`)
     },
@@ -74,7 +74,7 @@ function pageOf(win, out) {
   return page
 }
 
-/** モックに繋ぎ、Tab と Q を押し続けてアンロックする。途中も撮る。 */
+/** モックに繋ぎ、TabとQを押し続けてアンロックする。途中も撮る。 */
 async function connectAndUnlock(page, prefix) {
   await page.click('モックで試す')
   await sleep(1500)
@@ -84,7 +84,7 @@ async function connectAndUnlock(page, prefix) {
   await page.toggleKey('Q')
   await sleep(3000)
   await page.shot(`${prefix}-unlocking-progress`)
-  await sleep(9000) // モックは 200ms ごとに 50 から数える
+  await sleep(9000) // モックは200msごとに50から数える
   await page.toggleKey('Tab')
   await page.toggleKey('Q')
   await sleep(800)
@@ -175,11 +175,11 @@ async function shoot(mode, out) {
       preload: fileURLToPath(new URL('./preload.cjs', import.meta.url))
     }
   })
-  // Windows のときだけ出る欄(後ろのぼかし)も撮る
+  // Windowsのときだけ出る欄(後ろのぼかし)も撮る
   win.webContents.setUserAgent(`${win.webContents.getUserAgent()} (Windows NT 10.0)`)
   await win.loadURL(process.env.SHOTS_URL)
   // 動きを止めて、撮るたびに同じ絵にする(アンロックの破線や記号の点滅が撮った瞬間で変わると、
-  // --compare で毎回差が出て、本当の変化が埋もれる)
+  // --compareで毎回差が出て、本当の変化が埋もれる)
   await win.webContents.insertCSS(
     '*, *::before, *::after { animation: none !important; transition: none !important }'
   )
@@ -189,7 +189,7 @@ async function shoot(mode, out) {
   await (overlay ? overlayScenes(page) : normalScenes(page))
 }
 
-/** 同じ名前の PNG を画素で比べる。 */
+/** 同じ名前のPNGを画素で比べる。 */
 function compare(before, after) {
   let changed = 0
   for (const name of readdirSync(after)

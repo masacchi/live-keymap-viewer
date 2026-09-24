@@ -1,9 +1,9 @@
 /**
  * 実機と同じ経路(WebHidTransport)を通した結合テスト。
  *
- * ほかのテストは MockTransport を直接使うので、WebHID のイベント配送・直列化キュー・
+ * ほかのテストはMockTransportを直接使うので、WebHIDのイベント配送・直列化キュー・
  * 応答の照合という「本物のデバイスで通る経路」を素通りしている。ここでは
- * MockTransport のファーム模擬を裏に持つ偽の HIDDevice を作り、WebHidTransport 越しに動かす。
+ * MockTransportのファーム模擬を裏に持つ偽のHIDDeviceを作り、WebHidTransport越しに動かす。
  */
 import { describe, expect, it } from 'vitest'
 import { pickResponsiveDevice } from '@/hid/deviceProbe'
@@ -12,7 +12,7 @@ import { WebHidTransport } from '@/hid/transport'
 import { getMatrixState, loadKeyboard } from '@/hid/vial'
 import { KeyboardSession, type SessionState } from '@/session/keyboardSession'
 
-/** sendReport を受けると、ファーム模擬の応答を inputreport として返す偽デバイス。 */
+/** sendReportを受けると、ファーム模擬の応答をinputreportとして返す偽デバイス。 */
 class FirmwareBackedDevice extends EventTarget {
   opened = false
   productName = 'Cornix (fake HID)'
@@ -20,7 +20,7 @@ class FirmwareBackedDevice extends EventTarget {
   readonly firmware: MockTransport
   /** 応答を返すまでの遅れ(ms)。 */
   latencyMs = 1
-  /** 次の 1 往復だけ、さらにこれだけ遅らせる(詰まりの再現)。 */
+  /** 次の1往復だけ、さらにこれだけ遅らせる(詰まりの再現)。 */
   stallNextMs = 0
   /** この数だけ、応答を握りつぶす(要求ごと失われた場合の再現)。 */
   dropNext = 0
@@ -122,7 +122,7 @@ describe('WebHidTransport 越しの結合', () => {
     await first.start()
     await waitFor(first, (s) => s.status === 'ready')
 
-    // フックの attach と同じ順: 新しいセッションを作る → 古いものを破棄 → 新しいものを開始
+    // フックのattachと同じ順: 新しいセッションを作る → 古いものを破棄 → 新しいものを開始
     const second = new KeyboardSession(new WebHidTransport(device as unknown as HIDDevice))
     await first.dispose()
     await second.start()
@@ -133,7 +133,7 @@ describe('WebHidTransport 越しの結合', () => {
   }, 15000)
 })
 
-/** 何を送っても答えない偽デバイス(出力先でない側の Bluetooth インターフェースのような)。 */
+/** 何を送っても答えない偽デバイス(出力先でない側のBluetoothインターフェースのような)。 */
 class SilentDevice extends EventTarget {
   opened = false
   productName = 'Cornix (silent)'
@@ -211,25 +211,25 @@ describe('時間切れのメッセージ', () => {
 })
 
 /**
- * docs/BLUETOOTH.md §3 の再現。RMK の BLE はスレーブレイテンシ 30 なので、往復が
- * 最悪 240ms ほどかかる。今は matrix の時間切れ(200ms)で再送し、遅れて届いた応答が
- * 次の回の応答として受け取られて、押下が 1 回ずれる。
+ * docs/BLUETOOTH.md §3の再現。RMKのBLEはスレーブレイテンシ30なので、往復が
+ * 最悪240msほどかかる。今はmatrixの時間切れ(200ms)で再送し、遅れて届いた応答が
+ * 次の回の応答として受け取られて、押下が1回ずれる。
  *
  * TODO(BLUETOOTH.md P2): 往復に合わせた時間切れと、取り残された応答の破棄を実装したら
- * `it.skip` を `it` に戻す。これが通れば P2 は完了。
+ * `it.skip`を`it`に戻す。これが通ればP2は完了。
  */
 describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => {
   const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
   it('遅れて届いた応答は捨て、投げ直した方の応答を受け取る', async () => {
-    // ファームは応答に要求 ID を持たない。諦めた要求への応答をそのまま受け取ると、
-    // 同じコマンドなので照合も通ってしまい、以後ずっと 1 回ずつずれる
+    // ファームは応答に要求IDを持たない。諦めた要求への応答をそのまま受け取ると、
+    // 同じコマンドなので照合も通ってしまい、以後ずっと1回ずつずれる
     const device = new FirmwareBackedDevice(true)
     device.latencyMs = 20
     const transport = new WebHidTransport(device as unknown as HIDDevice)
     await transport.open()
 
-    device.stallNextMs = 300 // 1 往復目だけ、matrix の時間切れ(200ms)を超えて詰まる
+    device.stallNextMs = 300 // 1往復目だけ、matrixの時間切れ(200ms)を超えて詰まる
     // 投げ直すまでのあいだに押す。諦めた応答を受け取ると「離している」に見える
     setTimeout(() => device.firmware.press(0, 1), 100)
 
@@ -243,7 +243,7 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
     const transport = new WebHidTransport(device as unknown as HIDDevice, { staleWindowMs: 20 })
     await transport.open()
 
-    device.dropNext = 1 // 1 往復ぶん、応答が返ってこない
+    device.dropNext = 1 // 1往復ぶん、応答が返ってこない
     await getMatrixState(transport, 8, 7).catch(() => undefined)
 
     await pause(40) // 窓を過ぎれば、諦めた数は数え直す
@@ -260,7 +260,7 @@ describe('BLE 並みの遅さ(docs/BLUETOOTH.md §3)', () => {
     const transport = new WebHidTransport(device as unknown as HIDDevice)
     await transport.open()
 
-    // 3 回目の直前だけキーを押しておく。正しければ 3 回目だけが true
+    // 3回目の直前だけキーを押しておく。正しければ3回目だけがtrue
     const seen: boolean[] = []
     for (let i = 0; i < 4; i++) {
       if (i === 2) device.firmware.press(0, 1)

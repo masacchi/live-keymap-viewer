@@ -1,9 +1,9 @@
 /**
  * キーボード定義の展開。
  *
- * Cornix LP V1.12 の定義ブロックは XZ コンテナだった(docs/PROTOCOL.md §3)。
- * vial-gui は Python の lzma.decompress に自動判別させているので、念のため
- * LZMA-alone(先頭 0x5D)が来たときはそれと分かるエラーにしてある。
+ * Cornix LP V1.12の定義ブロックはXZコンテナだった(docs/PROTOCOL.md §3)。
+ * vial-guiはPythonのlzma.decompressに自動判別させているので、念のため
+ * LZMA-alone(先頭0x5D)が来たときはそれと分かるエラーにしてある。
  */
 import { XzReadableStream } from 'xz-decompress'
 
@@ -14,7 +14,7 @@ export function looksLikeXz(data: Uint8Array): boolean {
 }
 
 export function looksLikeLzmaAlone(data: Uint8Array): boolean {
-  // properties byte が 0x5D(lc=3, lp=0, pb=2)なのが一般的
+  // properties byteが0x5D(lc=3, lp=0, pb=2)なのが一般的
   return data[0] === 0x5d && data[1] === 0x00 && data[2] === 0x00
 }
 

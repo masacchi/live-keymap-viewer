@@ -4,14 +4,14 @@
   python3 scripts/gen-mock.py
 
 入力:
-  reference/Cornix_設定_LT.vil          Vial からエクスポートした実機のキーマップ
-  reference/cornix-vial-definition.json Cornix LP V1.12 のファームから取り出した定義 JSON
+  reference/Cornix_設定_LT.vil          Vialからエクスポートした実機のキーマップ
+  reference/cornix-vial-definition.json Cornix LP V1.12のファームから取り出した定義JSON
 
 出力:
   src/renderer/src/mock/cornix.generated.ts
 
-定義 JSON は実機と同じく XZ で固めて base64 で埋め込む。モックを相手にしても
-LZMA の展開経路がそのまま通るようにするため。
+定義JSONは実機と同じくXZで固めてbase64で埋め込む。モックを相手にしても
+LZMAの展開経路がそのまま通るようにするため。
 """
 import base64
 import json
@@ -39,7 +39,7 @@ def load_keycodes() -> dict[str, int]:
 
 
 def deserialize(name: str, kc: dict[str, int]) -> int:
-    """Vial の文字列キーコードを生の u16 に戻す(vial-gui の Keycode.deserialize 相当)。"""
+    """Vialの文字列キーコードを生のu16に戻す(vial-guiのKeycode.deserialize相当)。"""
     if name in kc:
         return kc[name]
     m = re.fullmatch(r"([A-Z0-9_]+)\((.+)\)", name)

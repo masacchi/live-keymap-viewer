@@ -1,16 +1,16 @@
 /**
  * レイヤーの一覧(ツールバーの中)。
  *
- * - いま図に出しているレイヤーはその色で塗り、輪を付ける。ほかに有効なレイヤー(L2 の下の L0 など)は
+ * - いま図に出しているレイヤーはその色で塗り、輪を付ける。ほかに有効なレイヤー(L2の下のL0など)は
  *   薄く塗る。以前は有効なものをすべて同じに塗っていて、どれが出ているのか輪でしか分からなかった
- * - **そのレイヤーへの行き方**(「Space 長押し」など、engine/layerSummary.ts)はツールチップに出す。
- *   番号の横にも並べられるが、既定では出さない(設定の showLayerTriggers)。常に並べると
+ * - **そのレイヤーへの行き方**(「Space長押し」など、engine/layerSummary.ts)はツールチップに出す。
+ *   番号の横にも並べられるが、既定では出さない(設定のshowLayerTriggers)。常に並べると
  *   ツールバーが詰まり、狭いウィンドウでは横に流れて肝心のレイヤーが見切れていた
- * - 中身の無いレイヤー(Cornix の L5〜L9)は「+5」に畳む。有効になったら畳んでいても出す
+ * - 中身の無いレイヤー(CornixのL5〜L9)は「+5」に畳む。有効になったら畳んでいても出す
  * - ポインタを乗せているあいだ、そのレイヤーを図に出す(プレビュー)。押すとプレビューのまま固定し、
- *   もう一度押すか、キーを押すか Esc で戻る(App.tsx)。キーマップを覚えるときに、レイヤーキーを
+ *   もう一度押すか、キーを押すかEscで戻る(App.tsx)。キーマップを覚えるときに、レイヤーキーを
  *   押さえ続けなくても中身を見られるように。オーバーレイはクリックが透過するので出さない
- * - ダブルクリックでレイヤーに名前を付けられる(Enter で決定、Esc でやめる、空にすると消す)
+ * - ダブルクリックでレイヤーに名前を付けられる(Enterで決定、Escでやめる、空にすると消す)
  */
 import { type JSX, useEffect, useRef, useState } from 'react'
 import { LAYER_NAME_MAX_LENGTH } from '../../../shared/settings'
@@ -26,15 +26,15 @@ export interface LayerStripProps {
   activeLayers: readonly number[]
   /** 図に出しているレイヤー(プレビュー中ならそのレイヤー)。 */
   shownLayer: number
-  /** 押して固定したプレビュー。していなければ null。 */
+  /** 押して固定したプレビュー。していなければnull。 */
   preview: number | null
-  /** レイヤーの名前(番号順、'' は名前なし)。 */
+  /** レイヤーの名前(番号順、''は名前なし)。 */
   names?: readonly string[]
   labelMode: LabelMode
   labelContext: LabelContext
-  /** 押したとき。固定のプレビューを切り替える(null で戻る)。 */
+  /** 押したとき。固定のプレビューを切り替える(nullで戻る)。 */
   onPreview: (layer: number | null) => void
-  /** ポインタを乗せた / 外したとき(外したら null)。 */
+  /** ポインタを乗せた / 外したとき(外したらnull)。 */
   onHover: (layer: number | null) => void
   /** 名前を付けた(空なら消した)とき。渡さなければ名前は付けられない。 */
   onRename?: (layer: number, name: string) => void
@@ -68,7 +68,7 @@ export function LayerStrip({
   const blankCount = summaries.filter((s) => s.blank).length
 
   return (
-    // 幅が足りなければ横に流す(折り返すとツールバーが 2 行になり、図に使える高さが減る)。
+    // 幅が足りなければ横に流す(折り返すとツールバーが2行になり、図に使える高さが減る)。
     // 流せる枠は縦にもはみ出しを切るので、輪(ring-offset)のぶん余白を取り、負のマージンで高さを戻す
     <div className="-my-1 flex min-w-0 items-center gap-1 overflow-x-auto px-1 py-1 [scrollbar-width:none]">
       {summaries.filter(visible).map(({ layer, triggers }) => {
@@ -101,7 +101,7 @@ export function LayerStrip({
             ]
               .filter(Boolean)
               .join(messages.layerStrip.joiner)}
-            // クリックでフォーカスを取らない。取ったままだと、このあと実機で Space / Enter を押したとき
+            // クリックでフォーカスを取らない。取ったままだと、このあと実機でSpace / Enterを押したとき
             // ブラウザがこのボタンを押したことにして、キーを押して戻したプレビューがまた固定される
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onPreview(preview === layer ? null : layer)}
@@ -163,7 +163,7 @@ export function LayerStrip({
   )
 }
 
-/** レイヤー名の入力欄。Enter か欄の外で決定、Esc でやめる(onDone に null)。 */
+/** レイヤー名の入力欄。Enterか欄の外で決定、Escでやめる(onDoneにnull)。 */
 function NameInput({
   layer,
   initial,
@@ -180,7 +180,7 @@ function NameInput({
     ref.current?.focus()
     ref.current?.select()
   }, [])
-  // Esc でやめたあと、欄が消えるときの blur で保存してしまわないよう、決まるのは 1 回だけ
+  // Escでやめたあと、欄が消えるときのblurで保存してしまわないよう、決まるのは1回だけ
   const finished = useRef(false)
   const finish = (name: string | null): void => {
     if (finished.current) return
@@ -195,7 +195,7 @@ function NameInput({
       defaultValue={initial}
       maxLength={LAYER_NAME_MAX_LENGTH}
       onKeyDown={(event) => {
-        // App の Esc(プレビューをやめる)まで届かせない
+        // AppのEsc(プレビューをやめる)まで届かせない
         event.stopPropagation()
         if (event.key === 'Enter') finish(event.currentTarget.value)
         if (event.key === 'Escape') finish(null)

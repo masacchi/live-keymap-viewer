@@ -1,15 +1,15 @@
-//! 配布ビルドの診断用ログ(設定と同じフォルダの log.txt)。
+//! 配布ビルドの診断用ログ(設定と同じフォルダのlog.txt)。
 //!
-//! 開発は WSL、動かすのは Windows なので、実機で何かが起きても開発側の端末には何も残らない。
-//! 配布ビルドでは DevTools も開けない。そこで「まれにしか起きない出来事」だけをファイルに残す:
+//! 開発はWSL、動かすのはWindowsなので、実機で何かが起きても開発側の端末には何も残らない。
+//! 配布ビルドではDevToolsも開けない。そこで「まれにしか起きない出来事」だけをファイルに残す:
 //!
-//!   - 起動(版と WebView の版。どのビルドが動いていたかが分かる)
+//!   - 起動(版とWebViewの版。どのビルドが動いていたかが分かる)
 //!   - 警告(ショートカットの登録失敗、ぼかしの切り替え失敗、設定の保存失敗)
-//!   - Rust 側の panic
-//!   - 画面から報告されたエラー(components/ErrorBoundary.tsx など)
+//!   - Rust側のpanic
+//!   - 画面から報告されたエラー(components/ErrorBoundary.tsxなど)
 //!
 //! ポーリングのような毎秒起きることは書かない。まれなので書き込みは同期でよく、そのぶん
-//! 落ちる直前の 1 行を取りこぼさない。無限に伸びないよう、MAX_LINES を超えたら古い方から捨てる。
+//! 落ちる直前の1行を取りこぼさない。無限に伸びないよう、MAX_LINESを超えたら古い方から捨てる。
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -17,12 +17,12 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// 残す行数。1 行 100 文字として 50KB ほど。
+/// 残す行数。1行100文字として50KBほど。
 const MAX_LINES: usize = 500;
 
 struct LogFile {
     path: PathBuf,
-    /// 直近のログ(メモリ側の控え)。書き直すときの元になる。読むまでは None。
+    /// 直近のログ(メモリ側の控え)。書き直すときの元になる。読むまではNone。
     kept: Mutex<Option<Vec<String>>>,
 }
 
@@ -82,10 +82,10 @@ fn write(level: &str, message: &str, detail: Option<&str>) {
     })();
 }
 
-/// 拾われなかった panic を残す。
+/// 拾われなかったpanicを残す。
 ///
-/// panic してもアプリは終わらせない(Cargo.toml で unwind のまま)。キーボードの表示はほとんど
-/// 画面の側で動いていて、裏のスレッドが 1 つ転んでも画面は使えることが多い。
+/// panicしてもアプリは終わらせない(Cargo.tomlでunwindのまま)。キーボードの表示はほとんど
+/// 画面の側で動いていて、裏のスレッドが1つ転んでも画面は使えることが多い。
 /// 黙って消えるより、記録を残して動き続ける方がよい。
 pub fn install_panic_hook() {
     let default = std::panic::take_hook();
@@ -95,7 +95,7 @@ pub fn install_panic_hook() {
     }));
 }
 
-/// いまの時刻を ISO 8601(UTC、ミリ秒まで)で。Electron 版のログと同じ形にそろえる。
+/// いまの時刻をISO 8601(UTC、ミリ秒まで)で。Electron版のログと同じ形にそろえる。
 fn iso_now() -> String {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     format_iso(now.as_secs() as i64, now.subsec_millis())
@@ -113,7 +113,7 @@ fn format_iso(seconds: i64, millis: u32) -> String {
     )
 }
 
-/// 1970-01-01 からの日数を年月日に(Howard Hinnant の civil_from_days)。
+/// 1970-01-01からの日数を年月日に(Howard Hinnantのcivil_from_days)。
 /// 時刻の書式のためだけに日付のライブラリは入れない。
 fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let z = days + 719_468;
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(format_iso(0, 0), "1970-01-01T00:00:00.000Z");
         // 2026-09-24T12:34:56.789Z
         assert_eq!(format_iso(1_790_253_296, 789), "2026-09-24T12:34:56.789Z");
-        // うるう年の 2 月 29 日
+        // うるう年の2月29日
         assert_eq!(format_iso(951_782_400, 0), "2000-02-29T00:00:00.000Z");
     }
 }

@@ -1,9 +1,9 @@
 /**
  * 実機なしで動かすためのモックデバイス。
  *
- * ファーム(vial-qmk の via.c / vial.c)と同じバイト並びで応答を組み立てる。
- * 既定で名乗るのは Cornix LP ― キーマップと Tap Dance は reference/Cornix_設定_LT.vil、
- * 定義 JSON は Cornix LP V1.12 のファームから取り出した実物(XZ 圧縮のまま)。
+ * ファーム(vial-qmkのvia.c / vial.c)と同じバイト並びで応答を組み立てる。
+ * 既定で名乗るのはCornix LP ― キーマップとTap Danceはreference/Cornix_設定_LT.vil、
+ * 定義JSONはCornix LP V1.12のファームから取り出した実物(XZ圧縮のまま)。
  *
  * **ほかのキーボードも名乗れる**(`MockOptions.keyboard`)。このアプリは固定データを持たず、
  * 配置もキーマップもキーボードから読むので、別の行列・レイヤー数・ノブ無し・
@@ -49,7 +49,7 @@ import {
 import type { SendOptions, Transport } from './transport'
 import { pad, TransportError } from './transport'
 
-/** atob はブラウザにも Node 16+ にもある。 */
+/** atobはブラウザにもNode 16+にもある。 */
 function fromBase64(base64: string): Uint8Array {
   const binary = atob(base64)
   const out = new Uint8Array(binary.length)
@@ -58,23 +58,23 @@ function fromBase64(base64: string): Uint8Array {
 }
 
 /**
- * モックが名乗るキーボード。定義 JSON・キーマップ・行列の大きさをまとめて差し替える。
+ * モックが名乗るキーボード。定義JSON・キーマップ・行列の大きさをまとめて差し替える。
  * バイト並びはファームと同じなので、アプリから見れば実機と区別が付かない。
  */
 export interface MockKeyboard {
-  /** 画面に出す名前(実機の productName に当たる)。 */
+  /** 画面に出す名前(実機のproductNameに当たる)。 */
   label: string
   viaProtocol: number
   vialProtocol: number
   uid: bigint
-  /** 定義 JSON を XZ で固めたもの(base64)。実機の応答と同じ形。 */
+  /** 定義JSONをXZで固めたもの(base64)。実機の応答と同じ形。 */
   definitionXzBase64: string
   layers: number
   rows: number
   cols: number
-  /** [layer][row][col] を平らにした生キーコード列。 */
+  /** [layer][row][col]を平らにした生キーコード列。 */
   keymap: readonly number[]
-  /** 枠ごとの [onTap, onHold, onDoubleTap, onTapHold, tappingTerm]。無ければ空。 */
+  /** 枠ごとの[onTap, onHold, onDoubleTap, onTapHold, tappingTerm]。無ければ空。 */
   tapDance: ReadonlyArray<readonly number[]>
   /** [layer][index] = [反時計回り, 時計回り]。ノブが無ければ空。 */
   encoders: ReadonlyArray<ReadonlyArray<readonly number[]>>
@@ -96,18 +96,18 @@ export const CORNIX_MOCK: MockKeyboard = {
 }
 
 export interface MockOptions {
-  /** 名乗るキーボード。既定は Cornix LP。 */
+  /** 名乗るキーボード。既定はCornix LP。 */
   keyboard?: MockKeyboard
   /** 最初からアンロック済みにするか。 */
   unlocked?: boolean
-  /** アンロックに使うキー。既定は Cornix の左上 2 つ。 */
+  /** アンロックに使うキー。既定はCornixの左上2つ。 */
   unlockKeys?: Array<{ row: number; col: number }>
-  /** 1 往復あたりの遅延(ms)。0 なら同期的に返す。 */
+  /** 1往復あたりの遅延(ms)。0なら同期的に返す。 */
   latencyMs?: number
 }
 
 /**
- * Transport と同じ口を持つ偽デバイス。押下状態はテスト側から動かす。
+ * Transportと同じ口を持つ偽デバイス。押下状態はテスト側から動かす。
  */
 export class MockTransport implements Transport {
   readonly label: string
@@ -153,7 +153,7 @@ export class MockTransport implements Transport {
     this.isOpen = false
   }
 
-  // --- テストから叩く操作 ---
+  // --- テストから叩く操作---
 
   /** 物理キーを押す。 */
   press(row: number, col: number): void {
@@ -171,7 +171,7 @@ export class MockTransport implements Transport {
 
   /**
    * 進行中のアンロック手順を外から打ち切る。
-   * キーボードの挿し直しや、別アプリからの vial_lock を再現するのに使う。
+   * キーボードの挿し直しや、別アプリからのvial_lockを再現するのに使う。
    */
   abortUnlock(): void {
     this.unlockInProgress = false
@@ -179,8 +179,8 @@ export class MockTransport implements Transport {
   }
 
   /**
-   * キーマップを書き換える。Vial 側で編集された状況を作るのに使う。
-   * 実機の set_keycode は実装していない(このアプリは読むだけなので)。
+   * キーマップを書き換える。Vial側で編集された状況を作るのに使う。
+   * 実機のset_keycodeは実装していない(このアプリは読むだけなので)。
    */
   setKeycode(layer: number, row: number, col: number, keycode: number): void {
     const { rows, cols } = this.keyboard
@@ -214,7 +214,7 @@ export class MockTransport implements Transport {
   }
 
   private handle(msg: Uint8Array): Uint8Array {
-    // アンロック進行中は 0xFE の一部しか通らない(via.c:215-224)
+    // アンロック進行中は0xFEの一部しか通らない(via.c:215-224)
     if (this.unlockInProgress) {
       const allowed =
         msg[0] === CMD_VIA_VIAL_PREFIX &&
@@ -268,7 +268,7 @@ export class MockTransport implements Transport {
               if (this.pressed.has(keyId(row, col))) value |= 1 << col
             }
             for (let byte = 0; byte < rowSize; byte++) {
-              // 行内は MSB のバイトが先
+              // 行内はMSBのバイトが先
               const shift = (rowSize - 1 - byte) * 8
               out[2 + row * rowSize + byte] = (value >> shift) & 0xff
             }
@@ -316,7 +316,7 @@ export class MockTransport implements Transport {
       }
 
       case CMD_VIAL_GET_DEFINITION: {
-        // ファームが読むのは 2 バイトだけ(vial.c:117)
+        // ファームが読むのは2バイトだけ(vial.c:117)
         const page = msg[2] | (msg[3] << 8)
         const start = page * MSG_LEN
         if (start >= this.definitionBytes.length) return out

@@ -1,9 +1,9 @@
 /**
- * Tauri 版の HID(hid/nativeHid.ts)。Rust の hidapi を WebHID と同じ形に見せる層。
+ * Tauri版のHID(hid/nativeHid.ts)。RustのhidapiをWebHIDと同じ形に見せる層。
  *
- * 接続の管理・候補の確かめ・往復は WebHID 用のコードをそのまま使うので、ここでは
- * 「WebHID と同じにふるまうか」を確かめる。Rust の側(NativeHidBackend)は偽物に差し替え、
- * 裏に MockTransport のファーム模擬を置いて、WebHidTransport 越しに読み込みまで通す。
+ * 接続の管理・候補の確かめ・往復はWebHID用のコードをそのまま使うので、ここでは
+ * 「WebHIDと同じにふるまうか」を確かめる。Rustの側(NativeHidBackend)は偽物に差し替え、
+ * 裏にMockTransportのファーム模擬を置いて、WebHidTransport越しに読み込みまで通す。
  */
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
@@ -20,13 +20,13 @@ const USB: NativeHidInfo = {
   usagePage: 0xff60,
   usage: 0x61
 }
-/** 同じキーボードの Bluetooth 側。VID/PID は同じで、名前は取れない。 */
+/** 同じキーボードのBluetooth側。VID/PIDは同じで、名前は取れない。 */
 const BT: NativeHidInfo = {
   ...USB,
   path: '\\\\?\\HID#{00001812}_Dev_VID&02e118#bt',
   productName: ''
 }
-/** 別のキーボード(VIA 用のインターフェースを持つ無線レシーバー)。 */
+/** 別のキーボード(VIA用のインターフェースを持つ無線レシーバー)。 */
 const OTHER: NativeHidInfo = {
   ...USB,
   path: '\\\\?\\HID#VID_3434&PID_D026#other',
@@ -35,7 +35,7 @@ const OTHER: NativeHidInfo = {
   productName: 'Keychron Link-KM'
 }
 
-/** Rust の側の偽物。書かれた要求にファーム模擬が答え、入力レポートとして返す。 */
+/** Rustの側の偽物。書かれた要求にファーム模擬が答え、入力レポートとして返す。 */
 class FakeBackend implements NativeHidBackend {
   list: NativeHidInfo[] = []
   granted: NativeHidInfo[] = []
@@ -71,8 +71,8 @@ class FakeBackend implements NativeHidBackend {
     return handle
   }
   async write(handle: number, data: Uint8Array): Promise<void> {
-    if (this.failWrite) throw 'デバイスが見つからない' // Rust からは文字列で来る
-    expect(data[0]).toBe(0) // 先頭はレポート ID
+    if (this.failWrite) throw 'デバイスが見つからない' // Rustからは文字列で来る
+    expect(data[0]).toBe(0) // 先頭はレポートID
     const response = await this.firmware.send(data.slice(1))
     setTimeout(() => this.reports.get(handle)?.(response), 1)
   }
@@ -157,7 +157,7 @@ describe('NativeHid: 挿し抜き', () => {
 
     backend.unplug(USB)
     backend.plug(USB)
-    // 抜けたのは持っていたオブジェクト。挿し直したら別のオブジェクトになる(WebHID と同じ)
+    // 抜けたのは持っていたオブジェクト。挿し直したら別のオブジェクトになる(WebHIDと同じ)
     expect(events[0]).toEqual(['disconnect', device])
     expect(events[1][0]).toBe('connect')
     expect(events[1][1]).not.toBe(device)

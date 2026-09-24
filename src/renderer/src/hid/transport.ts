@@ -1,8 +1,8 @@
 /**
- * デバイスとの 32 バイト往復を抽象化する層。
+ * デバイスとの32バイト往復を抽象化する層。
  *
- * ファームはリクエストとレスポンスを対応づける ID を持たないので、
- * 実装側で必ず直列化する。matrix ポーリングとキーマップ読み出しが
+ * ファームはリクエストとレスポンスを対応づけるIDを持たないので、
+ * 実装側で必ず直列化する。matrixポーリングとキーマップ読み出しが
  * 並走すると応答を取り違える(docs/PROTOCOL.md §7)。
  */
 import { MSG_LEN, VIAL_USAGE, VIAL_USAGE_PAGE } from './constants'
@@ -15,10 +15,10 @@ export interface SendOptions {
   /**
    * 受け取ったパケットが、このリクエストへの応答かどうかを判定する。
    *
-   * raw HID の入力レポートは、その HID を開いている**すべて**のプロセスに配られる。
-   * つまり Vial や Pipette を同時に開いていると、相手宛ての応答もこちらに届く。
-   * ここで弾かないと、matrix の値やキーマップが他アプリの応答で汚れる。
-   * false を返したパケットは捨てて、タイムアウトまで待ち続ける。
+   * raw HIDの入力レポートは、そのHIDを開いている**すべて**のプロセスに配られる。
+   * つまりVialやPipetteを同時に開いていると、相手宛ての応答もこちらに届く。
+   * ここで弾かないと、matrixの値やキーマップが他アプリの応答で汚れる。
+   * falseを返したパケットは捨てて、タイムアウトまで待ち続ける。
    */
   validate?: (data: Uint8Array) => boolean
 }
@@ -29,13 +29,13 @@ export interface Transport {
   readonly opened: boolean
   open(): Promise<void>
   close(): Promise<void>
-  /** 32 バイト以内のリクエストを送り、32 バイトのレスポンスを返す。 */
+  /** 32バイト以内のリクエストを送り、32バイトのレスポンスを返す。 */
   send(request: Uint8Array, options?: SendOptions): Promise<Uint8Array>
 }
 
 export class TransportError extends Error {}
 
-/** リクエストを 32 バイトに詰める。 */
+/** リクエストを32バイトに詰める。 */
 export function pad(bytes: ArrayLike<number>): Uint8Array {
   if (bytes.length > MSG_LEN) {
     throw new TransportError(`リクエストが ${MSG_LEN} バイトを超えている`)
@@ -45,7 +45,7 @@ export function pad(bytes: ArrayLike<number>): Uint8Array {
   return out
 }
 
-/** 送信を 1 本のキューに並べる。Transport 実装から使う。 */
+/** 送信を1本のキューに並べる。Transport実装から使う。 */
 export class RequestQueue {
   private tail: Promise<unknown> = Promise.resolve()
 
@@ -68,16 +68,16 @@ export interface WebHidTransportOptions {
   staleWindowMs?: number
 }
 
-/** WebHID 上の実デバイス。 */
+/** WebHID上の実デバイス。 */
 export class WebHidTransport implements Transport {
   private readonly queue = new RequestQueue()
-  /** 受け取ったパケットを渡す。引き取ったら true、自分宛てでなければ false。 */
+  /** 受け取ったパケットを渡す。引き取ったらtrue、自分宛てでなければfalse。 */
   private pending: ((data: Uint8Array) => boolean) | null = null
   /**
    * 時間切れで諦めた要求の数。この数だけ、届いた応答を捨てる。
    *
-   * ファームは応答に要求 ID を持たない(docs/PROTOCOL.md §7)。諦めた要求への応答が遅れて
-   * 届くと、**投げ直した要求の応答として受け取ってしまい、以後ずっと 1 回ずつずれる**
+   * ファームは応答に要求IDを持たない(docs/PROTOCOL.md §7)。諦めた要求への応答が遅れて
+   * 届くと、**投げ直した要求の応答として受け取ってしまい、以後ずっと1回ずつずれる**
    * (docs/BLUETOOTH.md §3)。同じコマンドなので照合(validate)では弾けない。
    * 応答は送った順に返るので、諦めた数だけ捨てれば並びが戻る。
    */
@@ -169,7 +169,7 @@ export class WebHidTransport implements Transport {
         this.abandonedAt = Date.now()
         reject(new TransportError(`デバイスが応答しません(コマンド ${describeCommand(payload)})`))
       }, timeoutMs)
-      // report ID を持たないデバイスなので 0 で送る
+      // report IDを持たないデバイスなので0で送る
       const report = new Uint8Array(MSG_LEN)
       report.set(payload)
       this.device.sendReport(0x00, report).catch((error: unknown) => {
@@ -181,21 +181,21 @@ export class WebHidTransport implements Transport {
   }
 }
 
-/** エラー表示用に、リクエストの先頭(コマンドとサブコマンド)を 16 進で表す。 */
+/** エラー表示用に、リクエストの先頭(コマンドとサブコマンド)を16進で表す。 */
 export function describeCommand(payload: Uint8Array): string {
   const head =
     payload[0] === 0xfe || payload[0] === 0x02 ? payload.subarray(0, 2) : payload.subarray(0, 1)
   return [...head].map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' ')
 }
 
-/** Vial の raw HID インターフェースを持つデバイスかどうか。 */
+/** Vialのraw HIDインターフェースを持つデバイスかどうか。 */
 export function isVialDevice(device: HIDDevice): boolean {
   return device.collections.some(
     (collection) => collection.usagePage === VIAL_USAGE_PAGE && collection.usage === VIAL_USAGE
   )
 }
 
-/** WebHID のデバイス要求に使うフィルタ。 */
+/** WebHIDのデバイス要求に使うフィルタ。 */
 export const VIAL_HID_FILTERS: HIDDeviceFilter[] = [
   { usagePage: VIAL_USAGE_PAGE, usage: VIAL_USAGE }
 ]

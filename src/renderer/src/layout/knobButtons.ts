@@ -2,13 +2,13 @@
  * ノブ(エンコーダー)を押し込んだときのキーが、行列のどこか。
  *
  * 分かれば、そのキーをノブとして円く描き、回したときの割り当てを上下に挟んで出せる
- * (KeyboardView)。ただ Vial の定義には書かれていない ― KLE のエンコーダーは飾りで、
- * Cornix LP の定義は図の右端にまとめて置いてあるだけ。なので分かっているキーボードだけここに持つ。
+ * (KeyboardView)。ただVialの定義には書かれていない ― KLEのエンコーダーは飾りで、
+ * Cornix LPの定義は図の右端にまとめて置いてあるだけ。なので分かっているキーボードだけここに持つ。
  * 載っていないキーボードのノブは、図の下にまとめて出す(layout/encoderStrip.ts)。
  */
 
 export interface KnobButton {
-  /** エンコーダーの番号(KLE の "e" の番号、keymap のエンコーダーの並び)。 */
+  /** エンコーダーの番号(KLEの"e"の番号、keymapのエンコーダーの並び)。 */
   index: number
   row: number
   col: number
@@ -25,9 +25,9 @@ interface KnownBoard {
 
 const KNOWN_BOARDS: KnownBoard[] = [
   {
-    // RMK のファーム。左手のノブ(0 番、既定は音量)の押し込みが 2,6(既定は消音)、
-    // 右手(1 番、既定はマウスのホイール)が 5,6(既定は中クリック)。6 列目はこの 2 つにしか無い。
-    // 定義の name は "HID Keyboard" と汎用的なので、VID / PID と行列の大きさで見分ける
+    // RMKのファーム。左手のノブ(0番、既定は音量)の押し込みが2,6(既定は消音)、
+    // 右手(1番、既定はマウスのホイール)が5,6(既定は中クリック)。6列目はこの2つにしか無い。
+    // 定義のnameは"HID Keyboard"と汎用的なので、VID / PIDと行列の大きさで見分ける
     name: 'Cornix LP',
     vendorId: 0xe118,
     productId: 0x0001,
@@ -40,7 +40,7 @@ const KNOWN_BOARDS: KnownBoard[] = [
   }
 ]
 
-/** 定義の vendorId / productId は "0xE118" のような文字列で書かれている。数でも受け付ける。 */
+/** 定義のvendorId / productIdは"0xE118"のような文字列で書かれている。数でも受け付ける。 */
 function toNumber(value: unknown): number | null {
   if (typeof value === 'number') return value
   if (typeof value !== 'string') return null

@@ -122,16 +122,16 @@ describe('Tap Dance は要る枠だけ読む', () => {
   it('キーマップとノブで使っている枠と、先頭の 5 個だけ読む', async () => {
     const transport = await openMock()
     const snapshot = await loadKeyboard(transport)
-    // Cornix のキーマップが使っているのは TD(3) だけで、先頭 5 個に含まれる
+    // Cornixのキーマップが使っているのはTD(3)だけで、先頭5個に含まれる
     expect(tapDanceReads(transport)).toEqual([0, 1, 2, 3, 4])
     expect(snapshot.tapDance).toHaveLength(MOCK_TAP_DANCE.length) // 枠の数は保つ
-    expect(snapshot.tapDance[3]?.onHold).toBe(0x5224) // 長押しで MO(4)
+    expect(snapshot.tapDance[3]?.onHold).toBe(0x5224) // 長押しでMO(4)
     expect(snapshot.tapDance[5]).toBeUndefined()
   })
 
   it('先頭 5 個より後ろでも、キーマップで使っていれば読む', async () => {
     const transport = await openMock()
-    transport.setKeycode(1, 0, 1, 0x5700 + 20) // L1 に TD(20)
+    transport.setKeycode(1, 0, 1, 0x5700 + 20) // L1にTD(20)
     const snapshot = await loadKeyboard(transport)
     expect(tapDanceReads(transport)).toEqual([0, 1, 2, 3, 4, 20])
     expect(snapshot.tapDance[20]).toBeDefined()
@@ -200,7 +200,7 @@ describe('読み込みの進み具合', () => {
       expect(steps.map((p) => p.done)).toEqual(steps.map((_, i) => i + 1))
       expect(steps.at(-1)?.done).toBe(steps[0].total)
     }
-    // Cornix: 10 レイヤー × 8 × 7 × 2 バイト = 1120 バイトを 28 バイトずつ
+    // Cornix: 10レイヤー × 8 × 7 × 2バイト = 1120バイトを28バイトずつ
     expect(seen.find((p) => p.stage === 'keymap')?.total).toBe(40)
   })
 
@@ -220,10 +220,10 @@ describe('読み込みの進み具合', () => {
 
 describe('matrix state', () => {
   it('行ごとに MSB バイトが先に来る並びをほどく', () => {
-    // 3 行 × 10 列。row_size = 2、col 8 は先頭バイトの bit0 に入る
+    // 3行 × 10列。row_size = 2、col 8は先頭バイトのbit0に入る
     const data = new Uint8Array(32)
-    data[2] = 0b0000_0001 // row0 の上位バイト → col 8
-    data[3] = 0b0000_0010 // row0 の下位バイト → col 1
+    data[2] = 0b0000_0001 // row0の上位バイト → col 8
+    data[3] = 0b0000_0010 // row0の下位バイト → col 1
     data[4] = 0b0000_0000
     data[5] = 0b1000_0000 // row1 → col 7
     const matrix = decodeMatrixState(data, 3, 10)
@@ -258,9 +258,9 @@ describe('matrix state', () => {
 
   it('Cornix のサイズなら matrix tester の条件を満たす', () => {
     expect(isMatrixTestSupported(6, 8, 7)).toBe(true)
-    // vial protocol 2 以下は不可
+    // vial protocol 2以下は不可
     expect(isMatrixTestSupported(2, 8, 7)).toBe(false)
-    // (cols/8 + 1) * rows が 28 を超えると不可
+    // (cols/8 + 1) * rowsが28を超えると不可
     expect(isMatrixTestSupported(6, 20, 20)).toBe(false)
   })
 })
@@ -308,7 +308,7 @@ describe('アンロック', () => {
 
   it('開始していなければ、やり直すべきだと判断する', async () => {
     const transport = await openMock(false)
-    // unlock_start を呼ばずにポーリングすると in_progress は落ちたまま
+    // unlock_startを呼ばずにポーリングするとin_progressは落ちたまま
     const progress = await unlockPoll(transport)
     expect(progress).toMatchObject({ unlocked: false, inProgress: false })
     expect(nextUnlockAction(progress)).toBe('restart')
@@ -366,7 +366,7 @@ describe('RequestQueue', () => {
 describe('対応バージョンの確認', () => {
   it('v6 以外はエラーにする', async () => {
     const transport = await openMock()
-    // Vial プロトコルの応答だけを 5 に差し替える
+    // Vialプロトコルの応答だけを5に差し替える
     const original = transport.send.bind(transport)
     transport.send = async (request, options) => {
       const data = await original(request, options)
@@ -383,7 +383,7 @@ describe('キーマップの読み直し', () => {
     const before = await loadKeyboard(transport)
     expect(formatKeycode(decodeKeycode(before.keymap[0][0][1]))).toBe('KC_Q')
 
-    // Vial でベースレイヤーの Q を Z に変えた、という想定
+    // VialでベースレイヤーのQをZに変えた、という想定
     transport.setKeycode(0, 0, 1, 0x001d) // KC_Z
     const after = await reloadKeymap(transport, before)
 
@@ -417,15 +417,15 @@ describe('キーマップの読み直し', () => {
 })
 
 /**
- * raw HID の入力レポートは、その HID を開いているすべてのプロセスに配られる。
- * Vial を同時に開いていると相手宛ての応答も届くので、照合して捨てられること。
+ * raw HIDの入力レポートは、そのHIDを開いているすべてのプロセスに配られる。
+ * Vialを同時に開いていると相手宛ての応答も届くので、照合して捨てられること。
  */
 describe('他アプリ宛ての応答を弾く', () => {
   class FakeHidDevice extends EventTarget {
     opened = false
     productName = 'Fake Vial'
     collections = [{ usagePage: 0xff60, usage: 0x61 }]
-    /** sendReport のたびに、この関数が返すパケットを順に流す。 */
+    /** sendReportのたびに、この関数が返すパケットを順に流す。 */
     responder: (request: Uint8Array) => Uint8Array[] = () => []
 
     async open(): Promise<void> {
@@ -452,7 +452,7 @@ describe('他アプリ宛ての応答を弾く', () => {
 
   it('コマンド ID が合わないパケットは捨てて、本来の応答を待つ', async () => {
     const device = new FakeHidDevice()
-    // 先に他アプリ宛て(0x11 レイヤー数)が届き、そのあと本命(0x02 0x03)が来る
+    // 先に他アプリ宛て(0x11レイヤー数)が届き、そのあと本命(0x02 0x03)が来る
     device.responder = () => [packet(0x11, 0x0a), packet(0x02, 0x03, 0b0000_0010)]
     const transport = new WebHidTransport(device as unknown as HIDDevice)
     await transport.open()
@@ -465,7 +465,7 @@ describe('他アプリ宛ての応答を弾く', () => {
   it('keymap バッファはオフセットとサイズまで照合する', async () => {
     const device = new FakeHidDevice()
     device.responder = (request) => [
-      // 同じ 0x12 でも別のオフセットへの応答は受け取らない
+      // 同じ0x12でも別のオフセットへの応答は受け取らない
       packet(0x12, 0xff, 0xff, request[3], 0xde, 0xad),
       packet(0x12, request[1], request[2], request[3], 0x00, 0x2b)
     ]

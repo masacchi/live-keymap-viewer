@@ -1,9 +1,9 @@
 /**
  * キーコード → 画面に出す文字。
  *
- * JIS モードは「Windows を日本語キーボード設定にしたまま使ったときに実際に入る文字」、
- * US モードは素の US 配列の表記。表の出発点は reference/keymap-preview.html の
- * JIS / NAMED オブジェクト(HANDOFF §7)。
+ * JISモードは「Windowsを日本語キーボード設定にしたまま使ったときに実際に入る文字」、
+ * USモードは素のUS配列の表記。表の出発点はreference/keymap-preview.htmlの
+ * JIS / NAMEDオブジェクト(HANDOFF §7)。
  */
 import type { Keycode } from './decode'
 import {
@@ -33,22 +33,22 @@ export type LabelCategory =
 export interface KeyLabel {
   /** キートップに大きく出す文字。 */
   main: string
-  /** Shift を足したときに出る文字。無ければ undefined。 */
+  /** Shiftを足したときに出る文字。無ければundefined。 */
   shift?: string
   /** 小さく添える補足。 */
   sub?: string
   /**
-   * ツールチップにだけ出す説明。カスタムキーの title("Switch default output mode between
-   * USB/BLE" など)は長く、キーの中に書くとはみ出すので、補足とは分けて持つ。
+   * ツールチップにだけ出す説明。カスタムキーのtitle("Switch default output mode between
+   * USB/BLE"など)は長く、キーの中に書くとはみ出すので、補足とは分けて持つ。
    */
   description?: string
   category: LabelCategory
 }
 
-/** 印字キー:[通常, Shift]。null は「Shift でも変わらない/何も出ない」。 */
+/** 印字キー:[通常, Shift]。nullは「Shiftでも変わらない/何も出ない」。 */
 type Printable = readonly [string, string | null]
 
-/** JIS 配列(Windows が日本語キーボードとして扱っているとき)に実際に入る文字。 */
+/** JIS配列(Windowsが日本語キーボードとして扱っているとき)に実際に入る文字。 */
 export const JIS_PRINTABLE: Readonly<Record<string, Printable>> = {
   KC_1: ['1', '!'],
   KC_2: ['2', '"'],
@@ -75,7 +75,7 @@ export const JIS_PRINTABLE: Readonly<Record<string, Printable>> = {
   KC_GRAVE: ['半/全', null]
 }
 
-/** US 配列の表記。 */
+/** US配列の表記。 */
 export const US_PRINTABLE: Readonly<Record<string, Printable>> = {
   KC_1: ['1', '!'],
   KC_2: ['2', '@'],
@@ -100,7 +100,7 @@ export const US_PRINTABLE: Readonly<Record<string, Printable>> = {
   KC_SLASH: ['/', '?'],
   KC_NONUS_HASH: ['#', '~'],
   KC_NONUS_BSLASH: ['\\', '|'],
-  // US 配列には無いが、キーマップ上には置ける
+  // US配列には無いが、キーマップ上には置ける
   KC_JYEN: ['¥', '|'],
   KC_RO: ['\\', '_']
 }
@@ -109,7 +109,7 @@ interface Named {
   main: string
   sub?: string
   category?: LabelCategory
-  /** US モードでの差し替え。 */
+  /** USモードでの差し替え。 */
   us?: { main?: string; sub?: string }
 }
 
@@ -170,9 +170,9 @@ export const NAMED: Readonly<Record<string, Named>> = {
 
 /** ラベルを出すのに要る、キーボードから読んだ情報。 */
 export interface LabelContext {
-  /** 定義 JSON の customKeycodes(USER00… の表示名)。 */
+  /** 定義JSONのcustomKeycodes(USER00… の表示名)。 */
   customKeycodes?: ReadonlyArray<{ name?: string; title?: string; shortName?: string }>
-  /** Tap Dance の設定。TD(n) をタップ側の文字で出すのに使う。読んでいない枠は undefined。 */
+  /** Tap Danceの設定。TD(n)をタップ側の文字で出すのに使う。読んでいない枠はundefined。 */
   tapDance?: ReadonlyArray<{ onTap: number; onHold: number } | undefined>
 }
 
@@ -227,10 +227,10 @@ function modsLabel(mods: number): string {
 }
 
 /**
- * キーコード 1 個分のラベルを作る。
+ * キーコード1個分のラベルを作る。
  *
- * Layer-Tap / Tap Dance など「押すと出る文字」と「長押しの機能」を両方持つキーは、
- * ここでは **タップ側の文字**を返す。長押し側の表現は呼び出し元(KeyCap)が担当する。
+ * Layer-Tap / Tap Danceなど「押すと出る文字」と「長押しの機能」を両方持つキーは、
+ * ここでは**タップ側の文字**を返す。長押し側の表現は呼び出し元(KeyCap)が担当する。
  */
 export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext = {}): KeyLabel {
   switch (kc.kind) {
@@ -242,7 +242,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
       return basicLabel(kc.name, mode)
 
     case 'mods': {
-      // Shift + 印字キーは、その Shift 面の文字そのものを出す(JIS の記号レイヤー対策)
+      // Shift +印字キーは、そのShift面の文字そのものを出す(JISの記号レイヤー対策)
       if (kc.mods === MOD_SHIFT && kc.inner.kind === 'basic') {
         const printable = printableTable(mode)[kc.inner.name]
         if (printable?.[1]) return { main: printable[1], category: 'sym' }
@@ -269,7 +269,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
       return { main: modsLabel(kc.mods), sub: 'ワンショット', category: 'mod' }
 
     case 'tapDance': {
-      // TD はタップ側の文字を出す。長押し側の表現は呼び出し元が担当する
+      // TDはタップ側の文字を出す。長押し側の表現は呼び出し元が担当する
       const entry = ctx.tapDance?.[kc.index]
       if (entry) return labelForKeycode(decodeKeycode(entry.onTap), mode, ctx)
       return { main: `TD${kc.index}`, category: 'layer' }
@@ -281,7 +281,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
     case 'user': {
       const custom = ctx.customKeycodes?.[kc.index]
       if (custom) {
-        // shortName は "Switch\nOutput" のように改行入りで来ることがある
+        // shortNameは"Switch\nOutput"のように改行入りで来ることがある
         const short = (custom.shortName ?? custom.name ?? '').replace(/\n/g, ' ')
         return { main: short || `USER${kc.index}`, description: custom.title, category: 'user' }
       }

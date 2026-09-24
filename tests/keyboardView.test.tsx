@@ -1,6 +1,6 @@
 /**
- * SVG の描画を、実際にマークアップへ落として確かめる。
- * ブラウザは要らないので react-dom/server で静的に描く。
+ * SVGの描画を、実際にマークアップへ落として確かめる。
+ * ブラウザは要らないのでreact-dom/serverで静的に描く。
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -68,7 +68,7 @@ describe('KeyboardView', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
-    // Cornix の親指は ±23 度と ±11.93 度
+    // Cornixの親指は ±23度と ±11.93度
     expect(html).toContain('rotate(23 ')
     expect(html).toContain('rotate(-23 ')
     expect(html).toContain('rotate(11.93 ')
@@ -120,19 +120,19 @@ describe('KeyboardView', () => {
     expect(layers.displayLayer).toBe(2)
 
     const html = render(engine, layers)
-    // 1u には「Space 長押し中」が収まらないので「長押し中」だけにする(キーの名前はツールチップ)
+    // 1uには「Space長押し中」が収まらないので「長押し中」だけにする(キーの名前はツールチップ)
     expect(html).toContain('>長押し中<')
     expect(html).toContain('<title>Space / 長押しで L2 / raw 0x422c</title>')
     expect(html).toContain('>L2<')
-    // L2 の (0,1) は LSFT(KC_1) → JIS では "!"
+    // L2の(0,1)はLSFT(KC_1) → JISでは"!"
     expect(html).toContain('>!<')
-    // L2 で透過のキーは薄く出す
+    // L2で透過のキーは薄く出す
     expect(html).toContain('key-trns')
   })
 
   it('押しているキーは、表示中のレイヤーではなく押した瞬間のキーコードで描く', () => {
-    // 右下の TD(3) は長押しで L4。L4 のその位置は透過ではないので、表示中のレイヤーで
-    // 引き直すと TD が見えなくなり、以前は「Lnull 長押し中」と出ていた
+    // 右下のTD(3)は長押しでL4。L4のその位置は透過ではないので、表示中のレイヤーで
+    // 引き直すとTDが見えなくなり、以前は「Lnull長押し中」と出ていた
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[7][0] = true
@@ -155,7 +155,7 @@ describe('KeyboardView', () => {
       [],
       4
     )
-    // L4 の (0,0) は USER06 = SWITCH(shortName "Switch\nOutput")
+    // L4の(0,0)はUSER06 = SWITCH(shortName "Switch\nOutput")
     expect(html).toMatch(/<tspan[^>]*>Switch<\/tspan><tspan[^>]*>Output<\/tspan>/)
     // 説明(title)はキーの中に書かない。はみ出していた
     expect(html).not.toMatch(/<text[^>]*>Switch default output mode/)
@@ -186,13 +186,13 @@ describe('KeyboardView', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
-    // KC_MINUS: 主文字 "-" / Shift 側 "="。どちらも同じ x(中央)に乗る
+    // KC_MINUS: 主文字"-" / Shift側"="。どちらも同じx(中央)に乗る
     const main = /<text class="main" x="([\d.]+)" y="([\d.]+)" font-size="\d+">-<\/text>/.exec(html)
     const shift = /<text class="shift" x="([\d.]+)" y="([\d.]+)">=<\/text>/.exec(html)
     expect(main).not.toBeNull()
     expect(shift).not.toBeNull()
-    expect(shift![1]).toBe(main![1]) // x が一致 = 中央揃え
-    expect(Number(shift![2])).toBeLessThan(Number(main![2])) // Shift 側が上
+    expect(shift![1]).toBe(main![1]) // xが一致 = 中央揃え
+    expect(Number(shift![2])).toBeLessThan(Number(main![2])) // Shift側が上
   })
 
   it('Shift を押しているあいだは、Shift で入る文字を主文字にして目立たせる', () => {
@@ -201,10 +201,10 @@ describe('KeyboardView', () => {
     matrix[2][0] = true // KC_LSHIFT
     const html = render(engine, engine.update(matrix, 0))
     expect(html).toContain('key-shifted')
-    // KC_MINUS: "=" が主文字に、"-" が上の小さい方に入れ替わる
+    // KC_MINUS: "="が主文字に、"-"が上の小さい方に入れ替わる
     expect(html).toMatch(/<text class="main"[^>]*>=<\/text>/)
     expect(html).toMatch(/<text class="shift"[^>]*>-<\/text>/)
-    // Shift で変わらないキー(英字)はそのまま
+    // Shiftで変わらないキー(英字)はそのまま
     expect(html).toMatch(/<g class="key"[^>]*>(?:(?!<\/g>).)*>Q</)
   })
 
@@ -218,15 +218,15 @@ describe('KeyboardView', () => {
   it('プレビューでは、実際の状態と関係なく指定のレイヤーを出す', () => {
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
-    matrix[0][0] = true // Tab を押している
+    matrix[0][0] = true // Tabを押している
     const layers = engine.update(matrix, 0)
     expect(layers.displayLayer).toBe(0)
 
     const html = render(engine, layers, 'jis', [], 1)
     expect(html).toContain('レイヤー 1 のキーマップ')
-    // L1 の (0,1) は KC_1
+    // L1の(0,1)はKC_1
     expect(html).toMatch(/<text class="main"[^>]*>1<\/text>/)
-    // 透過のキーはベースの値をたどる(L1 の (1,0) は透過 → L0 の Ctrl)
+    // 透過のキーはベースの値をたどる(L1の(1,0)は透過 → L0のCtrl)
     expect(html).toContain('key-trns')
     // 押しているキーの表示は実際の状態のまま
     expect(html).toContain('key-pressed')
@@ -243,7 +243,7 @@ describe('KeyboardView', () => {
       null,
       names
     )
-    // 帯は「L2 記号」。入らなければ名前だけ、それも入らなければ番号
+    // 帯は「L2記号」。入らなければ名前だけ、それも入らなければ番号
     expect(idle).toContain('>L2 記号<') // Space
     expect(idle).toContain('>L1 数字<') // BS
     expect(idle).toMatch(/class="band-text"[^>]*>L3<\/text>/) // 長すぎる名前は番号に戻す
@@ -264,12 +264,12 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     expect(html).toContain('↺ 音量−')
     expect(html).toContain('↻ 音量+')
-    // ホイールは "↑" だけだと曖昧なので補足が付く
+    // ホイールは"↑"だけだと曖昧なので補足が付く
     expect(html).toContain('↻ ↓ ホイール')
   })
 
   it('ノブは KLE 上の位置には描かない(図の幅はキーの範囲で決まる)', () => {
-    // Cornix の定義はエンコーダーを図の右端(x=15.25〜)に並べて置いてある。
+    // Cornixの定義はエンコーダーを図の右端(x=15.25〜)に並べて置いてある。
     // そのまま描くと横に間延びするので、キーだけの幅に合わせる。
     expect(geometry.bounds.maxX).toBeCloseTo(19.75)
     expect(geometry.keyBounds.maxX).toBeCloseTo(14.5)
@@ -287,7 +287,7 @@ describe('KeyboardView', () => {
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
 
-    // 押し込みキーは 2,6(消音)と 5,6(中クリック)。下の帯は出さない
+    // 押し込みキーは2,6(消音)と5,6(中クリック)。下の帯は出さない
     const knobs = [...html.matchAll(/<g class="key[^"]*key-knob[^"]*"[^>]*>([\s\S]*?)<title>/g)]
     expect(knobs).toHaveLength(2)
     expect(html).not.toContain('class="encoder"')
@@ -325,7 +325,7 @@ describe('KeyboardView', () => {
     expect(left.labels[0].x).toBeCloseTo(left.x + left.width / 2)
     expect(left.labels[0].attrs).not.toContain('text-anchor')
     // 右手はホイール。「↻ ↓ ホイール」はキーより長いので、右端で揃えて図の中央側(左)へ伸ばす。
-    // 中央揃えだと右隣の H・N にかかっていた
+    // 中央揃えだと右隣のH・Nにかかっていた
     expect(right.labels[0].text).toBe('↻ ↓ ホイール')
     for (const label of right.labels) {
       expect(label.attrs).toContain('text-anchor:end')
@@ -352,14 +352,14 @@ describe('KeyboardView', () => {
     )
     expect(html).not.toContain('key-knob')
 
-    // エンコーダー 1 個につき丸を 1 つ。キーの下端より下に横一列
+    // エンコーダー1個につき丸を1つ。キーの下端より下に横一列
     const circles = [...html.matchAll(/<circle class="encoder" cx="([\d.]+)" cy="([\d.]+)"/g)]
     expect(circles).toHaveLength(2)
     expect(circles[0][2]).toBe(circles[1][2])
     const cy = Number(circles[0][2])
     expect(cy).toBeGreaterThan(geometry.keyBounds.maxY * 58)
 
-    // 丸と同じ x に、右回りを上・左回りを下
+    // 丸と同じxに、右回りを上・左回りを下
     const labels = [
       ...html.matchAll(/<text class="encoder-label" x="([\d.]+)" y="([\d.]+)">([^<]*)</g)
     ]
@@ -379,7 +379,7 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     const attr = (tag: string, name: string): number =>
       Number(new RegExp(`${name}="([-\\d.]+)"`).exec(tag)![1])
-    // キーごとに区切る(1 つのキーは <title> で終わる)
+    // キーごとに区切る(1つのキーは<title>で終わる)
     const keysWithBand = html
       .split('<title>')
       .filter((segment) => segment.includes('class="band"'))
@@ -391,7 +391,7 @@ describe('KeyboardView', () => {
     for (const { cap, band } of keysWithBand) {
       expect(attr(band, 'x')).toBeCloseTo(attr(cap, 'x') + 2)
       expect(attr(band, 'width')).toBeCloseTo(attr(cap, 'width') - 4)
-      // 下端も 2px 上
+      // 下端も2px上
       expect(attr(band, 'y') + attr(band, 'height')).toBeCloseTo(
         attr(cap, 'y') + attr(cap, 'height') - 2
       )

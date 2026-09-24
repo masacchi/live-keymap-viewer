@@ -1,18 +1,18 @@
 /**
- * **Cornix 以外のキーボードでも動くか**を、別の機種を名乗るモックで確かめる。
+ * **Cornix以外のキーボードでも動くか**を、別の機種を名乗るモックで確かめる。
  *
  * このアプリは固定データを持たない(docs/ARCHITECTURE.md §1)。配置・キーマップ・レイヤー数・
  * カスタムキーコードは、すべて接続したキーボードから読む ― という前提が本当かどうかは、
- * Cornix のモックだけを相手にしていると確かめられない。ここでは
+ * Cornixのモックだけを相手にしていると確かめられない。ここでは
  *
  *   - 行列の大きさもレイヤー数も違う
  *   - ノブが無い
  *   - レイアウトオプション(layouts.labels)が無い
  *   - カスタムキーコードが無い
- *   - Tap Dance の枠が 0
+ *   - Tap Danceの枠が0
  *
  * というキーボード(tests/fixtures/boards.ts)を通し、読み込み・描画・押下・レイヤー判定まで
- * 一通り動くことを見る。対応できない条件(matrix state が 1 パケットに収まらない)も併せて。
+ * 一通り動くことを見る。対応できない条件(matrix stateが1パケットに収まらない)も併せて。
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -86,7 +86,7 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
     mock.release(4, 0)
     await waitFor(session, (s) => s.layers?.displayLayer === 0)
 
-    mock.press(4, 1) // LT(2, Space) を長押し
+    mock.press(4, 1) // LT(2, Space)を長押し
     state = await waitFor(session, (s) => s.layers?.displayLayer === 2, 5000)
     expect(state.layers?.activeLayers).toEqual([0, 2])
     await session.dispose()
@@ -126,7 +126,7 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
     )
     expect(html).toContain('Esc') // (0,0)
     expect(html).toContain('MO1') // レイヤーキーは名前で出る
-    expect(html).toContain('長押しで L2') // LT(2, Space) の色帯
+    expect(html).toContain('長押しで L2') // LT(2, Space)の色帯
     expect(html.match(/<g class="key"/g) ?? []).toHaveLength(70)
     await transport.close()
   })
@@ -134,7 +134,7 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
 
 describe('対応できないキーボード', () => {
   it('matrix state が 1 パケットに収まらない大きさなら、その旨を出して止まる', async () => {
-    // 10 行 20 列 →(20/8 + 1)× 10 = 30 バイトで、28 バイトに収まらない
+    // 10行20列 →(20/8 + 1)× 10 = 30バイトで、28バイトに収まらない
     const mock = new MockTransport({ keyboard: BIG_MATRIX, unlocked: true })
     const session = new KeyboardSession(mock, { sleep: yieldSleep })
     await session.start()

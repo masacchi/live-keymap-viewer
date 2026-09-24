@@ -2,11 +2,11 @@
  * オーバーレイ中の操作パネル。
  *
  * オーバーレイはクリックを透過させるので、普通に置いたボタンは押せない。
- * `setIgnoreMouseEvents(true, { forward: true })` のおかげで透過中でも
- * mousemove だけは renderer に届くので、ポインタがこのパネルの上に来た瞬間だけ
+ * `setIgnoreMouseEvents(true, { forward: true })`のおかげで透過中でも
+ * mousemoveだけはrendererに届くので、ポインタがこのパネルの上に来た瞬間だけ
  * 透過を切る。パネルから外れたら戻す。ドラッグ中は判定を止める。
  *
- * 透過を切りたい要素には `data-interactive` を付ける。判定はその有無で行う。
+ * 透過を切りたい要素には`data-interactive`を付ける。判定はその有無で行う。
  * このパネルのほか、未接続の画面の接続ボタンやデバイスの選択にも付いている
  * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
@@ -27,10 +27,10 @@ export interface OverlayControlsProps {
   displayLayer: number
   /** そのレイヤーの名前。無ければ番号だけ。 */
   displayLayerName?: string
-  /** 濃さ・L0 で薄く・薄くしたときの濃さ・後ろのぼかし。 */
+  /** 濃さ・L0で薄く・薄くしたときの濃さ・後ろのぼかし。 */
   settings: OverlaySettings
   onChange: (patch: SettingsPatch) => void
-  /** ぼかしが使えるか(Windows のときだけ)。使えなければ欄を出さない。 */
+  /** ぼかしが使えるか(Windowsのときだけ)。使えなければ欄を出さない。 */
   blurSupported: boolean
   onExit: () => void
 }
@@ -43,13 +43,13 @@ export function OverlayControls({
   blurSupported,
   onExit
 }: OverlayControlsProps): JSX.Element {
-  /** ドラッグ中は前回のポインタ位置(画面座標)。していなければ null。 */
+  /** ドラッグ中は前回のポインタ位置(画面座標)。していなければnull。 */
   const dragging = useRef<{ x: number; y: number; kind: 'move' | 'resize' } | null>(null)
   /** ポインタが透過を切っている要素(パネル・つまみ・接続ボタン)の上にあるか。 */
   const [active, setActive] = useState(false)
   /**
    * パネルを広げているか(ポインタがパネルの上にある)。ふだんは「⠿ L2」だけにしておく。
-   * 以前は濃さ・L0 で薄く・戻すが常に並んでいて、最前面のウィンドウの左上を横長に塞いでいた。
+   * 以前は濃さ・L0で薄く・戻すが常に並んでいて、最前面のウィンドウの左上を横長に塞いでいた。
    */
   const [expanded, setExpanded] = useState(false)
   const panel = useRef<HTMLDivElement>(null)
@@ -116,7 +116,7 @@ export function OverlayControls({
       >
         {/*
          * 移動のつまみ。「⠿」とレイヤーの札をまとめてつかめるようにし、パネルの余白
-         * (左と上下)まで広げる。以前は「⠿」の 1 文字だけで、狙って押さないとつかめなかった
+         * (左と上下)まで広げる。以前は「⠿」の1文字だけで、狙って押さないとつかめなかった
          */}
         <span
           title={messages.overlay.move}
@@ -185,7 +185,7 @@ export function OverlayControls({
             </label>
           )}
 
-          {/* パネル自体が bg-surface なので、ボタンは一段明るい面にする */}
+          {/* パネル自体がbg-surfaceなので、ボタンは一段明るい面にする */}
           <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
             {messages.overlay.exit}
           </Button>
@@ -193,8 +193,8 @@ export function OverlayControls({
       </div>
 
       {/*
-       * 右下のリサイズつまみ。枠が無いので OS の境界は使えない。
-       * 見た目の印(角の線)は小さいまま、つかめる範囲だけ 32px に広げる
+       * 右下のリサイズつまみ。枠が無いのでOSの境界は使えない。
+       * 見た目の印(角の線)は小さいまま、つかめる範囲だけ32pxに広げる
        */}
       <div
         data-interactive

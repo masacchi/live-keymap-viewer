@@ -1,26 +1,26 @@
 /**
- * キーボードとの接続を持ち続ける。セッション(session/keyboardSession.ts)は 1 接続ぶんで、
+ * キーボードとの接続を持ち続ける。セッション(session/keyboardSession.ts)は1接続ぶんで、
  * 切れたら捨てて作り直す。その差し替えと、どのデバイスに繋ぐかをここで決める。
  *
  *   - デバイスの選び方(選択ダイアログ / 前に許可したもの / モック)
  *   - セッションの差し替えと破棄
  *   - 切れたら繋ぎ直す
  *
- * React から切り離してあるのは、タイマーと HID のイベントが絡む繋ぎ直しをテストするため。
- * フック(hooks/useVialKeyboard.ts)は状態を React に渡すだけ。
+ * Reactから切り離してあるのは、タイマーとHIDのイベントが絡む繋ぎ直しをテストするため。
+ * フック(hooks/useVialKeyboard.ts)は状態をReactに渡すだけ。
  *
  * ## 繋ぎ直し
  *
- * USB の抜き差しや PC のスリープ復帰で、使っていたデバイスは消える。セッションは通信に
- * 失敗して error で止まるので、
+ * USBの抜き差しやPCのスリープ復帰で、使っていたデバイスは消える。セッションは通信に
+ * 失敗してerrorで止まるので、
  *
  *   - 一度でも動いた(アンロックかポーリングまで進んだ)実機のセッションが止まったら、
- *     RECONNECT_DELAY_MS ごとに許可済みのデバイスを探し直して繋ぐ
- *   - HID の connect イベント(挿された)が来たら、待たずに試す。起動時にキーボードが
+ *     RECONNECT_DELAY_MSごとに許可済みのデバイスを探し直して繋ぐ
+ *   - HIDのconnectイベント(挿された)が来たら、待たずに試す。起動時にキーボードが
  *     無かったときも、これで繋がる
- *   - HID の disconnect イベント(抜かれた・消えた)が来たら、その場で切って繋ぎ直しに入る。
+ *   - HIDのdisconnectイベント(抜かれた・消えた)が来たら、その場で切って繋ぎ直しに入る。
  *     通信の失敗を待つと、応答が返らないだけの詰まり(ウィンドウのドラッグ中など)と
- *     見分けが付かず、STALL_LIMIT_MS ぶん「応答待ち」のままになる
+ *     見分けが付かず、STALL_LIMIT_MSぶん「応答待ち」のままになる
  *
  * 読み込みの途中で止まったもの(未対応のプロトコルなど)は、繰り返しても同じなのでタイマーでは
  * 繋ぎ直さない(挿し直しと手動の接続は受け付ける)。
@@ -43,13 +43,13 @@ import {
 /** 切れてから、許可済みのデバイスを探し直すまでの間隔。 */
 export const RECONNECT_DELAY_MS = 2000
 
-/** セッションが無いときの 'idle' を足したもの。 */
+/** セッションが無いときの'idle'を足したもの。 */
 export type ConnectionStatus = 'idle' | SessionStatus
 
 export type ConnectionState = Omit<SessionState, 'status' | 'deviceLabel'> & {
   status: ConnectionStatus
   deviceLabel: string | null
-  /** 動いていた接続が切れて、繋ぎ直そうとしているあいだ true。 */
+  /** 動いていた接続が切れて、繋ぎ直そうとしているあいだtrue。 */
   reconnecting: boolean
   /** モックに繋いでいる。キーをクリックで押せる(toggleMockKey)。 */
   mock: boolean
@@ -71,7 +71,7 @@ export const IDLE: ConnectionState = {
   mock: false
 }
 
-/** navigator.hid のうち、ここで使うところ。 */
+/** navigator.hidのうち、ここで使うところ。 */
 export type HidLike = Pick<
   HID,
   'getDevices' | 'requestDevice' | 'addEventListener' | 'removeEventListener'
@@ -85,7 +85,7 @@ export interface ConnectionOptions {
   /** 実機のキーマップのキャッシュ(モックには使わない)。繋いだ直後の即表示に使う。 */
   keymapCache?: KeymapCache
   reconnectDelayMs?: number
-  // --- テストで差し替える ---
+  // --- テストで差し替える---
   openTransport?: (device: HIDDevice) => Transport
   pickDevice?: (
     candidates: readonly HIDDevice[]
@@ -93,13 +93,13 @@ export interface ConnectionOptions {
   createMock?: () => Transport
   sessionOptions?: SessionOptions
   /**
-   * 区切りをログに残す口(hooks/useVialKeyboard.ts が lib/report を渡す)。
-   * ここから window を触らないのは、この層を DOM 無しでテストできるようにしておくため。
+   * 区切りをログに残す口(hooks/useVialKeyboard.tsがlib/reportを渡す)。
+   * ここからwindowを触らないのは、この層をDOM無しでテストできるようにしておくため。
    */
   log?: (level: ReportLevel, message: string) => void
 }
 
-/** ログに出すデバイスの呼び名。名前が取れない経路(Bluetooth)もあるので ID も添える。 */
+/** ログに出すデバイスの呼び名。名前が取れない経路(Bluetooth)もあるのでIDも添える。 */
 function describeDevice(device: HIDDevice): string {
   const id = `${device.vendorId.toString(16).padStart(4, '0')}:${device.productId
     .toString(16)
@@ -117,13 +117,13 @@ export class KeyboardConnection {
   private tappingTerm: number | undefined = undefined
   /** デバイス探しの世代。新しい操作があったら、古い探索の結果は使わない。 */
   private search = 0
-  /** 切れたら繋ぎ直すか。「切断」やモックで false、実機への接続操作で true に戻る。 */
+  /** 切れたら繋ぎ直すか。「切断」やモックでfalse、実機への接続操作でtrueに戻る。 */
   private autoReconnect = true
   /** 動いていた接続が切れて、繋ぎ直そうとしている。 */
   private reconnecting = false
   /** モックに繋いでいるときの、そのモック。 */
   private mock: MockTransport | null = null
-  /** いま使っている実機。disconnect イベントが自分のものかを見分けるために持つ。 */
+  /** いま使っている実機。disconnectイベントが自分のものかを見分けるために持つ。 */
   private device: HIDDevice | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private started = false
@@ -135,7 +135,7 @@ export class KeyboardConnection {
     return this.current
   }
 
-  /** 状態の変化を受け取る。登録した時点の状態もすぐに 1 回渡す。 */
+  /** 状態の変化を受け取る。登録した時点の状態もすぐに1回渡す。 */
   subscribe(listener: ConnectionListener): () => void {
     this.listeners.add(listener)
     listener(this.current)
@@ -144,7 +144,7 @@ export class KeyboardConnection {
     }
   }
 
-  /** HID の connect イベントを聞き始め、前に許可したデバイスがあれば繋ぐ。 */
+  /** HIDのconnectイベントを聞き始め、前に許可したデバイスがあれば繋ぐ。 */
   start(): void {
     if (this.started || this.disposed) return
     this.started = true
@@ -180,8 +180,8 @@ export class KeyboardConnection {
     this.autoReconnect = true
     this.stopReconnecting()
 
-    // 許可は VID/PID 単位なので、同じキーボードの別経路(USB と BT)も一緒に許可されている。
-    // 選ばれたものを先頭にして、同じ VID/PID の Vial インターフェースをすべて候補にする
+    // 許可はVID/PID単位なので、同じキーボードの別経路(USBとBT)も一緒に許可されている。
+    // 選ばれたものを先頭にして、同じVID/PIDのVialインターフェースをすべて候補にする
     const granted = await hid.getDevices()
     const siblings = granted.filter(
       (d) =>
@@ -205,8 +205,8 @@ export class KeyboardConnection {
 
   /**
    * モックのキーを押す/離す(押すたびに切り替わる)。モックでなければ何もしない。
-   * マウスでは 1 つしか押さえられないので、押したままにできるようにしてある
-   * (アンロックは 2 つ同時に押し続ける必要がある)。
+   * マウスでは1つしか押さえられないので、押したままにできるようにしてある
+   * (アンロックは2つ同時に押し続ける必要がある)。
    */
   toggleMockKey(row: number, col: number): void {
     const mock = this.mock
@@ -216,14 +216,14 @@ export class KeyboardConnection {
   }
 
   /**
-   * キーボードを手放す(セッションを破棄して HID を閉じる)。**画面の表示はそのまま残す。**
+   * キーボードを手放す(セッションを破棄してHIDを閉じる)。**画面の表示はそのまま残す。**
    *
    * モードを切り替えるとウィンドウごと作り直すので、このウィンドウは間もなく壊される。
-   * そのあいだ新しいウィンドウの renderer が同じキーボードを開きに来るが、raw HID の応答は
-   * 開いている全員に配られ、Vial コマンド(`0xFE`)は照合できないので、両方が話していると
+   * そのあいだ新しいウィンドウのrendererが同じキーボードを開きに来るが、raw HIDの応答は
+   * 開いている全員に配られ、Vialコマンド(`0xFE`)は照合できないので、両方が話していると
    * 新しい方の読み込みが壊れる。壊される前にこちらから黙って降りる。
    *
-   * 「切断」(disconnect)と違って IDLE を配らないのは、壊れるまでのあいだ画面が
+   * 「切断」(disconnect)と違ってIDLEを配らないのは、壊れるまでのあいだ画面が
    * 「未接続」に切り替わって見えるのを避けるため。
    */
   async release(): Promise<void> {
@@ -254,11 +254,11 @@ export class KeyboardConnection {
     await this.session?.reload(options)
   }
 
-  // --- 内部 ---
+  // --- 内部---
 
   private readonly onHidConnect = (event: HIDConnectionEvent): void => {
     if (this.disposed || !this.autoReconnect || !isVialDevice(event.device)) return
-    // 動いている接続があれば乗り換えない(USB で使っているときに BT 側が繋がった、など)。
+    // 動いている接続があれば乗り換えない(USBで使っているときにBT側が繋がった、など)。
     // 繋ぎに行っている最中('connecting')も、その結果を待つ
     if (this.session && this.current.status !== 'error') return
     if (this.current.status === 'connecting') return
@@ -270,7 +270,7 @@ export class KeyboardConnection {
    * 使っていたキーボードが消えた。通信の失敗を待たずに切り、繋ぎ直しに入る。
    *
    * 待っても意味が無いうえ、待つと「詰まっているだけ(ウィンドウのドラッグ中など)」との
-   * 区別が付かない ― セッションは時間切れを 15 秒こらえるので、そのあいだ「応答待ち」に見える。
+   * 区別が付かない ― セッションは時間切れを15秒こらえるので、そのあいだ「応答待ち」に見える。
    */
   private readonly onHidDisconnect = (event: HIDConnectionEvent): void => {
     if (this.disposed || this.device === null || event.device !== this.device) return
@@ -291,7 +291,7 @@ export class KeyboardConnection {
     void session?.dispose()
   }
 
-  /** 前に許可した Vial デバイスを探して繋ぐ。 */
+  /** 前に許可したVialデバイスを探して繋ぐ。 */
   private async connectToGranted(): Promise<void> {
     const hid = this.options.hid
     if (!hid || this.disposed) return
@@ -307,8 +307,8 @@ export class KeyboardConnection {
   /**
    * 候補のうち、実際に答えるインターフェースに繋ぐ。
    *
-   * USB と Bluetooth の両方で繋がっていると、同じキーボードの Vial インターフェースが
-   * 2 つ見え、出力先でない側は答えない(hid/deviceProbe.ts)。確かめる間は候補を開き閉じ
+   * USBとBluetoothの両方で繋がっていると、同じキーボードのVialインターフェースが
+   * 2つ見え、出力先でない側は答えない(hid/deviceProbe.ts)。確かめる間は候補を開き閉じ
    * するので、いまのセッションは先に閉じておく(開いたまま閉じられると壊れる)。
    */
   private async connectToResponsive(candidates: HIDDevice[]): Promise<void> {
@@ -337,7 +337,7 @@ export class KeyboardConnection {
       if (this.reconnecting) this.scheduleRetry()
       return
     }
-    // どの相手に繋いだかは、切り分けの初手になる(BT では名前が取れず、往復も桁が違う)
+    // どの相手に繋いだかは、切り分けの初手になる(BTでは名前が取れず、往復も桁が違う)
     const picked = results.find((result) => result.device === device)
     const answered = results.filter((result) => result.latencyMs !== null).length
     this.options.log?.(
@@ -359,9 +359,9 @@ export class KeyboardConnection {
   }
 
   /**
-   * 新しい transport でセッションを作り直す。
+   * 新しいtransportでセッションを作り直す。
    *
-   * 参照は await より前に差し替える。こうしておくと、接続を連打しても
+   * 参照はawaitより前に差し替える。こうしておくと、接続を連打しても
    * 「最後に作ったセッション」だけが生き残り、それ以前のものは必ず破棄される。
    */
   private async attach(transport: Transport, real: boolean): Promise<void> {

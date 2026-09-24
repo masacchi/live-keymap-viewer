@@ -1,18 +1,18 @@
-﻿# 注意: このファイルは BOM 付き UTF-8 で保存すること(Windows PowerShell 5.1 は BOM が無いと Shift_JIS として読み、日本語が化けて壊れる)。
-# Windows の HID API で、Vial のインターフェースに直接問い合わせる(Chromium を通さない)。
+﻿# 注意: このファイルはBOM付きUTF-8で保存すること(Windows PowerShell 5.1はBOMが無いとShift_JISとして読み、日本語が化けて壊れる)。
+# WindowsのHID APIで、Vialのインターフェースに直接問い合わせる(Chromiumを通さない)。
 #
-#   npm run diag:hid                 # 既定は VID E118(Cornix)
-#   npm run diag:hid -- 3434         # 別の VID
+#   npm run diag:hid                 # 既定はVID E118(Cornix)
+#   npm run diag:hid -- 3434         # 別のVID
 #
-# VID を含む HID インターフェースを列挙し、用途(UsagePage / Usage)とレポート長を出す。
-# usagePage 0xFF60 のものには、Vial の「キーボード ID の問い合わせ」[0xFE, 0x00] を 1 回だけ送り、
+# VIDを含むHIDインターフェースを列挙し、用途(UsagePage / Usage)とレポート長を出す。
+# usagePage 0xFF60のものには、Vialの「キーボードIDの問い合わせ」[0xFE, 0x00]を1回だけ送り、
 # 応答と往復時間を出す(アプリが接続時に最初に送るのと同じ無害な問い合わせ)。
 #
-# 「OS からは答えるのにアプリでは駄目」なら、原因は Chromium / Electron かアプリ側にある。
+# 「OSからは答えるのにアプリでは駄目」なら、原因はChromium / Electronかアプリ側にある。
 # docs/BLUETOOTH.md §2.6。
 param([string]$VendorId = 'e118')
 $ErrorActionPreference = 'Stop'
-# WSL の端末に日本語が化けずに出るように
+# WSLの端末に日本語が化けずに出るように
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 Add-Type -TypeDefinition @'
 using System;

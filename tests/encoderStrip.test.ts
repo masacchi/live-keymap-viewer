@@ -44,7 +44,7 @@ describe('layoutEncoderStrip', () => {
     const strip = layout()!
     const [a, b] = strip.items
     expect(a.x).toBeLessThan(b.x)
-    // 文字は中央揃え。a の右端より b の左端が右にある
+    // 文字は中央揃え。aの右端よりbの左端が右にある
     const half = (text: string) => estimateTextWidth(text, 13) / 2
     expect(a.x + Math.max(half(a.ccw), half(a.cw))).toBeLessThan(
       b.x - Math.max(half(b.ccw), half(b.cw))

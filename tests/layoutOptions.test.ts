@@ -20,7 +20,7 @@ describe('optionBits', () => {
 })
 
 describe('decodeLayoutOptions', () => {
-  const labels = [['A', 'a0', 'a1', 'a2'], 'B', ['C', 'c0', 'c1']] // 2 + 1 + 1 ビット
+  const labels = [['A', 'a0', 'a1', 'a2'], 'B', ['C', 'c0', 'c1']] // 2 + 1 + 1ビット
 
   it('後ろの選択肢ほど下位ビットに入る', () => {
     // A=2 (0b10), B=1, C=0 → 0b10 1 0 = 0b1010 = 10

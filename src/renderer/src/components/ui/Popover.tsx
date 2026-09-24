@@ -1,7 +1,7 @@
 /**
  * ボタンから開くパネル。メニュー(Menu)と設定パネルが使う。
  *
- * 外を押すか Esc で閉じる。中身に関数を渡すと、閉じる関数を受け取れる(項目を選んだら閉じる、など)。
+ * 外を押すかEscで閉じる。中身に関数を渡すと、閉じる関数を受け取れる(項目を選んだら閉じる、など)。
  */
 import { type JSX, type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { cn } from '../../lib/cn'
@@ -13,7 +13,7 @@ export interface PopoverProps {
   title?: string
   /** パネルをボタンの左端に揃えるか(start)、右端に揃えるか(end)。 */
   align?: 'start' | 'end'
-  /** パネルの役割。メニューなら menu、設定のように入力を含むなら dialog。 */
+  /** パネルの役割。メニューならmenu、設定のように入力を含むならdialog。 */
   role: 'menu' | 'dialog'
   children: ReactNode | ((close: () => void) => ReactNode)
   className?: string

@@ -1,11 +1,11 @@
 /**
- * 通常ウィンドウのツールバー。常に 1 行。
+ * 通常ウィンドウのツールバー。常に1行。
  *
- *   [● Cornix LP ▾] [L0] [L1 BS 長押し] … +5 空 [Ctrl Shift Alt Win]   [JIS|US] [@ 記号の出し方] [オーバーレイへ] [設定]
+ *   [● Cornix LP ▾] [L0] [L1 BS長押し] … +5空[Ctrl Shift Alt Win]   [JIS|US] [@ 記号の出し方] [オーバーレイへ] [設定]
  *
  * - 左: 接続の状態とデバイス名。押すと、使う頻度の低い操作(読み直し・切断)のメニューが開く
  * - 中: レイヤーの一覧(LayerStrip)。いま出しているレイヤーは塗って輪を付ける。以前はこの横に
- *   大きな「L0」の札があり、下の段の一覧と同じことを 2 回言っていた。一覧をここに入れて 1 段減らし、
+ *   大きな「L0」の札があり、下の段の一覧と同じことを2回言っていた。一覧をここに入れて1段減らし、
  *   そのぶん図を大きくする
  *   の横に、いま効いているモディファイア
  * - 右: 表記の切り替え・記号の出し方・オーバーレイ・設定
@@ -35,7 +35,7 @@ export interface ToolbarProps {
   settingsBadge?: boolean
   /** 記号の出し方の中身。閉じる関数を受け取る(記号を選んだら閉じる)。キーボードを読み込むまでは渡さない。 */
   symbols?: (close: () => void) => ReactNode
-  /** いま効いているモディファイア(MOD_* ビット)。キーボードを読み込むまでは null(出さない)。 */
+  /** いま効いているモディファイア(MOD_*ビット)。キーボードを読み込むまではnull(出さない)。 */
   mods: number | null
   /** 応答が途切れているが、まだ切れたとは見なしていない。 */
   stalled: boolean
@@ -119,7 +119,7 @@ export function Toolbar({
         </div>
       ) : (
         <Menu label={statusLabel} title={title} className="shrink-0">
-          {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reload が何もしない) */}
+          {/* アンロック中や読み込み中は読み直せない(KeyboardSession.reloadが何もしない) */}
           <MenuItem onSelect={onReload} disabled={status !== 'ready' || reloading}>
             {messages.deviceMenu.reload}
           </MenuItem>

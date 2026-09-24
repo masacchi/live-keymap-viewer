@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""vial-gui の keycodes_v6.py から、値→QMK 名のテーブルを TypeScript として生成する。
+"""vial-guiのkeycodes_v6.pyから、値→QMK名のテーブルをTypeScriptとして生成する。
 
   python3 scripts/gen-keycodes.py
 
 構造的にデコードできるもの(モディファイア付き、Mod-Tap、LT、LM、レイヤー系、
-TD、マクロ、USER)はテーブルに入れない。decode.ts が範囲から計算する。
+TD、マクロ、USER)はテーブルに入れない。decode.tsが範囲から計算する。
 """
 import json
 import re
@@ -15,7 +15,7 @@ from pathlib import Path
 SRC = "https://raw.githubusercontent.com/vial-kb/vial-gui/main/src/main/python/keycodes/keycodes_v6.py"
 OUT = Path(__file__).resolve().parent.parent / "src/renderer/src/keycodes/table.generated.ts"
 
-# decode.ts が範囲計算で扱うため、テーブルから除外する生成系の名前
+# decode.tsが範囲計算で扱うため、テーブルから除外する生成系の名前
 FAMILY = re.compile(
     r"^(M\d+|TD\(\d+\)|MO\(\d+\)|DF\(\d+\)|TG\(\d+\)|TT\(\d+\)|OSL\(\d+\)|TO\(\d+\)"
     r"|PDF\(\d+\)|LT\d+\(kc\)|USER\d\d|OSM\(.*\))$"
@@ -58,7 +58,7 @@ def main() -> int:
     for value in sorted(table):
         lines.append(f"  0x{value:04x}: {json.dumps(table[value])},")
     lines.append("})")
-    # 内側キーを取るマスク系(LSFT(kc) / LSFT_T(kc) など)。接頭辞だけを残す。
+    # 内側キーを取るマスク系(LSFT(kc) / LSFT_T(kc)など)。接頭辞だけを残す。
     masks: dict[int, str] = {}
     for name, value in kc.items():
         if name.endswith("(kc)"):

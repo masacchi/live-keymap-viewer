@@ -1,13 +1,13 @@
-//! 設定の検証と、settings.json の読み書き。
+//! 設定の検証と、settings.jsonの読み書き。
 //!
-//! 設定ファイルは人が手で直すこともあるし、古い版のアプリ(Electron 版を含む)が書いたものが
+//! 設定ファイルは人が手で直すこともあるし、古い版のアプリ(Electron版を含む)が書いたものが
 //! 残っていることもある。読み込んだ値は信用せず、項目ごとに検証して、ダメなものだけ既定値に戻す。
 //!
-//! 型・既定値・範囲は画面側の src/shared/settings.ts にもある(画面はそれで表示とスライダーの
-//! 範囲を決める)。**範囲や既定値を変えるときは両方を直す。** 検証そのものはこちらだけが行う。
+//! 型・既定値・範囲は画面側のsrc/shared/settings.tsにもある(画面はそれで表示とスライダーの
+//! 範囲を決める)。**範囲や既定値を変えるときは両方を直す。**検証そのものはこちらだけが行う。
 //!
-//! **ディスクへの書き込みはまとめる。** 設定はスライダーからも来る ― つまみを 1 回動かすと
-//! 十数回飛んでくる。値はその場でメモリに載せ、ファイルには FLUSH_DELAY ごとにまとめて書く。
+//! **ディスクへの書き込みはまとめる。**設定はスライダーからも来る ― つまみを1回動かすと
+//! 十数回飛んでくる。値はその場でメモリに載せ、ファイルにはFLUSH_DELAYごとにまとめて書く。
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -29,7 +29,7 @@ const TAPPING_TERM_MIN: f64 = 100.0;
 const TAPPING_TERM_MAX: f64 = 500.0;
 /// レイヤー名の長さの上限(文字数)。ツールバーやキーの色帯に収まるように。
 const LAYER_NAME_MAX_LENGTH: usize = 12;
-/// 名前を持てるレイヤーの数。Vial の上限(32)に合わせる。
+/// 名前を持てるレイヤーの数。Vialの上限(32)に合わせる。
 pub const MAX_LAYERS: usize = 32;
 
 /// 画面から変えてよい項目。ウィンドウの位置・モード・許可したデバイス・レイヤー名は専用の手順で書く。
@@ -60,7 +60,7 @@ pub enum LabelMode {
     Us,
 }
 
-/// ウィンドウの位置と大きさ(論理ピクセル。Electron 版の DIP と同じ)。
+/// ウィンドウの位置と大きさ(論理ピクセル。Electron版のDIPと同じ)。
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Bounds {
     pub x: i32,
@@ -117,11 +117,11 @@ fn clamp_faded_opacity(value: Option<&Value>) -> f64 {
 }
 
 fn clamp_tapping_term(value: Option<&Value>) -> i64 {
-    // QMK の TAPPING_TERM の既定値(engine/layerState.ts の DEFAULT_TAPPING_TERM と同じ)
+    // QMKのTAPPING_TERMの既定値(engine/layerState.tsのDEFAULT_TAPPING_TERMと同じ)
     number(value).map_or(200, |n| n.clamp(TAPPING_TERM_MIN, TAPPING_TERM_MAX).round() as i64)
 }
 
-/// 数値として壊れていないか、最小サイズを満たすか。ダメなら None。
+/// 数値として壊れていないか、最小サイズを満たすか。ダメならNone。
 fn sanitize_bounds(value: Option<&Value>) -> Option<Bounds> {
     let object = value?.as_object()?;
     let x = number(object.get("x"))?;
@@ -153,12 +153,12 @@ fn sanitize_devices(value: Option<&Value>) -> Vec<GrantedDevice> {
         .collect()
 }
 
-/// キーボードの UID(64 ビットの 10 進数)か。layerNames のキーにはこれしか使わない。
+/// キーボードのUID(64ビットの10進数)か。layerNamesのキーにはこれしか使わない。
 pub fn is_keyboard_uid(value: &str) -> bool {
     (1..=20).contains(&value.len()) && value.bytes().all(|b| b.is_ascii_digit())
 }
 
-/// 名前を 1 つ整える。前後の空白を落とし、長すぎれば切る(文字の途中では切らない)。
+/// 名前を1つ整える。前後の空白を落とし、長すぎれば切る(文字の途中では切らない)。
 fn sanitize_layer_name(value: &Value) -> String {
     value
         .as_str()
@@ -166,7 +166,7 @@ fn sanitize_layer_name(value: &Value) -> String {
         .unwrap_or_default()
 }
 
-/// 1 台ぶんの名前の並び。末尾の名前なしは落とす。何も残らなければ None。
+/// 1台ぶんの名前の並び。末尾の名前なしは落とす。何も残らなければNone。
 fn sanitize_name_list(value: &Value) -> Option<Vec<String>> {
     let mut names: Vec<String> =
         value.as_array()?.iter().take(MAX_LAYERS).map(sanitize_layer_name).collect();
@@ -187,7 +187,7 @@ fn sanitize_layer_names(value: Option<&Value>) -> BTreeMap<String, Vec<String>> 
         .collect()
 }
 
-/// 何が入っていても、使える Settings にして返す。
+/// 何が入っていても、使えるSettingsにして返す。
 pub fn sanitize(raw: &Value) -> Settings {
     let empty = Map::new();
     let value = raw.as_object().unwrap_or(&empty);
@@ -216,7 +216,7 @@ pub fn sanitize(raw: &Value) -> Settings {
 }
 
 /// 画面から来た変更を、変えてよい項目だけに絞る。値そのものの検証は、保存するときの
-/// sanitize に任せる(手で直したファイルと同じ扱い)。
+/// sanitizeに任せる(手で直したファイルと同じ扱い)。
 pub fn pick_renderer_patch(value: &Value) -> Map<String, Value> {
     let Some(object) = value.as_object() else {
         return Map::new();
@@ -227,7 +227,7 @@ pub fn pick_renderer_patch(value: &Value) -> Map<String, Value> {
         .collect()
 }
 
-/// 1 つのレイヤーの名前を変えた layerNames を返す(元は変えない)。空にすると名前を消す。
+/// 1つのレイヤーの名前を変えたlayerNamesを返す(元は変えない)。空にすると名前を消す。
 pub fn with_layer_name(
     all: &BTreeMap<String, Vec<String>>,
     uid: &str,
@@ -251,8 +251,8 @@ pub fn with_layer_name(
 ///
 /// モニターを外したあとに起動すると、保存した位置が画面の外になることがある。
 /// オーバーレイはクリックが透過するので、そうなると設定ファイルを手で直すしか
-/// なくなる。タイトルバー相当(上端 40px ほど)が見えていれば良しとする。
-/// `work_areas` の先頭が主画面。
+/// なくなる。タイトルバー相当(上端40pxほど)が見えていれば良しとする。
+/// `work_areas`の先頭が主画面。
 pub fn ensure_on_screen(bounds: Bounds, work_areas: &[Bounds]) -> Bounds {
     const GRIP: i32 = 40;
     let visible = work_areas.iter().any(|area| {
@@ -275,7 +275,7 @@ pub fn ensure_on_screen(bounds: Bounds, work_areas: &[Bounds]) -> Bounds {
     }
 }
 
-/// settings.json の読み書き。値はメモリに持ち、ファイルにはまとめて書く。
+/// settings.jsonの読み書き。値はメモリに持ち、ファイルにはまとめて書く。
 pub struct SettingsStore {
     path: PathBuf,
     state: Mutex<StoreState>,
@@ -311,7 +311,7 @@ impl SettingsStore {
         sanitize(&raw)
     }
 
-    /// 今の設定に patch を重ねて、検証してから保存する。保存した設定を返す。
+    /// 今の設定にpatchを重ねて、検証してから保存する。保存した設定を返す。
     pub fn save(self: &Arc<Self>, patch: Map<String, Value>) -> Settings {
         let mut state = self.state.lock().unwrap();
         let current = state.cached.get_or_insert_with(|| self.read());
@@ -334,8 +334,8 @@ impl SettingsStore {
         next
     }
 
-    /// 溜めていた変更をディスクに書く。終了時にも呼ぶ(最後の 400ms ぶんを落とさないため)。
-    /// 書けなくてもアプリは止めない ― 設定が 1 回保存されないだけなので、記録して次に任せる。
+    /// 溜めていた変更をディスクに書く。終了時にも呼ぶ(最後の400msぶんを落とさないため)。
+    /// 書けなくてもアプリは止めない ― 設定が1回保存されないだけなので、記録して次に任せる。
     pub fn flush(&self) {
         let snapshot = {
             let mut state = self.state.lock().unwrap();
@@ -384,10 +384,10 @@ impl SettingsStore {
     }
 }
 
-/// 前の置き場所(`legacy`)の settings.json を、新しい置き場所(`dir`)に写す。
-/// 新しい方にもう設定があれば何もしない(写したら true)。
+/// 前の置き場所(`legacy`)のsettings.jsonを、新しい置き場所(`dir`)に写す。
+/// 新しい方にもう設定があれば何もしない(写したらtrue)。
 ///
-/// 写すだけで、前の置き場所は消さない ― Electron 版もそこを使っているので、並べて使えるように。
+/// 写すだけで、前の置き場所は消さない ― Electron版もそこを使っているので、並べて使えるように。
 /// ログは写さない(診断用で、新しい置き場所で一から始めてよい)。
 pub fn migrate_legacy(dir: &Path, legacy: &Path) -> std::io::Result<bool> {
     let target = dir.join("settings.json");
@@ -404,7 +404,7 @@ pub fn is_granted(settings: &Settings, vendor_id: i64, product_id: i64) -> bool 
     settings.granted_devices.iter().any(|d| d.vendor_id == vendor_id && d.product_id == product_id)
 }
 
-/// 1 項目だけの patch を作る。
+/// 1項目だけのpatchを作る。
 pub fn patch(key: &str, value: Value) -> Map<String, Value> {
     Map::from_iter([(key.to_owned(), value)])
 }

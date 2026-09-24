@@ -1,10 +1,10 @@
 /**
- * 小さなアイコン。アイコンのライブラリは入れず、使うものだけ SVG で書く(依存を増やさない方針)。
- * 絵文字(⚙ など)は Windows でカラーの絵文字になることがあるので使わない。
+ * 小さなアイコン。アイコンのライブラリは入れず、使うものだけSVGで書く(依存を増やさない方針)。
+ * 絵文字(⚙ など)はWindowsでカラーの絵文字になることがあるので使わない。
  */
 import type { JSX, SVGProps } from 'react'
 
-/** 設定(スライダー 3 本)。 */
+/** 設定(スライダー3本)。 */
 export function SlidersIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
   return (
     <svg
@@ -27,8 +27,8 @@ export function SlidersIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
 }
 
 /**
- * 読み込み中の印。薄い輪の上を短い弧が回る。回すのは呼び出し側(animate-spin)、色は currentColor。
- * ツールバーで状態の丸(8px)の代わりに出す。輪は線なので、丸と同じくらいに見えるよう 12px にしてある。
+ * 読み込み中の印。薄い輪の上を短い弧が回る。回すのは呼び出し側(animate-spin)、色はcurrentColor。
+ * ツールバーで状態の丸(8px)の代わりに出す。輪は線なので、丸と同じくらいに見えるよう12pxにしてある。
  */
 export function SpinnerIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
   return (

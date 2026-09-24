@@ -1,21 +1,21 @@
 /**
- * 1 台のキーボードとの接続 1 回分。
+ * 1台のキーボードとの接続1回分。
  *
- *   open → 読み込み → (ロックなら)アンロック → matrix ポーリング
+ *   open → 読み込み → (ロックなら)アンロック → matrixポーリング
  *                                                  ‖ 止めずに並べて読む
  *                                              reload(変わっていたらポーリングを入れ替える)
  *
- * React から切り離してあるのは、非同期の後始末を確実にするため。
- * 以前はフックの中で setInterval と ref を組み合わせていて、
+ * Reactから切り離してあるのは、非同期の後始末を確実にするため。
+ * 以前はフックの中でsetIntervalとrefを組み合わせていて、
  *
  *   - 切断・再接続の直後に、旧接続の応答が遅れて届くと新しい画面に書き込めた
  *   - アンロックの応答が重なると、ポーリングが二重に始まり得た
  *   - 接続を連打すると、片方の接続が閉じられずに残った
  *
- * という問題があった。ここでは次の 2 つで防ぐ。
+ * という問題があった。ここでは次の2つで防ぐ。
  *
  *   1. 接続ごとに別のインスタンスを作り、破棄したら以後の通知を一切出さない
- *   2. ループは setInterval ではなく await で回し、世代番号(generation)で止める。
+ *   2. ループはsetIntervalではなくawaitで回し、世代番号(generation)で止める。
  *      世代を進めると、古いループは次の確認で抜ける。応答待ちの途中でも、
  *      戻ってきた時点で自分が古いと分かるので、状態を書き換えない。
  */
@@ -42,21 +42,21 @@ import {
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
 import { messages } from '../messages'
 
-/** matrix のポーリング間隔。vial-gui も 20ms(docs/PROTOCOL.md §8)。 */
+/** matrixのポーリング間隔。vial-guiも20ms(docs/PROTOCOL.md §8)。 */
 export const MATRIX_POLL_MS = 20
-/** アンロックのポーリング間隔。vial-gui と同じ。 */
+/** アンロックのポーリング間隔。vial-guiと同じ。 */
 export const UNLOCK_POLL_MS = 200
 /**
  * 応答が返らないまま、これだけ続いたら切れたと見なす(ms)。
  *
- * 以前は「連続 5 回失敗」で数えていて、合計 3 秒ほどで切れていた。これだと
- * **ウィンドウの枠をドラッグしているあいだに切断される**。Windows では移動・リサイズの
- * ドラッグ中、ブラウザ(main)プロセスのメッセージループが止まり、WebHID の往復は
- * main を通るので応答が返らない。数秒のドラッグで切断 → 繋ぎ直し → キーマップの丸ごと
- * 読み直し、になっていた。OS やファームの省電力で一瞬詰まるのも同じ。
+ * 以前は「連続5回失敗」で数えていて、合計3秒ほどで切れていた。これだと
+ * **ウィンドウの枠をドラッグしているあいだに切断される**。Windowsでは移動・リサイズの
+ * ドラッグ中、ブラウザ(main)プロセスのメッセージループが止まり、WebHIDの往復は
+ * mainを通るので応答が返らない。数秒のドラッグで切断 → 繋ぎ直し → キーマップの丸ごと
+ * 読み直し、になっていた。OSやファームの省電力で一瞬詰まるのも同じ。
  *
- * 回数ではなく時間で数えるのは、往復が遅いほど 1 回の失敗に時間がかかるため
- * (USB は 600ms/回、BT ではもっと)。待っているあいだは最後の表示のまま読み続ける。
+ * 回数ではなく時間で数えるのは、往復が遅いほど1回の失敗に時間がかかるため
+ * (USBは600ms/回、BTではもっと)。待っているあいだは最後の表示のまま読み続ける。
  *
  * 長く待てるのは、**時間切れ以外の失敗は待たずに切る**から(isTimeout)。ケーブルが抜けた・
  * デバイスが消えたときは書き込みそのものが失敗し、時間切れを待たずに即座に返る。
@@ -68,7 +68,7 @@ export const POLL_RETRY_MS = 100
 /**
  * 時間切れ(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
  *
- * WebHidTransport は時間切れだけを TransportError にし、書き込みそのものの失敗
+ * WebHidTransportは時間切れだけをTransportErrorにし、書き込みそのものの失敗
  * (デバイスが消えた・開けていない)は元の例外をそのまま投げる(hid/transport.ts)。
  */
 function isTimeout(error: unknown): boolean {
@@ -80,7 +80,7 @@ export type SessionStatus = 'connecting' | 'loading' | 'unlocking' | 'ready' | '
 export interface UnlockState {
   /** 押し続けるべき物理キー。 */
   keys: Array<{ row: number; col: number }>
-  /** 0 に向かって減る。 */
+  /** 0に向かって減る。 */
   counter: number
   max: number
 }
@@ -116,7 +116,7 @@ export interface SessionOptions {
   definitionCache?: DefinitionCache
   /** キーマップのキャッシュ。定義のキャッシュと両方あるときだけ、繋いだ直後の即表示に使う。 */
   keymapCache?: KeymapCache
-  /** 長押しと見なすまでの時間(ms、LT の既定)。無ければエンジンの既定(200ms)。 */
+  /** 長押しと見なすまでの時間(ms、LTの既定)。無ければエンジンの既定(200ms)。 */
   tappingTerm?: number
 }
 
@@ -135,8 +135,8 @@ const defaultSleep = (ms: number): Promise<void> =>
 
 /**
  * 押下・表示レイヤー・モディファイアだけを見た指紋。これが同じなら画面は変わらない。
- * モディファイアも入れるのは、MT(Shift) が時間だけで長押し確定したときに、押下の並びは
- * 変わらないまま Shift の強調だけが変わるため。
+ * モディファイアも入れるのは、MT(Shift)が時間だけで長押し確定したときに、押下の並びは
+ * 変わらないままShiftの強調だけが変わるため。
  */
 export function signatureOf(layers: LayerSnapshot): string {
   const held: string[] = []
@@ -156,7 +156,7 @@ export class KeyboardSession {
   private started = false
   /** 動いているループの世代。進めると古いループは次の確認で抜ける。 */
   private generation = 0
-  /** 前回通知した画面の指紋。20ms ごとの無駄な再描画を避ける。 */
+  /** 前回通知した画面の指紋。20msごとの無駄な再描画を避ける。 */
   private lastSignature = ''
 
   private readonly matrixPollMs: number
@@ -203,7 +203,7 @@ export class KeyboardSession {
     return this.disposed
   }
 
-  /** 状態の変化を受け取る。登録した時点の状態もすぐに 1 回渡す。 */
+  /** 状態の変化を受け取る。登録した時点の状態もすぐに1回渡す。 */
   subscribe(listener: SessionListener): () => void {
     this.listeners.add(listener)
     listener(this.current)
@@ -212,7 +212,7 @@ export class KeyboardSession {
     }
   }
 
-  /** 開いて読み込み、アンロックかポーリングへ進む。読み込みが終わった時点で resolve する。 */
+  /** 開いて読み込み、アンロックかポーリングへ進む。読み込みが終わった時点でresolveする。 */
   async start(): Promise<void> {
     if (this.started) throw new Error('KeyboardSession.start() は 1 回しか呼べない')
     this.started = true
@@ -222,8 +222,8 @@ export class KeyboardSession {
       if (!this.alive(gen)) return
       this.update({ status: 'loading' })
 
-      // キャッシュが使えるなら、3 往復で図を出してしまう。全部読むのは 70〜95 往復で、
-      // USB でも数秒、Bluetooth では 30 秒ほど画面に何も出ない。読み直しは裏でやる
+      // キャッシュが使えるなら、3往復で図を出してしまう。全部読むのは70〜95往復で、
+      // USBでも数秒、Bluetoothでは30秒ほど画面に何も出ない。読み直しは裏でやる
       const cached = await loadCachedKeyboard(this.transport, {
         definitionCache: this.definitionCache,
         keymapCache: this.keymapCache
@@ -271,21 +271,21 @@ export class KeyboardSession {
   }
 
   /**
-   * キーマップを読み直す。Vial で編集したあとに呼ぶ。
+   * キーマップを読み直す。Vialで編集したあとに呼ぶ。
    *
-   * **ポーリングは止めない。** 裏の確かめ(verifyCached)と同じく、要求は 1 本のキューに並ぶので、
-   * 読んでいるあいだは matrix の間隔が延びるだけで、押下の表示は生きたままになる。
-   * 以前は読み終わるまでポーリングを止めていた。読み直しは 68 往復かかり、BT(1 往復 約 470ms)
-   * では 30 秒ほどになる。ウィンドウに戻るたびにそのあいだ押下が出ず「読み直し中…」が続くので、
+   * **ポーリングは止めない。**裏の確かめ(verifyCached)と同じく、要求は1本のキューに並ぶので、
+   * 読んでいるあいだはmatrixの間隔が延びるだけで、押下の表示は生きたままになる。
+   * 以前は読み終わるまでポーリングを止めていた。読み直しは68往復かかり、BT(1往復 約470ms)
+   * では30秒ほどになる。ウィンドウに戻るたびにそのあいだ押下が出ず「読み直し中…」が続くので、
    * 繋ぎ直しているように見えていた。
    *
    * 定義(物理配置)は読み直さない ― 焼き直さない限り変わらないので。
    * 中身が変わっていなければ、エンジンも画面もそのまま使う。変わっていれば新しいキーマップで
-   * エンジンを作り直してポーリングを入れ替え、TG の固定や押しているキーは前のエンジンから
+   * エンジンを作り直してポーリングを入れ替え、TGの固定や押しているキーは前のエンジンから
    * 引き継ぐ(キーボード側は覚えたままなので、捨てると表示がずれる)。
-   * ポーリング中でなければ何もしない(アンロック中は VIA コマンドが通らない)。
+   * ポーリング中でなければ何もしない(アンロック中はVIAコマンドが通らない)。
    *
-   * full のときは定義もキャッシュを使わずに読み直し、変わっていれば物理配置も組み直す。
+   * fullのときは定義もキャッシュを使わずに読み直し、変わっていれば物理配置も組み直す。
    */
   async reload({ full = false }: ReloadOptions = {}): Promise<void> {
     const previous = this.current.snapshot
@@ -315,7 +315,7 @@ export class KeyboardSession {
       if (!this.alive(gen)) return
       // 読み直しの失敗でセッションまで落とさない。時間切れなら、前のキーマップのまま続ける
       // (ポーリングは止めていないので表示もそのまま。また手動で読み直せる)。
-      // 以前はここで error にしていたので、1 回詰まっただけで接続が切れ、
+      // 以前はここでerrorにしていたので、1回詰まっただけで接続が切れ、
       // 繋ぎ直しで丸ごと読み直していた
       if (isTimeout(error)) {
         this.update({ reloading: false })
@@ -334,7 +334,7 @@ export class KeyboardSession {
     await this.transport.close().catch(() => undefined)
   }
 
-  // --- 内部 ---
+  // --- 内部---
 
   private alive(gen: number): boolean {
     return !this.disposed && gen === this.generation
@@ -365,7 +365,7 @@ export class KeyboardSession {
 
   /**
    * 読んだキーマップでエンジンを作り直し、状態に載せる。
-   * previous を渡すと、レイヤーの状態をそこから引き継ぐ(読み直しのとき)。
+   * previousを渡すと、レイヤーの状態をそこから引き継ぐ(読み直しのとき)。
    */
   private install(
     snapshot: KeyboardSnapshot,
@@ -407,7 +407,7 @@ export class KeyboardSession {
 
   /**
    * アンロック手順。ロックを見つけたら自動で始める(押下を読むには他に道が無い)。
-   * 進行中は VIA コマンドが通らない(docs/PROTOCOL.md §2)ので、ポーリングはしない。
+   * 進行中はVIAコマンドが通らない(docs/PROTOCOL.md §2)ので、ポーリングはしない。
    */
   private async runUnlock(
     gen: number,
@@ -447,8 +447,8 @@ export class KeyboardSession {
   /**
    * キャッシュで出した表示を、裏で読み直して確かめる。
    *
-   * ポーリングは止めない。要求は 1 本のキューに並ぶ(hid/transport.ts)ので、確かめている
-   * あいだは matrix の間隔が延びるだけで、押下の表示は生きたままになる。
+   * ポーリングは止めない。要求は1本のキューに並ぶ(hid/transport.ts)ので、確かめている
+   * あいだはmatrixの間隔が延びるだけで、押下の表示は生きたままになる。
    * 違っていたら新しいキーマップでエンジンを作り直し、ポーリングを入れ替える。
    *
    * 失敗しても表示は壊さない ― キャッシュのまま使い続け、手動の読み直しに任せる。
@@ -480,7 +480,7 @@ export class KeyboardSession {
   }
 
   /**
-   * matrix を読み続ける。1 往復 → 残りの時間だけ待つ、の繰り返し。
+   * matrixを読み続ける。1往復 → 残りの時間だけ待つ、の繰り返し。
    * 応答が遅いときは自然に間隔が延びる(要求を積み上げない)。
    */
   private async runPolling(
@@ -495,7 +495,7 @@ export class KeyboardSession {
     const verify = this.pendingVerify
     this.pendingVerify = null
     if (verify) void this.verifyCached(gen, verify)
-    /** 応答が返らなくなった時刻。1 回でも読めたら null に戻る。 */
+    /** 応答が返らなくなった時刻。1回でも読めたらnullに戻る。 */
     let stalledSince: number | null = null
     try {
       while (this.alive(gen)) {

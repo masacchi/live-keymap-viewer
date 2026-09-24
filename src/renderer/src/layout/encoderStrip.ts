@@ -3,27 +3,27 @@
  * 押し込みキーが分かるノブ(layout/knobButtons.ts。Cornix LP)は、そのキーに付けて描くので
  * ここには来ない。
  *
- * 1 つずつ、右回り(↻)の割り当てを丸の上、左回り(↺)を丸の下に挟んで置く(音量なら「音量+」が上)。押し込みキーに
- * 付けるときと同じ形にそろえるため。以前は丸の右に 2 つを横に並べ、図の上か下かを設定で
- * 選べたが、横に長くなるうえ、形が 2 通りあると見比べにくかった。
+ * 1つずつ、右回り(↻)の割り当てを丸の上、左回り(↺)を丸の下に挟んで置く(音量なら「音量+」が上)。押し込みキーに
+ * 付けるときと同じ形にそろえるため。以前は丸の右に2つを横に並べ、図の上か下かを設定で
+ * 選べたが、横に長くなるうえ、形が2通りあると見比べにくかった。
  *
- * ノブは KLE 上の座標では描かない。Cornix LP の定義はエンコーダーを図の右端
- * (x=15.25〜)にまとめて置いてあり、そのまま描くと横幅が 1.3 倍ほどに間延びする。
- * 位置に意味は無い(回転は matrix に出ないので押下表示もできない、docs/PROTOCOL.md §6)
+ * ノブはKLE上の座標では描かない。Cornix LPの定義はエンコーダーを図の右端
+ * (x=15.25〜)にまとめて置いてあり、そのまま描くと横幅が1.3倍ほどに間延びする。
+ * 位置に意味は無い(回転はmatrixに出ないので押下表示もできない、docs/PROTOCOL.md §6)
  * ので、割り当ての一覧としてまとめて出す。
  *
  * 描画(SVG)から切り離してあるのは、単体テストで位置を確かめるため。
  */
 import type { Bounds } from './geometry'
 
-/** 帯の高さ(1u 単位)。上の文字・丸・下の文字が収まり、キーの下の縁とくっつかない高さ。 */
+/** 帯の高さ(1u単位)。上の文字・丸・下の文字が収まり、キーの下の縁とくっつかない高さ。 */
 export const ENCODER_STRIP_HEIGHT = 1.4
 
 export interface EncoderStripInput {
   /** 並べる順(エンコーダー番号の昇順を想定)。 */
   items: ReadonlyArray<{ index: number; ccw: string; cw: string }>
   keyBounds: Bounds
-  /** 1u の px。 */
+  /** 1uのpx。 */
   unit: number
   /** 文字の大きさ(px)。幅と上下の位置の見積もりに使う。 */
   fontSize: number
@@ -45,14 +45,14 @@ export interface EncoderStrip {
   cwY: number
   ccwY: number
   dotRadius: number
-  /** 帯の左右端(px)。viewBox を広げるのに使う。 */
+  /** 帯の左右端(px)。viewBoxを広げるのに使う。 */
   minX: number
   maxX: number
 }
 
 /**
- * SVG には文字幅を測る手立てが無いので見積もる。
- * 全角はほぼ 1em、それ以外は 0.58em として扱えば、中央揃えには十分。
+ * SVGには文字幅を測る手立てが無いので見積もる。
+ * 全角はほぼ1em、それ以外は0.58emとして扱えば、中央揃えには十分。
  */
 export function estimateTextWidth(text: string, fontSize: number): number {
   let width = 0
@@ -62,7 +62,7 @@ export function estimateTextWidth(text: string, fontSize: number): number {
   return width
 }
 
-/** 並べる。ノブが無ければ null。 */
+/** 並べる。ノブが無ければnull。 */
 export function layoutEncoderStrip(input: EncoderStripInput): EncoderStrip | null {
   const { items, keyBounds, unit, fontSize } = input
   if (items.length === 0) return null
@@ -72,7 +72,7 @@ export function layoutEncoderStrip(input: EncoderStripInput): EncoderStrip | nul
   const labelGap = 0.14 * unit
   const itemGap = 0.4 * unit
 
-  // 1 つぶんの幅は、上下の文字と丸のうち広いもの
+  // 1つぶんの幅は、上下の文字と丸のうち広いもの
   const sized = items.map((item) => ({
     ...item,
     width: Math.max(
@@ -106,8 +106,8 @@ export function layoutEncoderStrip(input: EncoderStripInput): EncoderStrip | nul
 }
 
 /**
- * キーとノブの帯をまとめて収める viewBox(px)。帯はいつもキーの下。
- * `pad` は周りの余白(1u 単位)。
+ * キーとノブの帯をまとめて収めるviewBox(px)。帯はいつもキーの下。
+ * `pad`は周りの余白(1u単位)。
  */
 export function viewBoxFor(
   keyBounds: Bounds,

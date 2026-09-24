@@ -1,28 +1,28 @@
 /**
- * Tap Dance と「長押しで出るレイヤー」の解釈。
+ * Tap Danceと「長押しで出るレイヤー」の解釈。
  *
- * レイヤー判定(engine)と描画(KeyboardView の色帯)の両方が同じ規則を使うので、
- * ここに 1 つだけ置く。HID 層には依存しない。
+ * レイヤー判定(engine)と描画(KeyboardViewの色帯)の両方が同じ規則を使うので、
+ * ここに1つだけ置く。HID層には依存しない。
  */
 import { decodeKeycode, type Keycode, MOD_RIGHT, modifierBitsOf } from './decode'
 
-/** Vial の Tap Dance エントリ 1 個(`vial.h` の vial_tap_dance_entry_t)。 */
+/** VialのTap Danceエントリ1個(`vial.h`のvial_tap_dance_entry_t)。 */
 export interface TapDanceEntry {
   onTap: number
   onHold: number
   onDoubleTap: number
   onTapHold: number
-  /** ms。0 のときは既定の tapping term を使う。 */
+  /** ms。0のときは既定のtapping termを使う。 */
   tappingTerm: number
 }
 
 /**
- * このキーコードを長押ししたときに出るレイヤー。出さないなら null。
+ * このキーコードを長押ししたときに出るレイヤー。出さないならnull。
  *
- * 対象は HANDOFF §6 の MVP 範囲:
+ * 対象はHANDOFF §6のMVP範囲:
  *   - `MO(n)`
  *   - `LT(n, kc)`
- *   - on_hold が `MO(n)` の Tap Dance
+ *   - on_holdが`MO(n)`のTap Dance
  */
 export function holdLayerOf(
   keycode: Keycode,
@@ -40,10 +40,10 @@ export function holdLayerOf(
 }
 
 /**
- * このキーコードを長押ししたときに効くモディファイア(MOD_* ビット、左右は区別しない)。無ければ 0。
+ * このキーコードを長押ししたときに効くモディファイア(MOD_*ビット、左右は区別しない)。無ければ0。
  *
- *   - `MT(mod, kc)`(`LSFT_T(KC_A)` など)
- *   - on_hold が単独のモディファイアキーの Tap Dance
+ *   - `MT(mod, kc)`(`LSFT_T(KC_A)`など)
+ *   - on_holdが単独のモディファイアキーのTap Dance
  */
 export function holdModsOf(
   keycode: Keycode,
@@ -57,7 +57,7 @@ export function holdModsOf(
   return 0
 }
 
-/** このキーコードの tapping term(ms)。Tap Dance はエントリごとの値を優先する。 */
+/** このキーコードのtapping term(ms)。Tap Danceはエントリごとの値を優先する。 */
 export function tappingTermOf(
   keycode: Keycode,
   tapDance: ReadonlyArray<Pick<TapDanceEntry, 'tappingTerm'> | undefined>,

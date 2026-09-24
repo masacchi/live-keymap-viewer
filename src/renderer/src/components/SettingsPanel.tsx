@@ -6,7 +6,7 @@
  * - ノブの割り当ての位置 … 図の上 / 下
  * - 長押しの判定時間 … キーボードの設定と合わせる(ずれると表示だけ早く / 遅く切り替わる)
  * - オーバーレイの濃さと自動フェード … 以前はオーバーレイに入ってからでないと変えられなかった
- * - 許可したキーボード … 以前は settings.json を手で直すしかなかった
+ * - 許可したキーボード … 以前はsettings.jsonを手で直すしかなかった
  *
  * 表記(JIS / US)はよく切り替えるので、ここではなくツールバーに置いたまま。
  */
@@ -31,7 +31,7 @@ import { PercentSlider, Slider } from './ui/Slider'
 
 export interface SettingsLayer {
   layer: number
-  /** そのレイヤーへの行き方(「Space 長押し」)。無ければ null。 */
+  /** そのレイヤーへの行き方(「Space長押し」)。無ければnull。 */
   how: string | null
 }
 
@@ -46,7 +46,7 @@ export interface SettingsPanelProps {
   onChange: (patch: SettingsPatch) => void
   /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
   onForgetDevice?: (vendorId: number, productId: number) => void
-  /** 後ろのぼかしが使えるか(Windows のときだけ)。 */
+  /** 後ろのぼかしが使えるか(Windowsのときだけ)。 */
   blurSupported: boolean
   /** どのビルドが動いているか。取れていなければ欄を出さない(ブラウザで開いたとき)。 */
   appInfo?: AppInfo | null

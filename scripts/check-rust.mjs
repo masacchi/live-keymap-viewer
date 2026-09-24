@@ -1,9 +1,9 @@
 /**
- * Rust の検査(整形・clippy・テスト)。`npm run check:rust` で、コンテナの中で動く。
+ * Rustの検査(整形・clippy・テスト)。`npm run check:rust`で、コンテナの中で動く。
  *
- * clippy は Linux 向けと Windows 向けの両方にかける。Windows でしか使わないコード
- * (後ろのぼかしなど)は `#[cfg(windows)]` の中にあり、Linux 向けだけでは見られないため。
- * テストは Linux で動かす(Windows の exe はコンテナでは動かせない)。
+ * clippyはLinux向けとWindows向けの両方にかける。Windowsでしか使わないコード
+ * (後ろのぼかしなど)は`#[cfg(windows)]`の中にあり、Linux向けだけでは見られないため。
+ * テストはLinuxで動かす(Windowsのexeはコンテナでは動かせない)。
  */
 
 import { spawnSync } from 'node:child_process'

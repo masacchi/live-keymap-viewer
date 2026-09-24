@@ -1,9 +1,9 @@
 /**
- * Vial / VIA プロトコル。Transport の上に乗る薄い層。
+ * Vial / VIAプロトコル。Transportの上に乗る薄い層。
  *
- * バイト位置の根拠はすべて docs/PROTOCOL.md に書いてある。特に、
- * VIA コマンドの戻り値は data[1] 以降、Vial コマンド(0xFE)の戻り値は
- * data[0] 以降という非対称に注意。
+ * バイト位置の根拠はすべてdocs/PROTOCOL.mdに書いてある。特に、
+ * VIAコマンドの戻り値はdata[1]以降、Vialコマンド(0xFE)の戻り値は
+ * data[0]以降という非対称に注意。
  */
 
 import { decodeKeycode } from '../keycodes/decode'
@@ -40,7 +40,7 @@ import { decompressDefinition } from './xz'
 
 export class ProtocolError extends Error {}
 
-/** 定義 JSON のうち、このアプリが使う部分。 */
+/** 定義JSONのうち、このアプリが使う部分。 */
 export interface VialDefinition {
   name?: string
   matrix: { rows: number; cols: number }
@@ -59,7 +59,7 @@ export interface UnlockStatus {
 export interface UnlockProgress {
   unlocked: boolean
   inProgress: boolean
-  /** 0 に向かって減る。VIAL_UNLOCK_COUNTER_MAX から始まる。 */
+  /** 0に向かって減る。VIAL_UNLOCK_COUNTER_MAXから始まる。 */
   counter: number
 }
 
@@ -74,14 +74,14 @@ export interface KeyboardSnapshot {
   layers: number
   rows: number
   cols: number
-  /** [layer][row][col] の生キーコード。 */
+  /** [layer][row][col]の生キーコード。 */
   keymap: number[][][]
-  /** 枠の数だけ並ぶ。読んでいない枠は undefined(tapDanceToRead)。 */
+  /** 枠の数だけ並ぶ。読んでいない枠はundefined(tapDanceToRead)。 */
   tapDance: Array<TapDanceEntry | undefined>
-  /** [layer][encoder][direction] の生キーコード。 */
+  /** [layer][encoder][direction]の生キーコード。 */
   encoders: number[][][]
   layoutOptions: number
-  /** matrix state を読めるか(vial protocol とパケットサイズの条件)。 */
+  /** matrix stateを読めるか(vial protocolとパケットサイズの条件)。 */
   matrixTestSupported: boolean
 }
 
@@ -114,8 +114,8 @@ function u32be(data: Uint8Array, offset: number): number {
 }
 
 /**
- * 読み込みがどこまで進んだか。1 往復ごとに知らせる。
- * USB なら一瞬だが、Bluetooth では 1 往復 約 0.5 秒で、読み込み全体が数十秒かかる。
+ * 読み込みがどこまで進んだか。1往復ごとに知らせる。
+ * USBなら一瞬だが、Bluetoothでは1往復 約0.5秒で、読み込み全体が数十秒かかる。
  */
 export interface LoadProgress {
   stage: 'definition' | 'keymap' | 'encoders' | 'tapDance'
@@ -131,10 +131,10 @@ const LONG: SendOptions = { retries: 20, timeoutMs: 500 }
 /**
  * このリクエストへの応答かどうかを見分ける関数を作る。
  *
- * VIA コマンドはファームが `data[0]` にコマンド ID をそのまま残す(`via.c` は
- * `command_data = &data[1]` 以降にしか書かない)ので、それで照合できる。
- * Vial コマンド(0xFE)は `msg[0]` から上書きしてしまうため照合できない。
- * 幸い 0xFE 系は読み込み時にしか使わず、ポーリングの本流には出てこない。
+ * VIAコマンドはファームが`data[0]`にコマンドIDをそのまま残す(`via.c`は
+ * `command_data = &data[1]`以降にしか書かない)ので、それで照合できる。
+ * Vialコマンド(0xFE)は`msg[0]`から上書きしてしまうため照合できない。
+ * 幸い0xFE系は読み込み時にしか使わず、ポーリングの本流には出てこない。
  */
 function validatorFor(request: readonly number[]): ((data: Uint8Array) => boolean) | undefined {
   const id = request[0]
@@ -181,7 +181,7 @@ export async function getLayerCount(transport: Transport): Promise<number> {
   return data[1]
 }
 
-/** 定義ブロック(XZ で圧縮した JSON)のバイト数。 */
+/** 定義ブロック(XZで圧縮したJSON)のバイト数。 */
 export async function getDefinitionSize(transport: Transport): Promise<number> {
   const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE], LONG)
   const size = u32le(data, 0)
@@ -191,7 +191,7 @@ export async function getDefinitionSize(transport: Transport): Promise<number> {
   return size
 }
 
-/** 定義ブロックを全部集めて展開し、JSON にする。size を渡さなければ先に問い合わせる。 */
+/** 定義ブロックを全部集めて展開し、JSONにする。sizeを渡さなければ先に問い合わせる。 */
 export async function getDefinition(
   transport: Transport,
   size?: number,
@@ -203,7 +203,7 @@ export async function getDefinition(
   const chunks: Uint8Array[] = []
   let total = 0
   for (let block = 0; remaining > 0; block++) {
-    // ファームは下位 2 バイトしか読まないが、vial-gui に合わせて u32 LE で送る
+    // ファームは下位2バイトしか読まないが、vial-guiに合わせてu32 LEで送る
     const data = await send(transport, [
       CMD_VIA_VIAL_PREFIX,
       CMD_VIAL_GET_DEFINITION,
@@ -230,7 +230,7 @@ export async function getDefinition(
   return JSON.parse(json) as VialDefinition
 }
 
-/** キーマップ全体を読み、[layer][row][col] に組み直す。 */
+/** キーマップ全体を読み、[layer][row][col]に組み直す。 */
 export async function getKeymap(
   transport: Transport,
   layers: number,
@@ -260,7 +260,7 @@ export async function getKeymap(
       const rowKeys: number[] = []
       for (let col = 0; col < cols; col++) {
         const at = (layer * rows * cols + row * cols + col) * 2
-        rowKeys.push(u16be(buffer, at)) // キーコードは big-endian
+        rowKeys.push(u16be(buffer, at)) // キーコードはbig-endian
       }
       layerRows.push(rowKeys)
     }
@@ -330,16 +330,16 @@ export async function getTapDance(transport: Transport, index: number): Promise<
 }
 
 /**
- * キーマップに無くても読んでおく Tap Dance の枠の数(先頭から)。
+ * キーマップに無くても読んでおくTap Danceの枠の数(先頭から)。
  * 表示に要るのは使っている枠だけだが、絞りすぎないよう少し余裕を持たせている。
  */
 export const TAP_DANCE_ALWAYS_READ = 5
 
 /**
- * 読む Tap Dance の番号(昇順)。キーマップとノブで使っている枠と、先頭の TAP_DANCE_ALWAYS_READ 個。
+ * 読むTap Danceの番号(昇順)。キーマップとノブで使っている枠と、先頭のTAP_DANCE_ALWAYS_READ個。
  *
- * Vial は Tap Dance の枠を 32 個ほど持つが、実際に使うのは数個。1 枠 1 往復なので、
- * 全部読むと読み込みの 1/4 を占める(Bluetooth では 1 往復 約 0.5 秒)。
+ * VialはTap Danceの枠を32個ほど持つが、実際に使うのは数個。1枠1往復なので、
+ * 全部読むと読み込みの1/4を占める(Bluetoothでは1往復 約0.5秒)。
  */
 export function tapDanceToRead(
   count: number,
@@ -355,7 +355,7 @@ export function tapDanceToRead(
   return [...indices].sort((a, b) => a - b)
 }
 
-/** 要る枠だけ読み、枠の数ぶんの配列にして返す(読まない枠は undefined)。 */
+/** 要る枠だけ読み、枠の数ぶんの配列にして返す(読まない枠はundefined)。 */
 async function readTapDance(
   transport: Transport,
   count: number,
@@ -396,11 +396,11 @@ export async function unlockPoll(transport: Transport): Promise<UnlockProgress> 
 export type UnlockAction = 'done' | 'wait' | 'restart'
 
 /**
- * `unlock_poll` の結果から次の動きを決める。
+ * `unlock_poll`の結果から次の動きを決める。
  *
- * `in_progress` が落ちているのに未アンロック、という状態が起き得る
- * (`vial_lock` が呼ばれた、キーボードが挿し直された、など)。そのときは
- * `unlock_start` からやり直す。放っておくと永遠に進まないので。
+ * `in_progress`が落ちているのに未アンロック、という状態が起き得る
+ * (`vial_lock`が呼ばれた、キーボードが挿し直された、など)。そのときは
+ * `unlock_start`からやり直す。放っておくと永遠に進まないので。
  */
 export function nextUnlockAction(progress: UnlockProgress): UnlockAction {
   if (progress.unlocked) return 'done'
@@ -413,10 +413,10 @@ export async function lock(transport: Transport): Promise<void> {
 }
 
 /**
- * matrix state のレスポンスを (row, col) → 押下 に展開する。
+ * matrix stateのレスポンスを(row, col) → 押下 に展開する。
  *
- * 行ごとに ceil(cols/8) バイト。行内は MSB のバイトが先頭に来るので、
- * col が入っているバイトは末尾から数える(docs/PROTOCOL.md §2)。
+ * 行ごとにceil(cols/8)バイト。行内はMSBのバイトが先頭に来るので、
+ * colが入っているバイトは末尾から数える(docs/PROTOCOL.md §2)。
  */
 export function decodeMatrixState(data: Uint8Array, rows: number, cols: number): boolean[][] {
   const rowSize = Math.ceil(cols / 8)
@@ -446,7 +446,7 @@ export async function getMatrixState(
   return decodeMatrixState(data, rows, cols)
 }
 
-/** vial-gui の MatrixTest.valid() と同じ条件。 */
+/** vial-guiのMatrixTest.valid()と同じ条件。 */
 export function isMatrixTestSupported(vialProtocol: number, rows: number, cols: number): boolean {
   return (
     vialProtocol >= VIAL_PROTOCOL_MATRIX_TESTER &&
@@ -455,10 +455,10 @@ export function isMatrixTestSupported(vialProtocol: number, rows: number, cols: 
 }
 
 /**
- * 読み込んだ定義の置き場所。キーボードの UID と、圧縮した定義のバイト数で引く。
+ * 読み込んだ定義の置き場所。キーボードのUIDと、圧縮した定義のバイト数で引く。
  *
  * 定義はファームを焼き直さない限り変わらないので、繋ぐたびに読まなくてよい。読まずに済めば、
- * 応答を照合できない 0xFE 系の要求(Bluetooth では取り違えると定義の展開が壊れる)も減る。
+ * 応答を照合できない0xFE系の要求(Bluetoothでは取り違えると定義の展開が壊れる)も減る。
  * 焼き直して中身が変わってもバイト数が同じ、ということはあり得るので、手動の再読み込みでは
  * キャッシュを使わずに読み直す(LoadOptions.refreshDefinition)。
  */
@@ -468,14 +468,14 @@ export interface DefinitionCache {
 }
 
 /**
- * キーマップ側のキャッシュ。キーボードの UID で引く。
+ * キーマップ側のキャッシュ。キーボードのUIDで引く。
  *
- * 定義(物理配置)は DefinitionCache が持つ。こちらは **Vial で編集され得るところ** ―
+ * 定義(物理配置)はDefinitionCacheが持つ。こちらは**Vialで編集され得るところ** ―
  * キーマップ・Tap Dance・エンコーダー・レイアウトオプション ― を覚えておき、
  * 繋いだ直後に**まずキャッシュで画面を出す**ために使う。裏で読み直して、違っていれば差し替える。
  *
- * これが無いと、モードを切り替えるたび・繋ぎ直すたびに 70 往復ほど待つことになる
- * (USB で数秒、Bluetooth では 30 秒)。そのあいだ画面には何も出ない。
+ * これが無いと、モードを切り替えるたび・繋ぎ直すたびに70往復ほど待つことになる
+ * (USBで数秒、Bluetoothでは30秒)。そのあいだ画面には何も出ない。
  */
 export interface CachedKeymap {
   /** 圧縮した定義のバイト数。ファームを焼き直したら変わるので、違えば捨てる。 */
@@ -514,9 +514,9 @@ export interface CacheSet {
 }
 
 /**
- * キャッシュだけでスナップショットを組み立てる。使えなければ null(呼んだ側が普通に読む)。
+ * キャッシュだけでスナップショットを組み立てる。使えなければnull(呼んだ側が普通に読む)。
  *
- * 読むのは身元だけ ― VIA の版・Vial の版と UID・定義のバイト数の **3 往復**。
+ * 読むのは身元だけ ― VIAの版・Vialの版とUID・定義のバイト数の**3往復**。
  * 定義とキーマップの両方がキャッシュにあり、バイト数も行列の大きさも合っているときだけ返す。
  * 中身が古い可能性は残るので、呼んだ側が裏で読み直して確かめる(session/keyboardSession.ts)。
  */
@@ -528,7 +528,7 @@ export async function loadCachedKeyboard(
 
   const viaProtocol = await getViaProtocol(transport)
   const { vialProtocol, uid } = await getKeyboardId(transport)
-  // 未対応のプロトコルは、普通に読ませてそちらでエラーにする(文言が 1 か所で済む)
+  // 未対応のプロトコルは、普通に読ませてそちらでエラーにする(文言が1か所で済む)
   if (viaProtocol !== SUPPORTED_VIA_PROTOCOL || vialProtocol !== SUPPORTED_VIAL_PROTOCOL)
     return null
 
@@ -562,13 +562,13 @@ export async function loadCachedKeyboard(
 export interface LoadOptions {
   /** 定義のキャッシュ。無ければ毎回読む。 */
   definitionCache?: DefinitionCache
-  /** true ならキャッシュがあっても読み、読んだものでキャッシュを置き換える。 */
+  /** trueならキャッシュがあっても読み、読んだものでキャッシュを置き換える。 */
   refreshDefinition?: boolean
-  /** 1 往復ごとに進み具合を知らせる。 */
+  /** 1往復ごとに進み具合を知らせる。 */
   onProgress?: (progress: LoadProgress) => void
 }
 
-/** onProgress を段ごとの StepReporter にする。 */
+/** onProgressを段ごとのStepReporterにする。 */
 function reporter(options: LoadOptions, stage: LoadProgress['stage']): StepReporter | undefined {
   const { onProgress } = options
   return onProgress && ((done, total) => onProgress({ stage, done, total }))
@@ -590,7 +590,7 @@ async function loadDefinition(
   return { definition, size }
 }
 
-/** キーマップ・定義・Tap Dance を一通り読み込む。 */
+/** キーマップ・定義・Tap Danceを一通り読み込む。 */
 export async function loadKeyboard(
   transport: Transport,
   options: LoadOptions = {}
@@ -617,7 +617,7 @@ export async function loadKeyboard(
 
   const keymap = await getKeymap(transport, layers, rows, cols, reporter(options, 'keymap'))
 
-  // ノブにも TD を割り当てられるので、どの Tap Dance を読むかはノブまで読んでから決める
+  // ノブにもTDを割り当てられるので、どのTap Danceを読むかはノブまで読んでから決める
   const encoderCount = countEncoders(definition)
   const encoders =
     encoderCount > 0
@@ -654,9 +654,9 @@ export async function loadKeyboard(
 /**
  * キーマップまわりだけ読み直す。
  *
- * 物理配置・customKeycodes が入っている定義 JSON は、ファームを焼き直さないと
- * 変わらない(焼き直せば USB ごと繋ぎ直しになる)。なので定義は使い回して、
- * Vial で編集され得るところ ― キーマップ、Tap Dance、エンコーダー、
+ * 物理配置・customKeycodesが入っている定義JSONは、ファームを焼き直さないと
+ * 変わらない(焼き直せばUSBごと繋ぎ直しになる)。なので定義は使い回して、
+ * Vialで編集され得るところ ― キーマップ、Tap Dance、エンコーダー、
  * レイアウトオプション ― だけを取り直す。図が組み直されないので描画も跳ねない。
  */
 export async function reloadKeymap(
@@ -682,7 +682,7 @@ export async function reloadKeymap(
 }
 
 /**
- * 読み直した結果が前と同じか(Vial で編集され得るところだけを比べる)。
+ * 読み直した結果が前と同じか(Vialで編集され得るところだけを比べる)。
  * 読み直しても(接続直後の確かめ・手動の読み直し)、たいていは何も変わっていない。
  */
 export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
@@ -691,7 +691,7 @@ export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapsho
   return editable(before) === editable(after)
 }
 
-/** 定義の KLE から、エンコーダーが何個あるかを数える。 */
+/** 定義のKLEから、エンコーダーが何個あるかを数える。 */
 export function countEncoders(definition: VialDefinition): number {
   const { encoders } = buildGeometry(definition.layouts.keymap)
   return encoders.reduce((max, encoder) => Math.max(max, encoder.index + 1), 0)

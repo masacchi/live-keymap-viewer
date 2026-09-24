@@ -15,8 +15,8 @@ function labelAt(layer: number, row: number, col: number, mode: 'jis' | 'us' = '
 }
 
 /**
- * reference/keymap-preview.html の L0 と一致すること(HANDOFF §8 の受け入れ基準)。
- * 値は同ファイルの LAYOUT[0] と JIS / NAMED テーブルから起こした。
+ * reference/keymap-preview.htmlのL0と一致すること(HANDOFF §8の受け入れ基準)。
+ * 値は同ファイルのLAYOUT[0]とJIS / NAMEDテーブルから起こした。
  */
 const L0_JIS_MAIN: string[][] = [
   ['Tab', 'Q', 'W', 'E', 'R', 'T', ''],
@@ -45,11 +45,11 @@ describe('JIS ラベル', () => {
   })
 
   it('LSFT(x) は x の Shift 側の文字そのものを出す', () => {
-    // L2 の (0,1) は LSFT(KC_1) → JIS では "!"
+    // L2の(0,1)はLSFT(KC_1) → JISでは"!"
     expect(labelAt(2, 0, 1).main).toBe('!')
-    // L2 の (1,3) は LSFT(KC_SCOLON) → JIS では "+"
+    // L2の(1,3)はLSFT(KC_SCOLON) → JISでは"+"
     expect(labelAt(2, 1, 3).main).toBe('+')
-    // L2 の (7,1) は LSFT(KC_JYEN) → JIS では "|"
+    // L2の(7,1)はLSFT(KC_JYEN) → JISでは"|"
     expect(labelAt(2, 7, 1).main).toBe('|')
   })
 
@@ -66,16 +66,16 @@ describe('JIS ラベル', () => {
   })
 
   it('Tap Dance はタップ側のキーコードで表示する', () => {
-    // TD(3) の on_tap は LSFT(KC_LBRACKET) → JIS では "`"
+    // TD(3)のon_tapはLSFT(KC_LBRACKET) → JISでは"`"
     expect(labelAt(0, 7, 0).main).toBe('`')
   })
 
   it('USER キーコードを customKeycodes の名前で出す', () => {
-    // L4 の (1,0) は USER00 = BT0
+    // L4の(1,0)はUSER00 = BT0
     expect(labelAt(4, 1, 0)).toMatchObject({ main: 'BT0', category: 'user' })
-    // USER06 の shortName は "Switch\nOutput"
+    // USER06のshortNameは"Switch\nOutput"
     expect(labelAt(4, 0, 0).main).toBe('Switch Output')
-    // title は長い説明なので、キーに書く補足ではなくツールチップ用に持つ
+    // titleは長い説明なので、キーに書く補足ではなくツールチップ用に持つ
     expect(labelAt(4, 0, 0).description).toBe('Switch default output mode between USB/BLE')
     expect(labelAt(4, 0, 0).sub).toBeUndefined()
   })
@@ -91,7 +91,7 @@ describe('US ラベル', () => {
     expect(labelAt(0, 5, 0, 'us')).toMatchObject({ main: "'", shift: '"' }) // KC_QUOTE
     expect(labelAt(0, 6, 1, 'us')).toMatchObject({ main: ']', shift: '}' }) // KC_RBRACKET
     expect(labelAt(2, 0, 1, 'us').main).toBe('!') // LSFT(KC_1)
-    expect(labelAt(2, 1, 5, 'us').main).toBe('@') // LSFT(KC_2) は US だと "@"
+    expect(labelAt(2, 1, 5, 'us').main).toBe('@') // LSFT(KC_2)はUSだと"@"
   })
 
   it('かな / 英数 を英語表記にする', () => {

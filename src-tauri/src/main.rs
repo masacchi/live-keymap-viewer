@@ -1,9 +1,9 @@
 //! アプリの入口。起動と終了の段取りだけを持つ。
 //!
 //!   windows.rs  … 通常ウィンドウ / クリック透過オーバーレイの作り分けと切り替え
-//!   hid.rs      … キーボードとの raw HID(画面からは WebHID と同じ形に見せる)
+//!   hid.rs      … キーボードとのraw HID(画面からはWebHIDと同じ形に見せる)
 //!   commands.rs … 画面からの要求の受け口
-//!   settings.rs … settings.json の検証と読み書き
+//!   settings.rs … settings.jsonの検証と読み書き
 //!   logfile.rs  … log.txt(実機で何が起きたかを残す)
 //!   updater.rs  … インストーラーで入れたときの更新(Velopack)
 
@@ -26,11 +26,11 @@ use crate::hid::HidBridge;
 use crate::settings::SettingsStore;
 use crate::windows::WindowManager;
 
-/// 設定とログを置くフォルダの名前(OS の設定の置き場所 = Windows なら %APPDATA% の下)。
+/// 設定とログを置くフォルダの名前(OSの設定の置き場所 = Windowsなら%APPDATA%の下)。
 /// パスに半角スペースを入れない(コマンドラインやスクリプトで扱うときに引用符が要らないように)。
 const DATA_DIR_NAME: &str = "live-keymap-viewer";
 
-/// Electron 版が設定を置いていたフォルダの名前。新しい方に設定が無ければ、ここから写す
+/// Electron版が設定を置いていたフォルダの名前。新しい方に設定が無ければ、ここから写す
 /// (レイヤー名・ウィンドウの位置・許可したキーボードを引き継ぐ)。
 const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
 
@@ -38,7 +38,7 @@ const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
 const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 fn main() {
-    // いちばん先に動かす。インストール・アンインストール・更新の途中で Velopack が
+    // いちばん先に動かす。インストール・アンインストール・更新の途中でVelopackが
     // このプロセスを呼んだときは、ここで用を済ませて終わる(ウィンドウは出さない)
     velopack::VelopackApp::build().run();
 

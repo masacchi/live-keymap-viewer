@@ -1,7 +1,7 @@
 /**
  * キーマップから、レイヤーごとの「そこへの行き方」と「中身があるか」を読み取る。
  *
- * reference/keymap-preview.html にはレイヤーごとに「Space を長押ししている間」という説明が
+ * reference/keymap-preview.htmlにはレイヤーごとに「Spaceを長押ししている間」という説明が
  * あったが、アプリの一覧は番号が並ぶだけで、どのキーでそのレイヤーに入るのかが分からなかった。
  * キーマップを見れば分かるので、ここで拾う。
  *
@@ -14,7 +14,7 @@ import { messages } from '../messages'
 
 /** そのキーでレイヤーに入る方法。 */
 export type TriggerKind =
-  /** LT(n, kc) や、on_hold が MO(n) の Tap Dance。タップすると別の文字 */
+  /** LT(n, kc)や、on_holdがMO(n)のTap Dance。タップすると別の文字 */
   | 'hold'
   /** MO(n) / LM(n, mod)。押しているあいだ */
   | 'momentary'
@@ -24,13 +24,13 @@ export type TriggerKind =
   | 'to'
   /** DF(n) / PDF(n)。既定のレイヤーを変える */
   | 'default'
-  /** OSL(n)。次の 1 打だけ */
+  /** OSL(n)。次の1打だけ */
   | 'oneshot'
   /** TT(n)。押しているあいだ、連打で固定 */
   | 'tapToggle'
 
 export interface LayerTrigger {
-  /** キーが置いてあるレイヤー。多くは 0。 */
+  /** キーが置いてあるレイヤー。多くは0。 */
   fromLayer: number
   row: number
   col: number
@@ -44,20 +44,20 @@ export interface LayerSummary {
   triggers: LayerTrigger[]
   /**
    * 中身が無い(すべて透過か無効か、ベースレイヤーと同じ)。
-   * Cornix の L5〜L9 は、ノブの押し込みが L0 と同じで、ほかはすべて KC_NO。
+   * CornixのL5〜L9は、ノブの押し込みがL0と同じで、ほかはすべてKC_NO。
    */
   blank: boolean
 }
 
 export interface LayerSummaryInput {
-  /** [layer][row][col] の生キーコード。 */
+  /** [layer][row][col]の生キーコード。 */
   keymap: number[][][]
   tapDance: ReadonlyArray<Pick<TapDanceEntry, 'onHold'> | undefined>
-  /** [layer][encoder][direction] の生キーコード。ノブにだけ割り当てたレイヤーも空と見なさない。 */
+  /** [layer][encoder][direction]の生キーコード。ノブにだけ割り当てたレイヤーも空と見なさない。 */
   encoders?: number[][][]
 }
 
-/** このキーコードで入るレイヤーと、その入り方。レイヤーに関わらないキーなら null。 */
+/** このキーコードで入るレイヤーと、その入り方。レイヤーに関わらないキーならnull。 */
 export function triggerOf(
   keycode: Keycode,
   tapDance: LayerSummaryInput['tapDance']
@@ -118,7 +118,7 @@ export function summarizeLayers(input: LayerSummaryInput): LayerSummary[] {
       cols.forEach((raw, col) => {
         const keycode = decodeKeycode(raw)
         const trigger = triggerOf(keycode, input.tapDance)
-        // 自分自身へのキー(L2 に置いた MO(2) など)は行き方にならない
+        // 自分自身へのキー(L2に置いたMO(2)など)は行き方にならない
         if (!trigger || trigger.layer === fromLayer) return
         summaries[trigger.layer]?.triggers.push({
           fromLayer,
@@ -134,8 +134,8 @@ export function summarizeLayers(input: LayerSummaryInput): LayerSummary[] {
 }
 
 /**
- * 行き方の短い説明。LT / Tap Dance はタップ側の文字(「Space 長押し」)、MO や TG は
- * キーそのものの名前(「TG2 で固定」)で言う。ベースレイヤー以外にあるキーなら、先にそのレイヤーを書く。
+ * 行き方の短い説明。LT / Tap Danceはタップ側の文字(「Space長押し」)、MOやTGは
+ * キーそのものの名前(「TG2で固定」)で言う。ベースレイヤー以外にあるキーなら、先にそのレイヤーを書く。
  */
 export function describeTrigger(
   trigger: LayerTrigger,

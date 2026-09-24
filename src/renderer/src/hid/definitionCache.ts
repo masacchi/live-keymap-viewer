@@ -1,11 +1,11 @@
 /**
- * キーボード定義のキャッシュを localStorage に置く(hid/vial.ts の DefinitionCache)。
+ * キーボード定義のキャッシュをlocalStorageに置く(hid/vial.tsのDefinitionCache)。
  *
- * 通常ウィンドウとオーバーレイの切り替えはウィンドウごと作り直すので、renderer のメモリに
- * 持っても消えてしまう。localStorage なら両方のウィンドウ(同じ file:// のオリジン)で共有でき、
+ * 通常ウィンドウとオーバーレイの切り替えはウィンドウごと作り直すので、rendererのメモリに
+ * 持っても消えてしまう。localStorageなら両方のウィンドウ(同じfile:// のオリジン)で共有でき、
  * アプリを閉じても残る。
  *
- * キーボードごとに 1 件だけ持つ(UID で引く)。バイト数が違えば別物とみなして読み直させる。
+ * キーボードごとに1件だけ持つ(UIDで引く)。バイト数が違えば別物とみなして読み直させる。
  * 中身は信用せず、形が崩れていれば無いものとして扱う(読み直せば済むので)。
  */
 import type { DefinitionCache, VialDefinition } from './vial'
@@ -34,7 +34,7 @@ function defaultStorage(): StorageLike | null {
   try {
     return globalThis.localStorage ?? null
   } catch {
-    return null // 使えない環境(テストの node など)
+    return null // 使えない環境(テストのnodeなど)
   }
 }
 

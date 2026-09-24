@@ -1,11 +1,11 @@
 /**
- * キーマップのキャッシュを localStorage に置く(hid/vial.ts の KeymapCache)。
+ * キーマップのキャッシュをlocalStorageに置く(hid/vial.tsのKeymapCache)。
  *
- * 置き場所を localStorage にする理由は定義のキャッシュ(hid/definitionCache.ts)と同じ ―
- * 通常ウィンドウとオーバーレイはウィンドウごと作り直すので、renderer のメモリでは消える。
+ * 置き場所をlocalStorageにする理由は定義のキャッシュ(hid/definitionCache.ts)と同じ ―
+ * 通常ウィンドウとオーバーレイはウィンドウごと作り直すので、rendererのメモリでは消える。
  *
- * キーボードごとに 1 件(UID で引く)。中身は信用せず、形が崩れていれば無いものとして扱う
- * (読み直せば済む)。キーマップは Vial で編集され得るので、**これで出した表示は必ず裏で
+ * キーボードごとに1件(UIDで引く)。中身は信用せず、形が崩れていれば無いものとして扱う
+ * (読み直せば済む)。キーマップはVialで編集され得るので、**これで出した表示は必ず裏で
  * 読み直して確かめる**(session/keyboardSession.ts)。
  */
 import type { TapDanceEntry } from '../keycodes/tapDance'
@@ -19,7 +19,7 @@ function isCount(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) > 0
 }
 
-/** [layer][row][col] の形をしているか。中身の数までは見る(大きさが合わないと描画が崩れる)。 */
+/** [layer][row][col]の形をしているか。中身の数までは見る(大きさが合わないと描画が崩れる)。 */
 function isKeymap(value: unknown, layers: number, rows: number, cols: number): boolean {
   if (!Array.isArray(value) || value.length !== layers) return false
   return value.every(
@@ -59,7 +59,7 @@ function defaultStorage(): StorageLike | null {
   try {
     return globalThis.localStorage ?? null
   } catch {
-    return null // 使えない環境(テストの node など)
+    return null // 使えない環境(テストのnodeなど)
   }
 }
 

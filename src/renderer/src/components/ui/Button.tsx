@@ -4,8 +4,8 @@
  * 以前はツールバー・未接続の画面・エラー表示・レイヤー一覧・オーバーレイのパネルが
  * それぞれクラスを書いていて、大きさも角の丸みも色も少しずつ違っていた。
  *
- * アクセントに**レイヤー色を使わない**。以前は主ボタンや JIS/US の選択中に L2 のティールを
- * 使っていて、「L2 に入った」と見分けが付かなかった。色味はレイヤーだけのものにして、
+ * アクセントに**レイヤー色を使わない**。以前は主ボタンやJIS/USの選択中にL2のティールを
+ * 使っていて、「L2に入った」と見分けが付かなかった。色味はレイヤーだけのものにして、
  * ボタンは明るさの差で見せる。
  */
 import { cva, type VariantProps } from 'class-variance-authority'
@@ -21,7 +21,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /** その画面で一番押してほしいもの。1 画面に 1 つまで。 */
+        /** その画面で一番押してほしいもの。1画面に1つまで。 */
         primary: 'bg-ink font-semibold text-ink-inverse hover:bg-white',
         secondary: 'bg-surface text-ink hover:bg-line-soft',
         /** 目立たせたくないもの(やめる・閉じる)。 */
@@ -32,7 +32,7 @@ export const buttonVariants = cva(
         md: 'px-2 py-1.5 text-xs md:px-3',
         lg: 'px-4 py-2 text-xs'
       },
-      /** 切り替えの選択中(JIS / US など)。 */
+      /** 切り替えの選択中(JIS / USなど)。 */
       selected: {
         true: 'bg-raised text-ink hover:bg-raised',
         false: ''

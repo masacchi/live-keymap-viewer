@@ -1,10 +1,10 @@
 /**
  * 画面が例外で落ちたときの受け皿。
  *
- * オーバーレイは透明なので、React が転んで何も描かれないと**画面から消えたように見える**。
+ * オーバーレイは透明なので、Reactが転んで何も描かれないと**画面から消えたように見える**。
  * しかもクリック透過なので、押して確かめることもできない。せめて何が起きたかを出し、
- * 戻る道(通常ウィンドウへ / 読み込み直す)を示す。起きたことは main のログにも残す
- * (配布ビルドでは DevTools を開けないので、これが唯一の手がかりになる)。
+ * 戻る道(通常ウィンドウへ / 読み込み直す)を示す。起きたことはmainのログにも残す
+ * (配布ビルドではDevToolsを開けないので、これが唯一の手がかりになる)。
  */
 import { Component, type ErrorInfo, type JSX, type ReactNode, useEffect } from 'react'
 import { reportError } from '../lib/report'
@@ -18,7 +18,7 @@ function describe(error: unknown): string {
 
 function CrashScreen({ message }: { message: string }): JSX.Element {
   useEffect(() => {
-    // オーバーレイのクリック透過は OverlayControls が面倒を見ているが、その木ごと落ちている。
+    // オーバーレイのクリック透過はOverlayControlsが面倒を見ているが、その木ごと落ちている。
     // ここで透過を切って、このカードを押せるようにする
     window.api?.setIgnoreMouseEvents(false)
   }, [])

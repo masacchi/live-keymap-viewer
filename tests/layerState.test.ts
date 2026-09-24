@@ -35,11 +35,11 @@ const tapDance: TapDanceEntry[] = MOCK_TAP_DANCE.map((e) => ({
   tappingTerm: e[4]
 }))
 
-/** Cornix の物理位置(reference/Cornix_設定_LT.vil より)。 */
+/** Cornixの物理位置(reference/Cornix_設定_LT.vilより)。 */
 const SPACE = { row: 7, col: 5 } // LT2(KC_SPACE)
 const BSPACE = { row: 3, col: 5 } // LT1(KC_BSPACE)
 const DELETE = { row: 3, col: 4 } // LT3(KC_DELETE)
-const BACKTICK = { row: 7, col: 0 } // TD(3) → 長押しで MO(4)
+const BACKTICK = { row: 7, col: 0 } // TD(3) → 長押しでMO(4)
 const Q = { row: 0, col: 1 }
 
 class Board {
@@ -67,7 +67,7 @@ class Board {
     return this
   }
 
-  /** ポーリング 1 回分。経過時間を進めてから matrix を流し込む。 */
+  /** ポーリング1回分。経過時間を進めてからmatrixを流し込む。 */
   tick(elapsedMs = 20) {
     this.now += elapsedMs
     return this.engine.update(this.matrix, this.now)
@@ -76,9 +76,9 @@ class Board {
 
 describe('LayerEngine の作り方', () => {
   it('tappingTerm に undefined を渡しても、既定値で長押しが確定する', () => {
-    // セッションは、設定を受け取る前は tappingTerm: undefined でエンジンを作る。
-    // 以前は既定値を config で上書きしていたので undefined になり、
-    // `now - pressedAt >= undefined` が常に偽 ― LT / TD の長押しが永遠に確定しなかった
+    // セッションは、設定を受け取る前はtappingTerm: undefinedでエンジンを作る。
+    // 以前は既定値をconfigで上書きしていたのでundefinedになり、
+    // `now - pressedAt >= undefined`が常に偽 ― LT / TDの長押しが永遠に確定しなかった
     const engine = new LayerEngine({
       layers: MOCK_LAYERS,
       rows: MOCK_ROWS,
@@ -109,7 +109,7 @@ describe('Layer-Tap', () => {
     board.press(SPACE)
     board.tick(0)
     expect(board.tick(100).displayLayer).toBe(0)
-    expect(board.tick(120).displayLayer).toBe(2) // 合計 220ms > 200ms
+    expect(board.tick(120).displayLayer).toBe(2) // 合計220ms > 200ms
   })
 
   it('離すとベースレイヤーに戻る', () => {
@@ -123,13 +123,13 @@ describe('Layer-Tap', () => {
     board.press(SPACE)
     board.tick(0)
     board.engine.setTappingTerm(400)
-    expect(board.tick(250).displayLayer).toBe(2) // 押したときは 200ms だった
+    expect(board.tick(250).displayLayer).toBe(2) // 押したときは200msだった
     board.release(SPACE)
     board.tick()
 
     board.press(SPACE)
     board.tick(0)
-    expect(board.tick(250).displayLayer).toBe(0) // 400ms にはまだ届かない
+    expect(board.tick(250).displayLayer).toBe(0) // 400msにはまだ届かない
     expect(board.tick(200).displayLayer).toBe(2)
   })
 
@@ -164,8 +164,8 @@ describe('Layer-Tap', () => {
   it('2 つ重ねて長押しすると、上のレイヤーが表示になる', () => {
     board.press(SPACE)
     board.tick(0)
-    board.tick(250) // L2 が有効
-    // L2 の (3,4) は透過なので、L0 の LT3(KC_DELETE) として解決される
+    board.tick(250) // L2が有効
+    // L2の(3,4)は透過なので、L0のLT3(KC_DELETE)として解決される
     board.press(DELETE)
     board.tick(0)
     const snapshot = board.tick(250)
@@ -174,8 +174,8 @@ describe('Layer-Tap', () => {
   })
 
   it('同じ瞬間に押された 2 キーは、行優先の順に押したものとして扱う', () => {
-    // Del(3,4) が先に解決され、それが割り込み扱いになって L3 が立つ。
-    // L3 の (7,5) は KC_ACL2 なので、右親指はレイヤーキーにならない。
+    // Del(3,4)が先に解決され、それが割り込み扱いになってL3が立つ。
+    // L3の(7,5)はKC_ACL2なので、右親指はレイヤーキーにならない。
     board.press(SPACE).press(DELETE)
     board.tick(0)
     const snapshot = board.tick(250)
@@ -189,13 +189,13 @@ describe('押した瞬間のキーコードで固定される', () => {
     const board = new Board()
     board.press(SPACE)
     board.tick(0)
-    board.tick(250) // L2 が有効
+    board.tick(250) // L2が有効
     board.press(Q)
     const snapshot = board.tick()
 
     const held = snapshot.held.get(`${Q.row},${Q.col}`)
     expect(held).toBeDefined()
-    expect(formatKeycode(held!.keycode)).toBe('LSFT(KC_1)') // L2 の Q は "!"
+    expect(formatKeycode(held!.keycode)).toBe('LSFT(KC_1)') // L2のQは"!"
     expect(labelForKeycode(held!.keycode, 'jis').main).toBe('!')
   })
 
@@ -226,12 +226,12 @@ describe('押した瞬間のキーコードで固定される', () => {
 describe('透過キーの解決', () => {
   it('表示レイヤーが透過なら下の有効レイヤーをたどる', () => {
     const board = new Board()
-    board.press(BSPACE) // L1 を有効にする
+    board.press(BSPACE) // L1を有効にする
     board.tick(0)
     const snapshot = board.tick(250)
     expect(snapshot.displayLayer).toBe(1)
 
-    // L1 の (1,0) は KC_TRNS、L0 では KC_LCTRL
+    // L1の(1,0)はKC_TRNS、L0ではKC_LCTRL
     const resolved = board.engine.resolveKey(1, 0, snapshot)
     expect(resolved.transparent).toBe(true)
     expect(resolved.sourceLayer).toBe(0)
@@ -243,14 +243,14 @@ describe('透過キーの解決', () => {
     board.press(BSPACE)
     board.tick(0)
     const snapshot = board.tick(250)
-    // L1 の (0,1) は KC_1
+    // L1の(0,1)はKC_1
     const resolved = board.engine.resolveKey(0, 1, snapshot)
     expect(resolved.transparent).toBe(false)
     expect(formatKeycode(resolved.effective)).toBe('KC_1')
   })
 })
 
-/** MO / TG / TO は Cornix のキーマップに無いので、小さな合成キーマップで確かめる。 */
+/** MO / TG / TOはCornixのキーマップに無いので、小さな合成キーマップで確かめる。 */
 describe('MO / TG / TO', () => {
   const MO2 = 0x5222
   const TG1 = 0x5261
@@ -258,7 +258,7 @@ describe('MO / TG / TO', () => {
   const TRNS = 0x0001
 
   function synthetic(): LayerEngine {
-    // 3 レイヤー × 1 行 × 4 列
+    // 3レイヤー × 1行 × 4列
     const keymap = [
       [[MO2, TG1, TO0, 0x0004]], // L0: MO(2), TG(1), TO(0), KC_A
       [[TRNS, TRNS, TRNS, 0x0005]], // L1: ... KC_B
@@ -291,7 +291,7 @@ describe('MO / TG / TO', () => {
     const engine = synthetic()
     const matrix = emptyMatrix(1, 4)
     matrix[0][1] = true
-    engine.update(matrix, 0) // TG(1) を有効に
+    engine.update(matrix, 0) // TG(1)を有効に
     matrix[0][1] = false
     engine.update(matrix, 10)
     matrix[0][2] = true
@@ -303,13 +303,13 @@ describe('MO / TG / TO', () => {
   it('読み直した新しいエンジンは、TG の固定と押しているキーを引き継ぐ', () => {
     const engine = synthetic()
     const matrix = emptyMatrix(1, 4)
-    matrix[0][1] = true // TG(1) を押したまま読み直しになる
+    matrix[0][1] = true // TG(1)を押したまま読み直しになる
     engine.update(matrix, 0)
 
     const next = synthetic()
     next.inheritFrom(engine)
     expect(next.snapshot().toggledLayers).toEqual([1])
-    // 押しっぱなしの TG(1) は押し直しにならない(なるともう一度切り替わってしまう)
+    // 押しっぱなしのTG(1)は押し直しにならない(なるともう一度切り替わってしまう)
     expect(next.update(matrix, 10).toggledLayers).toEqual([1])
     matrix[0][1] = false
     expect(next.update(matrix, 20).displayLayer).toBe(1)
@@ -357,7 +357,7 @@ describe('Tap Dance の長押し', () => {
         { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 },
         { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 },
         { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 },
-        // TD(3): 長押しで MO(4)、tapping term は 350ms
+        // TD(3): 長押しでMO(4)、tapping termは350ms
         {
           onTap: 0x0004,
           onHold: 0x5224,
@@ -369,7 +369,7 @@ describe('Tap Dance の長押し', () => {
     })
     const matrix = [[true]]
     engine.update(matrix, 0)
-    expect(engine.update(matrix, 300).displayLayer).toBe(0) // 既定の 200ms では上がらない
+    expect(engine.update(matrix, 300).displayLayer).toBe(0) // 既定の200msでは上がらない
     expect(engine.update(matrix, 360).displayLayer).toBe(4)
   })
 
@@ -380,7 +380,7 @@ describe('Tap Dance の長押し', () => {
       rows: 1,
       cols: 1,
       keymap,
-      // 長押しで Shift
+      // 長押しでShift
       tapDance: [{ onTap: 0x0004, onHold: 0x00e1, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }]
     })
     const matrix = [[true]]
@@ -409,7 +409,7 @@ describe('モディファイア', () => {
   it('MT(Shift) は長押しが確定してから効く', () => {
     const engine = engineWith([LSFT_T_A, 0x0004])
     expect(engine.update([[true, false]], 0).mods).toBe(0) // まだタップかもしれない
-    expect(engine.update([[true, false]], 250).mods).toBe(MOD_SHIFT) // tapping term を超えた
+    expect(engine.update([[true, false]], 250).mods).toBe(MOD_SHIFT) // tapping termを超えた
   })
 
   it('MT(Shift) を押しているあいだに別のキーを押したら、その時点で効く', () => {

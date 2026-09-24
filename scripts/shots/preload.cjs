@@ -1,7 +1,7 @@
 /**
- * 撮影用の window.api。本物の preload の代わりに、設定をメモリに持つだけのものを渡す。
+ * 撮影用のwindow.api。本物のpreloadの代わりに、設定をメモリに持つだけのものを渡す。
  * これがあるとレイヤー名の欄など「保存できるときだけ出るもの」も撮れる。
- * ウィンドウのモードは SHOTS_WINDOW_MODE で決める(オーバーレイの画面も撮るため)。
+ * ウィンドウのモードはSHOTS_WINDOW_MODEで決める(オーバーレイの画面も撮るため)。
  */
 const mode = process.env.SHOTS_WINDOW_MODE === 'overlay' ? 'overlay' : 'normal'
 const settings = {

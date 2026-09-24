@@ -1,7 +1,7 @@
 /**
- * Vial protocol 6 の生キーコード (u16) を構造体に落とす。
+ * Vial protocol 6の生キーコード(u16)を構造体に落とす。
  *
- * 範囲の根拠は docs/PROTOCOL.md §5(vial-gui の keycodes_v6.py を確認したもの)。
+ * 範囲の根拠はdocs/PROTOCOL.md §5(vial-guiのkeycodes_v6.pyを確認したもの)。
  */
 import { KEYCODE_MASKS, KEYCODE_NAMES } from './table.generated'
 
@@ -37,7 +37,7 @@ export type LayerOp = 'TO' | 'MO' | 'DF' | 'TG' | 'OSL' | 'TT' | 'PDF'
 export type Keycode =
   | { kind: 'none'; raw: number }
   | { kind: 'trns'; raw: number }
-  /** 名前テーブルで引けた単独キーコード(基本キー、メディア、QK_BOOT など)。 */
+  /** 名前テーブルで引けた単独キーコード(基本キー、メディア、QK_BOOTなど)。 */
   | { kind: 'basic'; raw: number; name: string }
   /** モディファイア付きキー。例: LSFT(KC_1) */
   | { kind: 'mods'; raw: number; mods: number; inner: Keycode }
@@ -51,7 +51,7 @@ export type Keycode =
   | { kind: 'oneShotMod'; raw: number; mods: number }
   | { kind: 'tapDance'; raw: number; index: number }
   | { kind: 'macro'; raw: number; index: number }
-  /** customKeycodes[index] に対応する USER キーコード。 */
+  /** customKeycodes[index]に対応するUSERキーコード。 */
   | { kind: 'user'; raw: number; index: number }
   | { kind: 'unknown'; raw: number }
 
@@ -64,7 +64,7 @@ function basic(raw: number): Keycode {
 /**
  * 生のキーコードを構造体に変換する。
  *
- * 判定順は QMK の範囲割り当てどおり。名前テーブルは、構造的に解釈できない値にだけ使う。
+ * 判定順はQMKの範囲割り当てどおり。名前テーブルは、構造的に解釈できない値にだけ使う。
  */
 export function decodeKeycode(raw: number): Keycode {
   const code = raw & 0xffff
@@ -116,9 +116,9 @@ const LAYER_OPS: ReadonlyArray<{ base: number; op: LayerOp }> = [
 ]
 
 /**
- * モディファイアのビット集合を Vial / QMK の表記に戻す。例: 0x02 -> "LSFT"
+ * モディファイアのビット集合をVial / QMKの表記に戻す。例: 0x02 -> "LSFT"
  *
- * `base` に QK_MOD_TAP を渡すと Mod-Tap 側の名前(LSFT_T など)になる。
+ * `base`にQK_MOD_TAPを渡すとMod-Tap側の名前(LSFT_Tなど)になる。
  */
 export function formatMods(mods: number, base = 0): string {
   const named = KEYCODE_MASKS[base | ((mods & 0x1f) << 8)]
@@ -127,7 +127,7 @@ export function formatMods(mods: number, base = 0): string {
 }
 
 /**
- * 構造体を Vial の .vil と同じ文字列表記に戻す。テストと画面のツールチップ用。
+ * 構造体をVialの.vilと同じ文字列表記に戻す。テストと画面のツールチップ用。
  */
 export function formatKeycode(kc: Keycode): string {
   switch (kc.kind) {
@@ -160,16 +160,16 @@ export function formatKeycode(kc: Keycode): string {
   }
 }
 
-/** Shift が含まれているか。JIS ラベルの Shift 面を出すのに使う。 */
+/** Shiftが含まれているか。JISラベルのShift面を出すのに使う。 */
 export function hasShift(mods: number): boolean {
   return (mods & MOD_SHIFT) !== 0
 }
 
 /**
- * 単独のモディファイアキー(KC_LCTL〜KC_RGUI、0xE0〜0xE7)なら、その MOD_* ビット。違えば 0。
- * 左右は区別しない(MOD_RIGHT は立てない)。
+ * 単独のモディファイアキー(KC_LCTL〜KC_RGUI、0xE0〜0xE7)なら、そのMOD_*ビット。違えば0。
+ * 左右は区別しない(MOD_RIGHTは立てない)。
  */
 export function modifierBitsOf(keycode: Keycode): number {
   if (keycode.kind !== 'basic' || keycode.raw < 0xe0 || keycode.raw > 0xe7) return 0
-  return 1 << ((keycode.raw - 0xe0) & 3) // Ctrl, Shift, Alt, GUI の順に並んでいる
+  return 1 << ((keycode.raw - 0xe0) & 3) // Ctrl, Shift, Alt, GUIの順に並んでいる
 }

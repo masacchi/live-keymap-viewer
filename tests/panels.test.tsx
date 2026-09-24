@@ -46,7 +46,7 @@ describe('LoadingPanel', () => {
 
 const noop = () => undefined
 
-/** Cornix と同じく、L0〜L4 に中身があり L5〜L9 は空、という一覧。 */
+/** Cornixと同じく、L0〜L4に中身がありL5〜L9は空、という一覧。 */
 function cornixLike(triggers: Partial<Record<number, LayerTrigger[]>> = {}): LayerSummary[] {
   return Array.from({ length: 10 }, (_, layer) => ({
     layer,
@@ -238,7 +238,7 @@ describe('オーバーレイの自動フェード', () => {
     expect(html).toContain('L0 で薄く')
     expect(html).toMatch(/type="checkbox"[^>]*checked/)
     // ふだんは畳んでおき、ポインタを乗せたら広げる
-    // (cn が display のぶつかりを解くので、flex は消えて hidden だけが残る)
+    // (cnがdisplayのぶつかりを解くので、flexは消えてhiddenだけが残る)
     expect(html).toMatch(/class="[^"]*hidden"/)
   })
 
@@ -343,7 +343,7 @@ describe('SettingsPanel', () => {
   })
 
   it('どのビルドが動いているかと、ログの置き場所を出す', () => {
-    // WSL で作って Windows に置くので、「直した版が動いているのか」が分からなくなる
+    // WSLで作ってWindowsに置くので、「直した版が動いているのか」が分からなくなる
     const html = panel({
       appInfo: {
         version: '0.1.0',
@@ -475,7 +475,7 @@ describe('SymbolFinder', () => {
 
   it('記号ごとに 1 枚のカードにし、記号と押すキーの組み合わせを対で出す', () => {
     const html = finder(new Map([['@', [route(2)]]]))
-    // 読み上げでも「@ は Space 長押し + W」と分かる
+    // 読み上げでも「@ はSpace長押し+ W」と分かる
     expect(html).toContain('aria-label="@: Space 長押し + W"')
     // レイヤーは番号ではなく行き方で言う
     expect(html).toMatch(/background-color:var\(--color-layer-2\)">Space 長押し</)

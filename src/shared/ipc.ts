@@ -1,7 +1,7 @@
 /**
- * 画面と、それを動かす側(Tauri の Rust: src-tauri/src/commands.rs)との約束。
+ * 画面と、それを動かす側(TauriのRust: src-tauri/src/commands.rs)との約束。
  *
- * 画面は `window.api`(RendererApi)だけを通して外と話す。Tauri への繋ぎは platform/tauri.ts。
+ * 画面は`window.api`(RendererApi)だけを通して外と話す。Tauriへの繋ぎはplatform/tauri.ts。
  */
 
 import type { GrantedDevice, Settings, SettingsPatch, WindowMode } from './settings'
@@ -15,7 +15,7 @@ export type {
   WindowMode
 } from './settings'
 
-/** 画面がログに残せる段。警告は Rust の側だけが使う。 */
+/** 画面がログに残せる段。警告はRustの側だけが使う。 */
 export type ReportLevel = 'info' | 'error'
 
 /** どのビルドが動いているか。設定パネルの隅に出す。 */
@@ -23,15 +23,15 @@ export interface AppInfo {
   version: string
   /** 画面を描いているものの名前と版(「WebView2 153.0.…」など)。 */
   runtime: string
-  /** ビルドした時刻(ISO)。dev では空。 */
+  /** ビルドした時刻(ISO)。devでは空。 */
   buildTime: string
-  /** 診断用のログの置き場所(設定と同じフォルダの log.txt)。 */
+  /** 診断用のログの置き場所(設定と同じフォルダのlog.txt)。 */
   logPath: string
 }
 
 /**
- * アプリの更新の状態(src-tauri/src/updater.rs の UpdateStatus)。
- * 更新はインストーラーで入れたときだけ使える。開発中や deploy:win で置いた exe は unsupported。
+ * アプリの更新の状態(src-tauri/src/updater.rsのUpdateStatus)。
+ * 更新はインストーラーで入れたときだけ使える。開発中やdeploy:winで置いたexeはunsupported。
  */
 export type UpdateStatus =
   | { kind: 'unsupported' }
@@ -46,7 +46,7 @@ export interface HidCandidate {
   productId: number
 }
 
-/** 画面が外(Tauri の Rust)に頼めること。画面が使うものだけを置く。 */
+/** 画面が外(TauriのRust)に頼めること。画面が使うものだけを置く。 */
 export interface RendererApi {
   /** 版・ビルド時刻・ログの置き場所。設定パネルに出す。 */
   getAppInfo(): Promise<AppInfo>
@@ -63,7 +63,7 @@ export interface RendererApi {
    */
   setLayerName(uid: string, layer: number, name: string): Promise<string[]>
   /**
-   * 一度許可したキーボードを忘れる(次の起動で自動では繋がなくなる)。VID / PID で指定する。
+   * 一度許可したキーボードを忘れる(次の起動で自動では繋がなくなる)。VID / PIDで指定する。
    * 残った並びを返す。いま繋いでいる接続はそのまま。
    */
   forgetDevice(vendorId: number, productId: number): Promise<GrantedDevice[]>
@@ -81,7 +81,7 @@ export interface RendererApi {
    *
    * オーバーレイは既定でクリックを透過させるので、そのままではボタンが押せない。
    * 画面の側でポインタが操作パネルの上に来たときだけ透過を切る
-   * (透過中は Rust がカーソルの位置を送ってくるので、mousemove として届く ― platform/tauri.ts)。
+   * (透過中はRustがカーソルの位置を送ってくるので、mousemoveとして届く ― platform/tauri.ts)。
    */
   setIgnoreMouseEvents(ignore: boolean): void
   /** ウィンドウを相対移動する。オーバーレイのつまみから使う。 */
@@ -97,27 +97,27 @@ export interface RendererApi {
    * 「キーボードを手放して」と言われたときのハンドラを登録する。戻り値を呼ぶと解除。
    *
    * モードを切り替えるとウィンドウごと作り直すので、新しいウィンドウの画面が
-   * 同じキーボードを開きに来る。raw HID の応答は同じデバイスを開いている全員に配られ、
-   * Vial コマンド(0xFE)は応答を照合できないので、両方が話していると新しい方の
-   * 読み込みが壊れる。手放したら hidReleased() で返事をする(Rust はそれを待って作る)。
+   * 同じキーボードを開きに来る。raw HIDの応答は同じデバイスを開いている全員に配られ、
+   * Vialコマンド(0xFE)は応答を照合できないので、両方が話していると新しい方の
+   * 読み込みが壊れる。手放したらhidReleased()で返事をする(Rustはそれを待って作る)。
    */
   onReleaseHid(handler: () => void): () => void
   hidReleased(): void
 
   /**
    * 画面側の出来事をログ(log.txt)に残す。
-   * 配布ビルドでは DevTools を開けないので、実機で何が起きたかはこれでしか分からない。
+   * 配布ビルドではDevToolsを開けないので、実機で何が起きたかはこれでしか分からない。
    * 残すのはまれにしか起きない区切りだけ(例外・接続が切れた理由・応答待ちからの復帰)。
    */
   report(level: ReportLevel, message: string, detail?: string): void
-  /** ログ(log.txt)を OS の既定のアプリで開く。 */
+  /** ログ(log.txt)をOSの既定のアプリで開く。 */
   openLog(): void
 
   /**
-   * 新しい版があるかを見る(GitHub のリリース)。force でなければ、少し前に確かめた結果を使う
+   * 新しい版があるかを見る(GitHubのリリース)。forceでなければ、少し前に確かめた結果を使う
    * ― モードを切り替えるたびにウィンドウごと作り直すので、そのたびに問い合わせないように。
    */
   checkForUpdate(force: boolean): Promise<UpdateStatus>
-  /** 新しい版を落として入れ替え、起動し直す。うまくいけばアプリが終わる。失敗したら reject。 */
+  /** 新しい版を落として入れ替え、起動し直す。うまくいけばアプリが終わる。失敗したらreject。 */
   applyUpdate(): Promise<void>
 }

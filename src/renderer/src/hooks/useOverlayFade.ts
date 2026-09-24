@@ -1,8 +1,8 @@
 /**
- * オーバーレイを薄くするか(「L0 で薄く」)と、それに合わせた後ろのぼかしの入り切り。
+ * オーバーレイを薄くするか(「L0で薄く」)と、それに合わせた後ろのぼかしの入り切り。
  *
  * オーバーレイは常に最前面なので、ふだんの入力のあいだも画面を覆う。ベースレイヤーのあいだは
- * 図を薄くし、ほかのレイヤーに入るか Shift を押したら濃く戻す。後ろのぼかし(OS が描く)も
+ * 図を薄くし、ほかのレイヤーに入るかShiftを押したら濃く戻す。後ろのぼかし(OSが描く)も
  * 薄くしているあいだは外す ― 薄くするのは後ろの画面を読むためなので。
  */
 import { useEffect } from 'react'
@@ -14,7 +14,7 @@ import { useEffect } from 'react'
 export const FADE_DELAY_MS = 300
 
 /**
- * オーバーレイの図を薄くするか。ベースレイヤーで、Shift も押しておらず、案内(アンロックや
+ * オーバーレイの図を薄くするか。ベースレイヤーで、Shiftも押しておらず、案内(アンロックや
  * エラー)も出ていないときだけ。ほかのレイヤーに入った瞬間に濃く戻す。
  */
 export function overlayFaded(state: {
@@ -34,8 +34,8 @@ export function overlayFaded(state: {
 }
 
 /**
- * 薄くしているかを main に伝え、後ろのぼかしを合わせる。図が薄くなり始めるのは FADE_DELAY_MS 後
- * (App の transition)なので、外すのも同じだけ待つ。濃く戻すときはすぐ入れる。
+ * 薄くしているかをmainに伝え、後ろのぼかしを合わせる。図が薄くなり始めるのはFADE_DELAY_MS後
+ * (Appのtransition)なので、外すのも同じだけ待つ。濃く戻すときはすぐ入れる。
  */
 export function useOverlayBlurSync(overlay: boolean, faded: boolean): void {
   useEffect(() => {

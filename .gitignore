@@ -7,8 +7,8 @@ dist-electron/
 .DS_Store
 *.zip
 
-# tsc --build の中間ファイル
+# tsc --buildの中間ファイル
 *.tsbuildinfo
 
-# npm run shots の出力
+# npm run shotsの出力
 .shots/

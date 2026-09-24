@@ -1,13 +1,13 @@
 /**
  * KLE(keyboard-layout-editor)形式のパーサ。
  *
- * vial-gui の src/main/python/kle_serial.py(ijprest/kle-serial の移植)と
- * 同じ挙動になるように書いてある。ラベルの並べ替え表や、rx / ry がクラスタ原点を
- * リセットする点まで合わせてある。docs/PROTOCOL.md §4 を参照。
+ * vial-guiのsrc/main/python/kle_serial.py(ijprest/kle-serialの移植)と
+ * 同じ挙動になるように書いてある。ラベルの並べ替え表や、rx / ryがクラスタ原点を
+ * リセットする点まで合わせてある。docs/PROTOCOL.md §4を参照。
  */
 
 export interface KleKey {
-  /** 並べ替え後のラベル 12 個。0 が "row,col"、4 が "e"(エンコーダー)、8 がレイアウト選択。 */
+  /** 並べ替え後のラベル12個。0が"row,col"、4が"e"(エンコーダー)、8がレイアウト選択。 */
   labels: (string | null)[]
   x: number
   y: number
@@ -28,13 +28,13 @@ export interface KleKeyboard {
 /** align(`{"a": n}`)ごとの、入力順 → 出力位置の対応表。 */
 const LABEL_MAP: ReadonlyArray<ReadonlyArray<number>> = [
   [0, 6, 2, 8, 9, 11, 3, 5, 1, 4, 7, 10], // 0 = 中央寄せなし
-  [1, 7, -1, -1, 9, 11, 4, -1, -1, -1, -1, 10], // 1 = x 中央
-  [3, -1, 5, -1, 9, 11, -1, -1, 4, -1, -1, 10], // 2 = y 中央
-  [4, -1, -1, -1, 9, 11, -1, -1, -1, -1, -1, 10], // 3 = x, y 中央
-  [0, 6, 2, 8, 10, -1, 3, 5, 1, 4, 7, -1], // 4 = front 中央(既定)
-  [1, 7, -1, -1, 10, -1, 4, -1, -1, -1, -1, -1], // 5 = front, x 中央
-  [3, -1, 5, -1, 10, -1, -1, -1, 4, -1, -1, -1], // 6 = front, y 中央
-  [4, -1, -1, -1, 10, -1, -1, -1, -1, -1, -1, -1] // 7 = front, x, y 中央
+  [1, 7, -1, -1, 9, 11, 4, -1, -1, -1, -1, 10], // 1 = x中央
+  [3, -1, 5, -1, 9, 11, -1, -1, 4, -1, -1, 10], // 2 = y中央
+  [4, -1, -1, -1, 9, 11, -1, -1, -1, -1, -1, 10], // 3 = x, y中央
+  [0, 6, 2, 8, 10, -1, 3, 5, 1, 4, 7, -1], // 4 = front中央(既定)
+  [1, 7, -1, -1, 10, -1, 4, -1, -1, -1, -1, -1], // 5 = front, x中央
+  [3, -1, 5, -1, 10, -1, -1, -1, 4, -1, -1, -1], // 6 = front, y中央
+  [4, -1, -1, -1, 10, -1, -1, -1, -1, -1, -1, -1] // 7 = front, x, y中央
 ]
 
 function reorderLabels(labels: string[], align: number): (string | null)[] {
@@ -51,7 +51,7 @@ function reorderLabels(labels: string[], align: number): (string | null)[] {
 
 type KleProps = Record<string, unknown>
 
-/** KLE の行配列(定義 JSON の `layouts.keymap`)をキー一覧に展開する。 */
+/** KLEの行配列(定義JSONの`layouts.keymap`)をキー一覧に展開する。 */
 export function parseKle(rows: unknown[]): KleKeyboard {
   const keys: KleKey[] = []
   let align = 4

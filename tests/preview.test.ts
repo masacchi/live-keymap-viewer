@@ -1,4 +1,4 @@
-/** 図のプレビューの規則(hooks/usePreview.ts の純粋な部分)。 */
+/** 図のプレビューの規則(hooks/usePreview.tsの純粋な部分)。 */
 import { describe, expect, it } from 'vitest'
 import {
   NO_PREVIEW,

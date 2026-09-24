@@ -18,7 +18,7 @@ export function PreviewNotice({
   name?: string
   pinned: boolean
   onExit: () => void
-  /** 「@ は L2 + W」のような案内。あれば「プレビュー中」の代わりにこれを出す(記号の出し方)。 */
+  /** 「@ はL2 + W」のような案内。あれば「プレビュー中」の代わりにこれを出す(記号の出し方)。 */
   hint?: ReactNode
 }): JSX.Element {
   return (

@@ -25,7 +25,7 @@ describe('parseKle', () => {
   it('rx / ry がクラスタ原点をリセットする', () => {
     const { keys } = parseKle([['a'], [{ r: 15, rx: 5, ry: 4 }, 'b'], ['c']])
     expect(keys[1]).toMatchObject({ x: 5, y: 4, rotationAngle: 15, rotationX: 5, rotationY: 4 })
-    // 次の行はクラスタ原点の x に戻り、y だけ 1 進む
+    // 次の行はクラスタ原点のxに戻り、yだけ1進む
     expect(keys[2]).toMatchObject({ x: 5, y: 5, rotationAngle: 15 })
   })
 
@@ -34,7 +34,7 @@ describe('parseKle', () => {
   })
 
   it('align に合わせてラベルを並べ替える', () => {
-    // 既定 align=4 では入力位置 9 が labels[4] になる(エンコーダーの目印)
+    // 既定align=4では入力位置9がlabels[4]になる(エンコーダーの目印)
     const { keys } = parseKle([['0,0\n\n\n\n\n\n\n\n\ne']])
     expect(keys[0].labels[0]).toBe('0,0')
     expect(keys[0].labels[4]).toBe('e')
@@ -45,9 +45,9 @@ describe('buildGeometry (Cornix LP の実定義)', () => {
   const geometry = buildGeometry(definition.layouts.keymap, definition.matrix)
 
   it('matrix のキーとエンコーダーを分けて取り出す', () => {
-    // 8 行 7 列の matrix のうち、実際に配線されている 50 キーだけが KLE に載っている
-    expect(geometry.keys).toHaveLength(50) // 片手 25 キー × 2
-    expect(geometry.encoders).toHaveLength(4) // 2 個 × 2 方向
+    // 8行7列のmatrixのうち、実際に配線されている50キーだけがKLEに載っている
+    expect(geometry.keys).toHaveLength(50) // 片手25キー × 2
+    expect(geometry.encoders).toHaveLength(4) // 2個 × 2方向
     expect(new Set(geometry.encoders.map((e) => e.index))).toEqual(new Set([0, 1]))
   })
 

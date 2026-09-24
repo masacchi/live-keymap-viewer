@@ -1,11 +1,11 @@
 /**
- * キーボードとの接続(session/keyboardConnection.ts)を React につなぐ薄いフック。
+ * キーボードとの接続(session/keyboardConnection.ts)をReactにつなぐ薄いフック。
  *
- * デバイスの選び方・セッションの差し替え・切れたときの繋ぎ直しは KeyboardConnection が持つ。
- * ここでやるのは、状態を React に渡すことだけ。
+ * デバイスの選び方・セッションの差し替え・切れたときの繋ぎ直しはKeyboardConnectionが持つ。
+ * ここでやるのは、状態をReactに渡すことだけ。
  *
  * キーマップの読み直しは手動(「キーマップを読み直す」)だけにしてある。以前はウィンドウに
- * フォーカスが戻るたびに読み直していたが、BT では 1 回 30 秒以上かかり、そのあいだ
+ * フォーカスが戻るたびに読み直していたが、BTでは1回30秒以上かかり、そのあいだ
  * 「読み直し中…」が出続ける。繋いだときに読んでいる(キャッシュなら裏で確かめている)ので、
  * 戻るたびに読む必要は無い、と判断した。
  */
@@ -27,10 +27,10 @@ const definitionCache = new LocalStorageDefinitionCache()
 const keymapCache = new LocalStorageKeymapCache()
 
 /**
- * 接続の区切りを main のログに残す見張り。**切れた理由は、実機では後から追えない**ので。
+ * 接続の区切りをmainのログに残す見張り。**切れた理由は、実機では後から追えない**ので。
  *
  * 残すのは「エラーになった」「応答待ちに入った / 戻った(何秒詰まったか)」だけ。
- * 応答待ちは、ウィンドウのドラッグ中に main が止まると出る(keyboardSession.ts の STALL_LIMIT_MS)ので、
+ * 応答待ちは、ウィンドウのドラッグ中にmainが止まると出る(keyboardSession.tsのSTALL_LIMIT_MS)ので、
  * 切断まで至ったのか、詰まって戻っただけなのかが、これで区別できる。
  */
 function watchForLog(next: (state: ConnectionState) => void): (state: ConnectionState) => void {
@@ -54,17 +54,17 @@ function watchForLog(next: (state: ConnectionState) => void): (state: Connection
 }
 
 /**
- * @param tappingTerm 長押しと見なすまでの時間(設定)。変わったら動いている接続にもすぐ効かせる
+ * @param tappingTerm長押しと見なすまでの時間(設定)。変わったら動いている接続にもすぐ効かせる
  */
 export function useVialKeyboard(tappingTerm?: number) {
   const [state, setState] = useState(IDLE)
   const connectionRef = useRef<KeyboardConnection | null>(null)
 
-  // 接続は effect の中で作って、片付けで捨てる。StrictMode では開発時に 2 回走るが、
-  // 1 回目のものは dispose されるので、HID のイベントもタイマーも残らない
+  // 接続はeffectの中で作って、片付けで捨てる。StrictModeでは開発時に2回走るが、
+  // 1回目のものはdisposeされるので、HIDのイベントもタイマーも残らない
   useEffect(() => {
     const connection = new KeyboardConnection({
-      // Tauri では Rust の hidapi、ブラウザ(npm run dev)では WebHID
+      // TauriではRustのhidapi、ブラウザ(npm run dev)ではWebHID
       hid: nativeHid ?? navigator.hid ?? null,
       definitionCache,
       keymapCache,
@@ -85,10 +85,10 @@ export function useVialKeyboard(tappingTerm?: number) {
   }, [tappingTerm])
 
   /**
-   * main から「キーボードを手放して」と言われたら、セッションを閉じて返事をする。
-   * モードの切り替えでこのウィンドウが作り直される直前に来る。新しいウィンドウの renderer と
-   * 同時に同じ HID を開いていると、応答が混ざって新しい方の読み込みが壊れる
-   * (session/keyboardConnection.ts の release)。
+   * mainから「キーボードを手放して」と言われたら、セッションを閉じて返事をする。
+   * モードの切り替えでこのウィンドウが作り直される直前に来る。新しいウィンドウのrendererと
+   * 同時に同じHIDを開いていると、応答が混ざって新しい方の読み込みが壊れる
+   * (session/keyboardConnection.tsのrelease)。
    */
   useEffect(
     () =>

@@ -1,4 +1,4 @@
-// Tauri で動いているなら window.api と HID を用意する。部品より先に読み込むこと
+// Tauriで動いているならwindow.apiとHIDを用意する。部品より先に読み込むこと
 import './platform/tauri'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -7,8 +7,8 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { reportError } from './lib/report'
 import './styles.css'
 
-// React の外で起きたもの(非同期の失敗など)も main のログに残す。
-// 配布ビルドでは DevTools を開けないので、実機で何が起きたかはこれでしか分からない
+// Reactの外で起きたもの(非同期の失敗など)もmainのログに残す。
+// 配布ビルドではDevToolsを開けないので、実機で何が起きたかはこれでしか分からない
 window.addEventListener('error', (event) => {
   reportError(event.message, event.error instanceof Error ? event.error.stack : undefined)
 })

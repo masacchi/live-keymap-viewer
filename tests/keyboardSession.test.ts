@@ -111,7 +111,7 @@ describe('KeyboardSession: アンロック', () => {
       { row: 0, col: 0 },
       { row: 0, col: 1 }
     ])
-    // unlock_start が実際に送られている
+    // unlock_startが実際に送られている
     expect(mock.requests.some((r) => r[0] === 0xfe && r[1] === 0x06)).toBe(true)
     await session.dispose()
   })
@@ -148,7 +148,7 @@ describe('KeyboardSession: アンロック', () => {
     await waitFor(session, (s) => s.status === 'unlocking')
     const startsBefore = mock.requests.filter(isUnlockStart).length
 
-    mock.abortUnlock() // 挿し直しや vial_lock の代わり
+    mock.abortUnlock() // 挿し直しやvial_lockの代わり
     await until(() => mock.requests.filter(isUnlockStart).length > startsBefore)
 
     // やり直したあとも、押し続ければアンロックできる
@@ -165,7 +165,7 @@ describe('KeyboardSession: アンロック', () => {
     await waitFor(session, (s) => s.status === 'unlocking')
     const before = mock.requests.length
     await session.reload()
-    // keymap バッファ(0x12)は読みに行っていない
+    // keymapバッファ(0x12)は読みに行っていない
     expect(mock.requests.slice(before).some((r) => r[0] === 0x12)).toBe(false)
     await session.dispose()
   })
@@ -184,14 +184,14 @@ describe('KeyboardSession: ポーリング', () => {
     const { session } = await readySession()
     let notified = 0
     session.subscribe(() => notified++)
-    const afterSubscribe = notified // subscribe 直後の 1 回
+    const afterSubscribe = notified // subscribe直後の1回
     await new Promise((r) => setTimeout(r, 50)) // 何度もポーリングさせる
     expect(notified).toBe(afterSubscribe)
     await session.dispose()
   })
 
   it('単発の取りこぼしでは落とさず、応答が戻れば黙って続ける', async () => {
-    // OS やファームの省電力で応答が一瞬詰まることがある。以前はこれで切断していた
+    // OSやファームの省電力で応答が一瞬詰まることがある。以前はこれで切断していた
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     let failuresLeft = 3
@@ -216,8 +216,8 @@ describe('KeyboardSession: ポーリング', () => {
   })
 
   it('応答が返らないあいだは粘り、限界を超えたら切る', async () => {
-    // Windows ではウィンドウの枠をドラッグしているあいだ main のメッセージループが止まり、
-    // WebHID の往復が返らない。数秒で切っていたので、ドラッグのたびに繋ぎ直していた
+    // Windowsではウィンドウの枠をドラッグしているあいだmainのメッセージループが止まり、
+    // WebHIDの往復が返らない。数秒で切っていたので、ドラッグのたびに繋ぎ直していた
     const opts = options()
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, opts)
@@ -251,7 +251,7 @@ describe('KeyboardSession: ポーリング', () => {
     expect(state.error).toBe('ケーブルが抜けた')
     expect(state.stalled).toBe(false)
 
-    // 止まっている: 以後 matrix を読みに行かない
+    // 止まっている: 以後matrixを読みに行かない
     const before = mock.requests.length
     await new Promise((r) => setTimeout(r, 30))
     expect(mock.requests.length).toBe(before)
@@ -260,7 +260,7 @@ describe('KeyboardSession: ポーリング', () => {
 })
 
 describe('KeyboardSession: キャッシュから始める', () => {
-  /** 定義とキーマップのキャッシュをメモリに持つ(localStorage の代わり)。 */
+  /** 定義とキーマップのキャッシュをメモリに持つ(localStorageの代わり)。 */
   function memoryCaches() {
     const definitions = new Map<string, { size: number; definition: VialDefinition }>()
     const keymaps = new Map<string, CachedKeymap>()
@@ -284,7 +284,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     }
   }
 
-  /** キャッシュを満たすために 1 回繋いで切る。 */
+  /** キャッシュを満たすために1回繋いで切る。 */
   async function warmUp(caches: ReturnType<typeof memoryCaches>): Promise<void> {
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, { ...options(), ...caches })
@@ -298,7 +298,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     mock.requests.filter((request) => request[0] === 0x12).length
 
   it('2 回目は読まずに図を出し、裏で読み直して確かめる', async () => {
-    // モードの切り替えや繋ぎ直しのたびに 70 往復待たされていた(BT では 30 秒)
+    // モードの切り替えや繋ぎ直しのたびに70往復待たされていた(BTでは30秒)
     const caches = memoryCaches()
     await warmUp(caches)
 
@@ -321,7 +321,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
     await warmUp(caches)
 
     const mock = new MockTransport({ unlocked: true })
-    mock.setKeycode(0, 0, 1, 0x001d) // 繋いでいない間に Vial で Q → Z に変えた
+    mock.setKeycode(0, 0, 1, 0x001d) // 繋いでいない間にVialでQ → Zに変えた
     const session = new KeyboardSession(mock, { ...options(), ...caches })
     await session.start()
     await waitFor(session, (s) => s.status === 'ready')
@@ -352,7 +352,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
 
 describe('KeyboardSession: 読み直し', () => {
   it('読み直しが時間切れでも、セッションは落とさず前のキーマップで続ける', async () => {
-    // ウィンドウに戻った拍子(フォーカスで自動の読み直し)に 1 回詰まっただけで切れていた
+    // ウィンドウに戻った拍子(フォーカスで自動の読み直し)に1回詰まっただけで切れていた
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
@@ -393,8 +393,8 @@ describe('KeyboardSession: 読み直し', () => {
   })
 
   it('読み直しのあいだもポーリングを止めず、押下を出し続ける', async () => {
-    // 以前は読み終わるまで止めていた。BT(68 往復 × 約 470ms)ではウィンドウに戻るたびに
-    // 30 秒ほど押下が出なくなり、繋ぎ直しているように見えた
+    // 以前は読み終わるまで止めていた。BT(68往復 × 約470ms)ではウィンドウに戻るたびに
+    // 30秒ほど押下が出なくなり、繋ぎ直しているように見えた
     const { session, mock } = await readySession()
     let resume!: () => void
     const gate = new Promise<void>((resolve) => {
@@ -430,7 +430,7 @@ describe('KeyboardSession: 読み直し', () => {
 
   it('キーマップが変わっても、TG で固定したレイヤーは残る(キーボード側は固定したまま)', async () => {
     const mock = new MockTransport({ unlocked: true })
-    mock.setKeycode(0, 0, 2, 0x5261) // L0 の W を TG(1) に
+    mock.setKeycode(0, 0, 2, 0x5261) // L0のWをTG(1)に
     const { session } = await readySession(mock)
 
     mock.press(0, 2)
@@ -439,7 +439,7 @@ describe('KeyboardSession: 読み直し', () => {
     await waitFor(session, (s) => s.layers?.held.size === 0)
 
     const engineBefore = session.state.engine
-    mock.setKeycode(0, 0, 1, 0x001d) // 別のところを Q → Z(エンジンを作り直させる)
+    mock.setKeycode(0, 0, 1, 0x001d) // 別のところをQ → Z(エンジンを作り直させる)
     await session.reload()
     expect(session.state.engine).not.toBe(engineBefore)
     expect(session.state.layers?.toggledLayers).toEqual([1])
@@ -468,7 +468,7 @@ describe('KeyboardSession: 読み直し', () => {
     const { session, mock } = await readySession()
     const before = mock.requests.filter((r) => r[0] === 0x12).length
     await Promise.all([session.reload(), session.reload(), session.reload()])
-    // 10 レイヤー × 8 × 7 × 2 バイト = 1120 バイト。28 バイトずつなので 40 回で 1 周
+    // 10レイヤー × 8 × 7 × 2バイト = 1120バイト。28バイトずつなので40回で1周
     expect(mock.requests.filter((r) => r[0] === 0x12).length - before).toBe(40)
     await session.dispose()
   })
@@ -484,7 +484,7 @@ describe('KeyboardSession: 読み直し', () => {
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
       // matrix(0x02 0x03)だけを数える。読み直しはポーリングと並んで走り、レイアウトオプション
-      // (0x02 0x02)も 0x02 で始まる。モックはキューを持たないので、それとは重なって見える
+      // (0x02 0x02)も0x02で始まる。モックはキューを持たないので、それとは重なって見える
       if (request[0] !== 0x02 || request[1] !== 0x03) return original(request, opts)
       inFlight++
       maxInFlight = Math.max(maxInFlight, inFlight)
@@ -520,7 +520,7 @@ describe('KeyboardSession: 破棄', () => {
   })
 
   it('応答待ちの途中で破棄しても、戻ってきた応答で状態を書き換えない', async () => {
-    // 1 往復 15ms かかるデバイス。破棄の時点で matrix の要求が飛んでいる
+    // 1往復15msかかるデバイス。破棄の時点でmatrixの要求が飛んでいる
     const mock = new MockTransport({ unlocked: true, latencyMs: 15 })
     const session = new KeyboardSession(mock, options())
     await session.start()
@@ -531,7 +531,7 @@ describe('KeyboardSession: 破棄', () => {
     await session.dispose()
     await new Promise((r) => setTimeout(r, 60))
     expect(session.state).toBe(frozen) // 同じオブジェクトのまま
-    expect(session.state.status).toBe('ready') // error にもならない
+    expect(session.state.status).toBe('ready') // errorにもならない
   })
 
   it('二重に破棄しても安全', async () => {

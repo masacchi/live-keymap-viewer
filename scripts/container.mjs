@@ -4,13 +4,13 @@
  *   node scripts/container.mjs <コマンド> [引数…]
  *   npm run container -- bash                      # コンテナの中でシェルを開く
  *
- * Rust のビルド(Windows 向けのクロスビルドを含む)に要るものはコンテナにだけ入れてある。
- * WSL(ホスト)から `npm run package:win` などを打ったときに、ここを通して中で動かす。
- * 一方、Windows 側に置く(deploy-win.mjs)のは WSL からしかできない(powershell.exe を呼ぶ)。
+ * Rustのビルド(Windows向けのクロスビルドを含む)に要るものはコンテナにだけ入れてある。
+ * WSL(ホスト)から`npm run package:win`などを打ったときに、ここを通して中で動かす。
+ * 一方、Windows側に置く(deploy-win.mjs)のはWSLからしかできない(powershell.exeを呼ぶ)。
  *
- * すでにコンテナの中(devcontainer で開いている)や CI では、そのまま動かす。
- * イメージの名前は Dockerfile の中身から決め、無ければ作る(Dockerfile を直したら作り直される)。
- * 使うのは podman。Docker なら CONTAINER_ENGINE=docker。
+ * すでにコンテナの中(devcontainerで開いている)やCIでは、そのまま動かす。
+ * イメージの名前はDockerfileの中身から決め、無ければ作る(Dockerfileを直したら作り直される)。
+ * 使うのはpodman。DockerならCONTAINER_ENGINE=docker。
  */
 
 import { spawnSync } from 'node:child_process'
@@ -37,7 +37,7 @@ if (!command) {
   process.exit(1)
 }
 
-// コンテナの中(Dockerfile で立てている)と CI(ツールを直に入れている)では、そのまま動かす
+// コンテナの中(Dockerfileで立てている)とCI(ツールを直に入れている)では、そのまま動かす
 if (process.env.LKV_DEVCONTAINER === '1' || process.env.CI) {
   process.exit(run(command, args))
 }
@@ -64,7 +64,7 @@ if (spawnSync(engine, ['image', 'inspect', image], { stdio: 'ignore' }).status !
 
 const user =
   engine === 'podman'
-    ? // ホストの自分の uid をコンテナの ubuntu(uid 1000)に合わせる(devcontainer.json と同じ)
+    ? // ホストの自分のuidをコンテナのubuntu(uid 1000)に合わせる(devcontainer.jsonと同じ)
       ['--userns=keep-id']
     : [`--user=${process.getuid()}:${process.getgid()}`]
 const cwd = process.cwd().startsWith(ROOT) ? process.cwd() : ROOT
@@ -77,7 +77,7 @@ process.exit(
     // ホストと同じパスに置く。ビルドの出力や、エラーに出るパスがそのまま通じるように
     `--volume=${ROOT}:${ROOT}`,
     `--workdir=${cwd}`,
-    // crate と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK は作り直しても残す
+    // crateと、cargo-xwinが落としてくるMSVCのCRT / Windows SDKは作り直しても残す
     '--volume=lkv-cargo-registry:/home/ubuntu/.cargo/registry',
     '--volume=lkv-xwin-cache:/home/ubuntu/.cache/cargo-xwin',
     image,

@@ -1,4 +1,4 @@
-/** キーボード全体の SVG。物理配置は定義の KLE から来るので固定データは持たない。 */
+/** キーボード全体のSVG。物理配置は定義のKLEから来るので固定データは持たない。 */
 import { type JSX, useMemo } from 'react'
 import type { LayerEngine, LayerSnapshot } from '../engine/layerState'
 import type { KeyboardSnapshot } from '../hid/vial'
@@ -29,18 +29,18 @@ export interface KeyboardViewProps {
    * 値をたどる。押しているキーの表示は実際の状態のまま。
    */
   previewLayer?: number | null
-  /** レイヤーの名前(番号順、'' は名前なし)。長押しの色帯などに使う。 */
+  /** レイヤーの名前(番号順、''は名前なし)。長押しの色帯などに使う。 */
   layerNames?: readonly string[]
   /**
-   * 縁取るキー。プレビュー中に、そのレイヤーに入るキー(Space など)を示すのに使う。
+   * 縁取るキー。プレビュー中に、そのレイヤーに入るキー(Spaceなど)を示すのに使う。
    * 色は図に出しているレイヤーの色。
    */
   highlightKeys?: ReadonlyArray<{ row: number; col: number }>
-  /** 光らせるキー。記号の出し方で選んだ記号を打つのに押すキー(Shift も含む)。 */
+  /** 光らせるキー。記号の出し方で選んだ記号を打つのに押すキー(Shiftも含む)。 */
   flashKeys?: ReadonlyArray<{ row: number; col: number }>
 }
 
-/** ノブの割り当て文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
+/** ノブの割り当て文字の大きさ(px)。styles.cssの.encoder-labelと揃える。 */
 const ENCODER_FONT = 13
 
 export function KeyboardView({
@@ -57,7 +57,7 @@ export function KeyboardView({
   highlightKeys = [],
   flashKeys = []
 }: KeyboardViewProps): JSX.Element {
-  // Shift を押しているあいだは、Shift で入る文字の方を目立たせる
+  // Shiftを押しているあいだは、Shiftで入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
 
   // 図に出すレイヤーの解決に使う状態。プレビュー中は、そのレイヤーと既定レイヤーだけが有効な体にする
@@ -84,7 +84,7 @@ export function KeyboardView({
     [geometry.keys, layoutOptions]
   )
 
-  // ノブの割り当ては "↑" だけだと何の ↑ か分からないので、短いものには補足を足す
+  // ノブの割り当ては"↑"だけだと何の ↑ か分からないので、短いものには補足を足す
   const labelOf = useMemo(
     () =>
       (raw: number): string => {
@@ -159,7 +159,7 @@ export function KeyboardView({
       style={{ '--trigger': layerColor(view.displayLayer) } as React.CSSProperties}
       aria-label={messages.keyboardView.label(view.displayLayer, layerNames[view.displayLayer])}
     >
-      {/* 回転は matrix に出ないので押下表示はできない。割り当てだけ出す */}
+      {/* 回転はmatrixに出ないので押下表示はできない。割り当てだけ出す */}
       {strip?.items.map((item) => (
         <g key={`enc-${item.index}`} className="encoder-item">
           <text className="encoder-label" x={item.x} y={strip.cwY}>
@@ -176,9 +176,9 @@ export function KeyboardView({
         const id = keyId(physical.row, physical.col)
         const resolved = engine.resolveKey(physical.row, physical.col, view)
         const held = layers.held.get(id)
-        // 押しているキーは、押した瞬間に確定したキーコードで描く(QMK と同じく、離すまで変わらない)。
-        // 表示中のレイヤーで引き直すと、TD で L4 に入ったとき L4 のその位置(TD ではない)を引いてしまい、
-        // 長押しレイヤーが分からず「Lnull 長押し中」になっていた
+        // 押しているキーは、押した瞬間に確定したキーコードで描く(QMKと同じく、離すまで変わらない)。
+        // 表示中のレイヤーで引き直すと、TDでL4に入ったときL4のその位置(TDではない)を引いてしまい、
+        // 長押しレイヤーが分からず「Lnull長押し中」になっていた
         const keycode = held?.keycode ?? resolved.effective
         const label = labelForKeycode(keycode, labelMode, labelContext)
         const holdLayer = held ? held.holdLayer : holdLayerOf(keycode, snapshot.tapDance)

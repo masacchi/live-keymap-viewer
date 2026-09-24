@@ -1,9 +1,9 @@
 /**
- * パース済み KLE → 描画に使う物理キー配置。
+ * パース済みKLE → 描画に使う物理キー配置。
  *
- * ラベルの意味づけは vial-gui の keyboard_comm.py reload_layout と同じ:
+ * ラベルの意味づけはvial-guiのkeyboard_comm.py reload_layoutと同じ:
  *   labels[0] = "row,col"(通常キー)/ "encoder_idx,direction"(エンコーダー)
- *   labels[4] = "e" ならエンコーダー
+ *   labels[4] = "e"ならエンコーダー
  *   labels[8] = "layout_index,layout_option"
  */
 import { type KleKey, parseKle } from './kle'
@@ -11,7 +11,7 @@ import { type KleKey, parseKle } from './kle'
 export interface PhysicalKey {
   row: number
   col: number
-  /** 単位は 1u。KLE の座標そのまま。 */
+  /** 単位は1u。KLEの座標そのまま。 */
   x: number
   y: number
   width: number
@@ -46,19 +46,19 @@ export interface Bounds {
 export interface KeyboardGeometry {
   keys: PhysicalKey[]
   encoders: EncoderKey[]
-  /** キーとエンコーダーを含めた、回転後の外接矩形(1u 単位)。 */
+  /** キーとエンコーダーを含めた、回転後の外接矩形(1u単位)。 */
   bounds: Bounds
   /**
    * キーだけの外接矩形。
    *
    * 定義によっては、エンコーダーが実際の物理位置ではなく図の端に並べて
-   * 置かれていることがある(Cornix LP は右端にまとめて置いてある)。
+   * 置かれていることがある(Cornix LPは右端にまとめて置いてある)。
    * それを含めて枠を取ると横に間延びするので、描画はこちらを使う。
    */
   keyBounds: Bounds
 }
 
-/** `row,col` を 1 本の文字列キーにする。Map のキーに使う。 */
+/** `row,col`を1本の文字列キーにする。Mapのキーに使う。 */
 export function keyId(row: number, col: number): string {
   return `${row},${col}`
 }
@@ -102,7 +102,7 @@ function geometryOf(
   }
 }
 
-/** 回転を考慮した、キー 1 個の四隅。 */
+/** 回転を考慮した、キー1個の四隅。 */
 export function keyCorners(
   key: Pick<
     PhysicalKey,
@@ -119,10 +119,10 @@ export function keyCorners(
 }
 
 /**
- * 定義 JSON の `layouts.keymap` から物理配置を組み立てる。
+ * 定義JSONの`layouts.keymap`から物理配置を組み立てる。
  *
- * `matrix` を渡すと、宣言された行列サイズをはみ出すキーを検出してエラーにする
- * (vial-gui の reload_keymap と同じチェック)。
+ * `matrix`を渡すと、宣言された行列サイズをはみ出すキーを検出してエラーにする
+ * (vial-guiのreload_keymapと同じチェック)。
  */
 export function buildGeometry(
   kleRows: unknown[],
@@ -193,7 +193,7 @@ function boundsOf(items: ReadonlyArray<Parameters<typeof keyCorners>[0]>): Bound
 
 /**
  * レイアウト選択で今は出ないキーを落とす。
- * `options[i]` がレイアウト i で選ばれているオプション番号。
+ * `options[i]`がレイアウトiで選ばれているオプション番号。
  */
 export function visibleKeys(keys: PhysicalKey[], options: number[]): PhysicalKey[] {
   return keys.filter(

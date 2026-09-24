@@ -1,7 +1,7 @@
 /**
  * 図の代わり・図の上に出す、接続まわりの表示(エラーの帯と、未接続の画面)。
  *
- * どちらもオーバーレイで押せるように data-interactive を付ける(OverlayControls)。
+ * どちらもオーバーレイで押せるようにdata-interactiveを付ける(OverlayControls)。
  */
 import type { JSX } from 'react'
 import { messages } from '../messages'

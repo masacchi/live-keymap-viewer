@@ -1,16 +1,16 @@
 /**
  * モックを動かして、状態ごとに画面を撮る。
  *
- *   npm run shots                               … .shots/latest に撮る
+ *   npm run shots                               … .shots/latestに撮る
  *   npm run shots -- --out .shots/before        … 撮る先を変える
  *   npm run shots -- --compare .shots/before    … 撮ったあと、前の結果と画素で比べる
  *
- * WSL からは実機が見えないので、見た目の変更はこれで確かめる。リファクタの前後で撮って
- * --compare すれば、見た目が変わっていないことを画素単位で確かめられる。撮るあいだは
- * アニメーションと transition を止めるので、同じコードなら毎回同じ絵になる。
+ * WSLからは実機が見えないので、見た目の変更はこれで確かめる。リファクタの前後で撮って
+ * --compareすれば、見た目が変わっていないことを画素単位で確かめられる。撮るあいだは
+ * アニメーションとtransitionを止めるので、同じコードなら毎回同じ絵になる。
  *
- * 画面は出さない(オフスクリーンで描いて撮る)。Windows 側で動いているアプリには触らない。
- * 撮る場面は electron.mjs の SCENES。
+ * 画面は出さない(オフスクリーンで描いて撮る)。Windows側で動いているアプリには触らない。
+ * 撮る場面はelectron.mjsのSCENES。
  */
 
 import { spawn } from 'node:child_process'
@@ -30,7 +30,7 @@ const out = resolve(values.out)
 rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 
-// npm run dev が 5173 を使っていても撮れるように、空いている番号にずらす(vite.config.ts は固定)
+// npm run devが5173を使っていても撮れるように、空いている番号にずらす(vite.config.tsは固定)
 const server = await createServer({
   clearScreen: false,
   logLevel: 'error',
@@ -40,7 +40,7 @@ await server.listen()
 const url = server.resolvedUrls?.local[0]
 if (!url) throw new Error('開発サーバーの URL が取れなかった')
 
-/** Electron を 1 回動かす。ツールの中では ELECTRON_RUN_AS_NODE が立っていることがあるので外す。 */
+/** Electronを1回動かす。ツールの中ではELECTRON_RUN_AS_NODEが立っていることがあるので外す。 */
 function electron(args) {
   const env = { ...process.env, SHOTS_URL: url }
   delete env.ELECTRON_RUN_AS_NODE
@@ -49,7 +49,7 @@ function electron(args) {
       stdio: ['ignore', 'inherit', 'pipe'],
       env
     })
-    // GPU や D-Bus の警告は WSL では毎回出て読めなくなるので、こちらの出したものだけ通す
+    // GPUやD-Busの警告はWSLでは毎回出て読めなくなるので、こちらの出したものだけ通す
     child.stderr.on('data', (chunk) => {
       for (const line of String(chunk).split('\n'))
         if (line.startsWith('[shots]')) console.error(line)

@@ -1,14 +1,14 @@
 /**
- * Tauri(デスクトップ版)で動いているときに、`window.api` と HID を用意する。
+ * Tauri(デスクトップ版)で動いているときに、`window.api`とHIDを用意する。
  *
- * 画面のほかの部分は Electron 版のころと同じく `window.api`(shared/ipc.ts の RendererApi)と
- * WebHID の形だけを知っていて、Tauri を直接は呼ばない。ここがその 2 つを Rust のコマンド
+ * 画面のほかの部分はElectron版のころと同じく`window.api`(shared/ipc.tsのRendererApi)と
+ * WebHIDの形だけを知っていて、Tauriを直接は呼ばない。ここがその2つをRustのコマンド
  * (src-tauri/src/commands.rs)に繋ぐ。
  *
- * ブラウザで開いたとき(`npm run dev`)は何もしない。`window.api` は undefined のままで、
- * HID はブラウザの WebHID を使う(Chrome / Edge なら実機にも繋がる)。
+ * ブラウザで開いたとき(`npm run dev`)は何もしない。`window.api`はundefinedのままで、
+ * HIDはブラウザのWebHIDを使う(Chrome / Edgeなら実機にも繋がる)。
  *
- * **このファイルはいちばん先に読み込む**(main.tsx の先頭)。部品は最初の描画から `window.api` を使う。
+ * **このファイルはいちばん先に読み込む**(main.tsxの先頭)。部品は最初の描画から`window.api`を使う。
  */
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { type EventCallback, listen } from '@tauri-apps/api/event'
@@ -20,14 +20,14 @@ import type { HidLike } from '../session/keyboardConnection'
 
 declare const __BUILD_TIME__: string | undefined
 
-/** ビルドした時刻(vite.config.ts の define で埋める)。dev では空。 */
+/** ビルドした時刻(vite.config.tsのdefineで埋める)。devでは空。 */
 const BUILD_TIME = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : ''
 
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 /**
- * 候補が複数あったときの選択。Electron 版では main から候補が飛んできて、選んだ結果を main に
- * 返していた。いまは選ぶのも待つのも画面の中(nativeHid.ts の requestDevice)なので、ここで繋ぐ。
+ * 候補が複数あったときの選択。Electron版ではmainから候補が飛んできて、選んだ結果をmainに
+ * 返していた。いまは選ぶのも待つのも画面の中(nativeHid.tsのrequestDevice)なので、ここで繋ぐ。
  */
 class DeviceChooser {
   private readonly handlers = new Set<(devices: HidCandidate[]) => void>()
@@ -57,9 +57,9 @@ class DeviceChooser {
 }
 
 /**
- * Rust からのイベントを受ける。戻り値を呼ぶと解除。
+ * Rustからのイベントを受ける。戻り値を呼ぶと解除。
  *
- * `own` はこのウィンドウ宛ての知らせ(emit_to で送るもの)。全ウィンドウ宛ての `listen` で受けると、
+ * `own`はこのウィンドウ宛ての知らせ(emit_toで送るもの)。全ウィンドウ宛ての`listen`で受けると、
  * ほかのウィンドウ宛てのもの(モード切り替え中の古いウィンドウへの「手放して」など)まで届く。
  */
 function subscribe<T>(event: string, handler: EventCallback<T>, own = false): () => void {
@@ -138,12 +138,12 @@ function createApi(chooser: DeviceChooser): RendererApi {
 }
 
 /**
- * クリック透過中に Rust から届くカーソルの位置を、mousemove として流す。
+ * クリック透過中にRustから届くカーソルの位置を、mousemoveとして流す。
  *
- * Electron はクリック透過中でも mousemove を画面に届けてくれた(`forward: true`)。
+ * Electronはクリック透過中でもmousemoveを画面に届けてくれた(`forward: true`)。
  * 操作パネル(components/OverlayControls.tsx)はそれを見て、ポインタが乗ったときだけ透過を切る。
- * Tauri にはその機能が無いので、Rust がカーソルの位置を送ってくる(src-tauri/src/windows.rs の
- * start_cursor_forwarding)。同じ形の mousemove にしておけば、操作パネルはそのまま動く。
+ * Tauriにはその機能が無いので、Rustがカーソルの位置を送ってくる(src-tauri/src/windows.rsの
+ * start_cursor_forwarding)。同じ形のmousemoveにしておけば、操作パネルはそのまま動く。
  */
 function forwardOverlayCursor(): void {
   subscribe<[number, number]>(
@@ -159,9 +159,9 @@ function install(): HidLike {
   const chooser = new DeviceChooser()
   window.api = createApi(chooser)
   forwardOverlayCursor()
-  // NativeHid は HID のうちアプリが使うところだけを持つ(型の全部は満たさない)
+  // NativeHidはHIDのうちアプリが使うところだけを持つ(型の全部は満たさない)
   return new NativeHid(createHidBackend(chooser)) as unknown as HidLike
 }
 
-/** Tauri で動いているときの HID。ブラウザでは null(navigator.hid を使う)。 */
+/** Tauriで動いているときのHID。ブラウザではnull(navigator.hidを使う)。 */
 export const nativeHid: HidLike | null = isTauri ? install() : null

@@ -8,7 +8,7 @@ import {
   MOD_SHIFT
 } from '@/keycodes/decode'
 
-/** 生の値 → Vial の文字列表記。値は keycodes_v6.py の定数から。 */
+/** 生の値 → Vialの文字列表記。値はkeycodes_v6.pyの定数から。 */
 const ROUND_TRIP: Array<[number, string]> = [
   [0x0000, 'KC_NO'],
   [0x0001, 'KC_TRNS'],
@@ -20,7 +20,7 @@ const ROUND_TRIP: Array<[number, string]> = [
   [0x0091, 'KC_LANG2'],
   [0x0204, 'LSFT(KC_A)'], // LSFT = 0x0200, KC_A = 0x04
   [0x021e, 'LSFT(KC_1)'],
-  [0x1404, 'RALT(KC_A)'], // 右 Alt は 0x1400
+  [0x1404, 'RALT(KC_A)'], // 右Altは0x1400
   [0x2204, 'LSFT_T(KC_A)'], // Mod-Tap
   [0x4229, 'LT2(KC_ESCAPE)'],
   [0x5200, 'TO(0)'],
@@ -77,14 +77,14 @@ describe('decodeKeycode', () => {
   })
 
   it('OSM をレイヤー系と取り違えない', () => {
-    // 0x52A0-0x52BF は OSM。TT(0) = 0x52C0 の手前
+    // 0x52A0-0x52BFはOSM。TT(0) = 0x52C0の手前
     expect(decodeKeycode(0x52a2)).toMatchObject({ kind: 'oneShotMod', mods: MOD_SHIFT })
     expect(decodeKeycode(0x52c0)).toMatchObject({ kind: 'layer', op: 'TT', layer: 0 })
   })
 
   it('USER の範囲は 64 個まで', () => {
     expect(decodeKeycode(0x7e3f)).toMatchObject({ kind: 'user', index: 63 })
-    // 0x7E40 以降は USER ではない
+    // 0x7E40以降はUSERではない
     expect(decodeKeycode(0x7e40).kind).not.toBe('user')
   })
 

@@ -1,12 +1,12 @@
 /**
- * アプリの更新を React に渡す。更新は、インストーラーで入れたときだけ使える
- * (src-tauri/src/updater.rs。開発中や deploy:win で置いた exe では unsupported)。
+ * アプリの更新をReactに渡す。更新は、インストーラーで入れたときだけ使える
+ * (src-tauri/src/updater.rs。開発中やdeploy:winで置いたexeではunsupported)。
  *
- * 起動して少し待ってから 1 回確かめる。起動の直後はキーボードとの接続でいちばん忙しいので、
- * それと重ねない。このときは force を付けない ― モードを切り替えるたびにウィンドウごと
- * 作り直すので、Rust が少し前の結果を使い回す。「更新を確認」を押したときは問い合わせ直す。
+ * 起動して少し待ってから1回確かめる。起動の直後はキーボードとの接続でいちばん忙しいので、
+ * それと重ねない。このときはforceを付けない ― モードを切り替えるたびにウィンドウごと
+ * 作り直すので、Rustが少し前の結果を使い回す。「更新を確認」を押したときは問い合わせ直す。
  *
- * ブラウザで開いたとき(window.api が無い)は何もしない。
+ * ブラウザで開いたとき(window.apiが無い)は何もしない。
  */
 import { useCallback, useEffect, useState } from 'react'
 import type { UpdateStatus } from '../../../shared/ipc'

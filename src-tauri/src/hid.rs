@@ -1,12 +1,12 @@
-//! キーボードとの raw HID(hidapi)。Electron 版で画面の WebHID がしていたことの代わり。
+//! キーボードとのraw HID(hidapi)。Electron版で画面のWebHIDがしていたことの代わり。
 //!
-//! Tauri の画面は WebView2 で、WebHID の許可や選択ダイアログを差し込む口が無い
-//! (docs/ARCHITECTURE.md §2)。そこで HID は Rust で扱い、画面(TS)からは WebHID と同じ形に
+//! Tauriの画面はWebView2で、WebHIDの許可や選択ダイアログを差し込む口が無い
+//! (docs/ARCHITECTURE.md §2)。そこでHIDはRustで扱い、画面(TS)からはWebHIDと同じ形に
 //! 見せる(src/renderer/src/hid/nativeHid.ts)。プロトコル(hid/vial.ts)・直列化と照合
-//! (hid/transport.ts)・接続の管理(session/)は Electron 版のものをそのまま使う。
+//! (hid/transport.ts)・接続の管理(session/)はElectron版のものをそのまま使う。
 //!
-//! ここがするのは、Vial のインターフェースを並べる・開く・書く・届いたものを画面へ流す・
-//! 挿し抜きを知らせる、だけ。応答の照合や時間切れは TS 側の仕事。
+//! ここがするのは、Vialのインターフェースを並べる・開く・書く・届いたものを画面へ流す・
+//! 挿し抜きを知らせる、だけ。応答の照合や時間切れはTS側の仕事。
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -23,27 +23,27 @@ use tauri::{AppHandle, Emitter};
 
 use crate::logfile;
 
-/// Vial の raw HID インターフェース(docs/PROTOCOL.md §1)。
+/// Vialのraw HIDインターフェース(docs/PROTOCOL.md §1)。
 const VIAL_USAGE_PAGE: u16 = 0xFF60;
 const VIAL_USAGE: u16 = 0x61;
-/// Vial のレポートの長さ。
+/// Vialのレポートの長さ。
 const MSG_LEN: usize = 32;
 
-/// 挿し抜きを見に行く間隔。hidapi には挿し抜きの通知が無いので、一覧を取り直して比べる。
+/// 挿し抜きを見に行く間隔。hidapiには挿し抜きの通知が無いので、一覧を取り直して比べる。
 /// 抜けたこと(使っていたもの)は読み取りの失敗ですぐ分かるので、これは主に「挿された」のため。
 const SCAN_INTERVAL: Duration = Duration::from_secs(2);
 /// 読み取りスレッドが、閉じられたかを確かめる間隔(ms)。閉じてから止まるまでの最長。
 const READ_POLL_MS: i32 = 100;
 
-/// 画面に渡すデバイスの情報。WebHID の HIDDevice のうち、アプリが使うところ。
+/// 画面に渡すデバイスの情報。WebHIDのHIDDeviceのうち、アプリが使うところ。
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HidDeviceInfo {
-    /// OS のデバイスパス。開くときと、同じものかを見分けるのに使う。
+    /// OSのデバイスパス。開くときと、同じものかを見分けるのに使う。
     pub path: String,
     pub vendor_id: u16,
     pub product_id: u16,
-    /// 製品名。Bluetooth では取れず空のことがある(docs/BLUETOOTH.md §2.6)。
+    /// 製品名。Bluetoothでは取れず空のことがある(docs/BLUETOOTH.md §2.6)。
     pub product_name: String,
     pub usage_page: u16,
     pub usage: u16,
@@ -62,11 +62,11 @@ impl HidDeviceInfo {
     }
 }
 
-/// 開いているデバイス 1 つぶん。
+/// 開いているデバイス1つぶん。
 ///
-/// hidapi のデバイスは 1 つのハンドルを複数のスレッドから同時に使えない(読むスレッドが
-/// read で待っているあいだに書けない)。なので**読む用と書く用に 2 回開く**。
-/// 入力レポートは OS がハンドルごとに配る(書く用に溜まるぶんは、OS の輪状のバッファが
+/// hidapiのデバイスは1つのハンドルを複数のスレッドから同時に使えない(読むスレッドが
+/// readで待っているあいだに書けない)。なので**読む用と書く用に2回開く**。
+/// 入力レポートはOSがハンドルごとに配る(書く用に溜まるぶんは、OSの輪状のバッファが
 /// 古い方から捨てる)。
 struct OpenDevice {
     /// 開いたウィンドウ。ウィンドウが消えたら、そのウィンドウが開いたものを閉じる。
@@ -77,11 +77,11 @@ struct OpenDevice {
 
 pub struct HidBridge {
     app: AppHandle,
-    /// hidapi の本体。作れなかったら None のまま(次に使うときに作り直す)。
+    /// hidapiの本体。作れなかったらNoneのまま(次に使うときに作り直す)。
     api: Mutex<Option<HidApi>>,
     open: Mutex<HashMap<u32, OpenDevice>>,
     next_handle: AtomicU32,
-    /// 前回並べたときの一覧。挿し抜きはこれとの差で知らせる。まだ並べていなければ None。
+    /// 前回並べたときの一覧。挿し抜きはこれとの差で知らせる。まだ並べていなければNone。
     known: Mutex<Option<Vec<HidDeviceInfo>>>,
     /// 挿し抜きを見に行くスレッドを、待たずに起こす。
     rescan: Mutex<Option<Sender<()>>>,
@@ -99,8 +99,8 @@ impl HidBridge {
         })
     }
 
-    /// 挿し抜きを見に行くスレッドを動かす。挿されたら `hid-connect`、
-    /// 抜かれたら `hid-disconnect` を全部のウィンドウに送る(中身は HidDeviceInfo)。
+    /// 挿し抜きを見に行くスレッドを動かす。挿されたら`hid-connect`、
+    /// 抜かれたら`hid-disconnect`を全部のウィンドウに送る(中身はHidDeviceInfo)。
     pub fn start_monitor(self: &Arc<Self>) {
         let (sender, receiver) = mpsc::channel();
         *self.rescan.lock().unwrap() = Some(sender);
@@ -112,7 +112,7 @@ impl HidBridge {
                     bridge.devices();
                     match receiver.recv_timeout(SCAN_INTERVAL) {
                         Ok(()) | Err(RecvTimeoutError::Timeout) => {
-                            // まとめて来た「起こして」は 1 回で足りる
+                            // まとめて来た「起こして」は1回で足りる
                             while receiver.try_recv().is_ok() {}
                         }
                         Err(RecvTimeoutError::Disconnected) => break,
@@ -122,7 +122,7 @@ impl HidBridge {
             .expect("hid-monitor のスレッドを作れなかった");
     }
 
-    /// いま繋がっている Vial のインターフェースを並べる。前回との差を挿し抜きとして知らせる。
+    /// いま繋がっているVialのインターフェースを並べる。前回との差を挿し抜きとして知らせる。
     pub fn devices(&self) -> Vec<HidDeviceInfo> {
         let list = self.scan();
         self.notify_changes(&list);
@@ -159,7 +159,7 @@ impl HidBridge {
         }
     }
 
-    /// 開いて、届いた入力レポートを `on_report` に流す。閉じるときに使う番号を返す。
+    /// 開いて、届いた入力レポートを`on_report`に流す。閉じるときに使う番号を返す。
     pub fn open(
         &self,
         owner: &str,
@@ -189,7 +189,7 @@ impl HidBridge {
         Ok(handle)
     }
 
-    /// 1 つのレポートを書く。先頭の 1 バイトはレポート ID(Vial は 0)。
+    /// 1つのレポートを書く。先頭の1バイトはレポートID(Vialは0)。
     pub fn write(&self, handle: u32, data: &[u8]) -> Result<(), String> {
         let writer = self
             .open
@@ -204,7 +204,7 @@ impl HidBridge {
 
     pub fn close(&self, handle: u32) {
         if let Some(device) = self.open.lock().unwrap().remove(&handle) {
-            // 読み取りスレッドは READ_POLL_MS 以内に気付いて止まり、読む用のハンドルを閉じる
+            // 読み取りスレッドはREAD_POLL_MS以内に気付いて止まり、読む用のハンドルを閉じる
             device.stop.store(true, Ordering::Relaxed);
         }
     }
@@ -223,7 +223,7 @@ impl HidBridge {
     }
 }
 
-/// hidapi の本体を用意する。作れなければログに残して None。
+/// hidapiの本体を用意する。作れなければログに残してNone。
 fn ensure_api(api: &mut Option<HidApi>) -> Option<&mut HidApi> {
     if api.is_none() {
         match HidApi::new() {
@@ -240,7 +240,7 @@ fn read_loop(
     stop: &AtomicBool,
     rescan: Option<Sender<()>>,
 ) {
-    // Bluetooth の Vial はレポート ID 込みで 33 バイトになる(docs/BLUETOOTH.md §2.6)。余裕を持たせる
+    // BluetoothのVialはレポートID込みで33バイトになる(docs/BLUETOOTH.md §2.6)。余裕を持たせる
     let mut buffer = [0u8; 64];
     while !stop.load(Ordering::Relaxed) {
         match reader.read_timeout(&mut buffer, READ_POLL_MS) {
@@ -262,7 +262,7 @@ fn read_loop(
     }
 }
 
-/// レポート ID の 0 が先頭に付いて来たら外す。画面の WebHID と同じく、中身の 32 バイトだけを渡す。
+/// レポートIDの0が先頭に付いて来たら外す。画面のWebHIDと同じく、中身の32バイトだけを渡す。
 fn strip_report_id(data: &[u8]) -> Vec<u8> {
     match data {
         [0, rest @ ..] if rest.len() == MSG_LEN => rest.to_vec(),
@@ -279,7 +279,7 @@ mod tests {
         let mut with_id = vec![0u8];
         with_id.extend([0xFE; MSG_LEN]);
         assert_eq!(strip_report_id(&with_id), vec![0xFE; MSG_LEN]);
-        // 32 バイトちょうどならそのまま(先頭が 0 でも中身の一部)
+        // 32バイトちょうどならそのまま(先頭が0でも中身の一部)
         let mut plain = vec![0u8; MSG_LEN];
         plain[1] = 0x03;
         assert_eq!(strip_report_id(&plain), plain);

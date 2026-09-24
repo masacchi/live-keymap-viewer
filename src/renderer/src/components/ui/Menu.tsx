@@ -4,7 +4,7 @@
  * 使う頻度の低い操作(キーマップの読み直し・切断)をツールバーに並べておくと、よく使う操作と
  * 同じ重さに見え、切断を押し間違えやすかった。デバイス名のボタンの下にしまう。
  *
- * 外を押すか Esc で閉じる。項目を選んでも閉じる。
+ * 外を押すかEscで閉じる。項目を選んでも閉じる。
  */
 import { createContext, type JSX, type ReactNode, useContext } from 'react'
 import { cn } from '../../lib/cn'

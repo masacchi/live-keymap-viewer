@@ -1,17 +1,17 @@
-# Windows 版をビルドする。
+# Windows版をビルドする。
 #
-#   main に push(マージ)   → ビルドして、GitHub のリリース(dev-build。プレリリース)に置く
-#   v* のタグを push        → ビルドして、GitHub の正式リリースに載せる。入っているアプリはここから更新する
+#   mainにpush(マージ)   → ビルドして、GitHubのリリース(dev-build。プレリリース)に置く
+#   v*のタグをpush        → ビルドして、GitHubの正式リリースに載せる。入っているアプリはここから更新する
 #   手動(Run workflow)     → 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
-#                              (タグが無ければ、dev-build リリースを更新)
+#                              (タグが無ければ、dev-buildリリースを更新)
 #
-# 作るもの: インストーラー(Velopack の Setup)と更新の包み、ポータブル版(exe 単体)。
+# 作るもの: インストーラー(VelopackのSetup)と更新の包み、ポータブル版(exe単体)。
 #
-# Ubuntu で作る。package-win.mjs(cargo-xwin でクロスビルド)も pack-win.mjs(vpk)も Linux で
-# Windows 版を作る作りで(wine も Windows も要らない)、手元のコンテナと同じ手順・同じ結果になるため。
-# ツールは .devcontainer/Dockerfile と同じものを直に入れる(CI ではコンテナを通さない ―
-# scripts/container.mjs は CI ならそのまま動かす)。
-# 詳しくは docs/DEVELOPMENT.md「GitHub Actions でのビルド」。
+# Ubuntuで作る。package-win.mjs(cargo-xwinでクロスビルド)もpack-win.mjs(vpk)もLinuxで
+# Windows版を作る作りで(wineもWindowsも要らない)、手元のコンテナと同じ手順・同じ結果になるため。
+# ツールは.devcontainer/Dockerfileと同じものを直に入れる(CIではコンテナを通さない ―
+# scripts/container.mjsはCIならそのまま動かす)。
+# 詳しくはdocs/DEVELOPMENT.md「GitHub Actionsでのビルド」。
 
 name: Windows 版のビルド
 
@@ -29,18 +29,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Rust の初回ビルド(キャッシュが無いとき)に 10 分ほどかかる
+    # Rustの初回ビルド(キャッシュが無いとき)に10分ほどかかる
     timeout-minutes: 45
     permissions:
       # リリースを作るため
       contents: write
     env:
-      # CI ではコミットしないので、husky のフックは入れない
+      # CIではコミットしないので、huskyのフックは入れない
       HUSKY: '0'
     steps:
       - uses: actions/checkout@v7
         with:
-          # トークンを .git に残さない。npm の install スクリプトなど、後の手順から読めないように
+          # トークンを.gitに残さない。npmのinstallスクリプトなど、後の手順から読めないように
           persist-credentials: false
 
       - uses: actions/setup-node@v7
@@ -61,18 +61,18 @@ jobs:
           fi
 
           if [ -z "$tag" ]; then
-            # リリースしないビルドは、どの commit のものか分かるように名前に入れる
+            # リリースしないビルドは、どのcommitのものか分かるように名前に入れる
             label="$version-${GITHUB_SHA::7}"
-            # 包みの版は SemVer でないといけない。commit が数字だけで 0 から始まると SemVer として
-            # 正しくないので、git describe と同じく g を前に付ける
+            # 包みの版はSemVerでないといけない。commitが数字だけで0から始まるとSemVerとして
+            # 正しくないので、git describeと同じくgを前に付ける
             pack_version="$version-g${GITHUB_SHA::7}"
           else
-            # アプリの画面・ログ・「設定 → アプリ」に出る版は package.json から来る。タグと食い違わないように
+            # アプリの画面・ログ・「設定 → アプリ」に出る版はpackage.jsonから来る。タグと食い違わないように
             if [ "$tag" != "v$version" ]; then
               echo "::error::タグ $tag と package.json の版($version)が合っていません。package.json の版を ${tag#v} にしてからリリースしてください(npm version ${tag#v} で版上げとタグ付けが一度にできます)"
               exit 1
             fi
-            # gh release create は既にあるタグをそのまま使う。別の commit のビルドを載せないように止める
+            # gh release createは既にあるタグをそのまま使う。別のcommitのビルドを載せないように止める
             if tagged=$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha 2>/dev/null) &&
               [ "$tagged" != "$GITHUB_SHA" ]; then
               echo "::error::タグ $tag は既に別の commit(${tagged::7})に付いています。Run workflow の「Use workflow from」でそのタグを選んで実行してください"
@@ -96,9 +96,9 @@ jobs:
             --component clippy,rustfmt --target x86_64-pc-windows-msvc
           rustup default stable
 
-      # crate のビルド結果と、cargo-xwin が落としてくる MSVC の CRT / Windows SDK を残す。
-      # 下で cargo install する cargo-xwin(~/.cargo/bin)も残るので、2 回目からはビルドし直さない
-      # (rustc の版がキャッシュの鍵に入るので、Rust を入れた後に置く)
+      # crateのビルド結果と、cargo-xwinが落としてくるMSVCのCRT / Windows SDKを残す。
+      # 下でcargo installするcargo-xwin(~/.cargo/bin)も残るので、2回目からはビルドし直さない
+      # (rustcの版がキャッシュの鍵に入るので、Rustを入れた後に置く)
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -106,9 +106,9 @@ jobs:
 
       - name: cargo-xwin を入れる
         run: |
-          # 配布されているバイナリ(install-action などが入れる musl 版)は使わない。メモリの取り回しが遅く、
-          # MSVC の CRT の初回ダウンロードが 10 分以上かかる。crates.io からビルドした glibc 版なら十数秒。
-          # 版は .devcontainer/Dockerfile の CARGO_XWIN_VERSION に合わせる(同じ版ならビルドを飛ばす)
+          # 配布されているバイナリ(install-actionなどが入れるmusl版)は使わない。メモリの取り回しが遅く、
+          # MSVCのCRTの初回ダウンロードが10分以上かかる。crates.ioからビルドしたglibc版なら十数秒。
+          # 版は.devcontainer/DockerfileのCARGO_XWIN_VERSIONに合わせる(同じ版ならビルドを飛ばす)
           version=$(sed -n 's/^ARG CARGO_XWIN_VERSION=//p' .devcontainer/Dockerfile)
           cargo install --locked cargo-xwin --version "$version"
 
@@ -118,7 +118,7 @@ jobs:
 
       - name: vpk(Velopack の CLI)を入れる
         run: |
-          # 版は .devcontainer/Dockerfile の VPK_VERSION に合わせる(Cargo.toml の velopack とも同じ)
+          # 版は.devcontainer/DockerfileのVPK_VERSIONに合わせる(Cargo.tomlのvelopackとも同じ)
           version=$(sed -n 's/^ARG VPK_VERSION=//p' .devcontainer/Dockerfile)
           dotnet tool install --global vpk --version "$version"
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
@@ -140,18 +140,18 @@ jobs:
           PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
         run: |
           node scripts/pack-win.mjs --version "$PACK_VERSION"
-          # dev-build や正式リリースの添付には、どのビルドか分かる名前で置く
+          # dev-buildや正式リリースの添付には、どのビルドか分かる名前で置く
           mkdir -p dist/artifacts
           cp dist/releases/live-keymap-viewer-win-Setup.exe \
             "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
-          # ポータブル版は exe をそのまま置く(Tauri の exe は 1 つで完結する。自分では更新しない)
+          # ポータブル版はexeをそのまま置く(Tauriのexeは1つで完結する。自分では更新しない)
           cp dist/win32-x64/LiveKeymapViewer.exe \
             "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe"
           ls -l dist/releases dist/artifacts
 
-      # 入っているアプリは、最新の正式リリースの releases.win.json を見て更新する
-      # (src-tauri/src/updater.rs)。正式リリースに載せるのは vpk upload github ― 目録と包みを、
-      # アプリが読む名前のまま載せる。dev-build はプレリリースなので、更新の対象にならない
+      # 入っているアプリは、最新の正式リリースのreleases.win.jsonを見て更新する
+      # (src-tauri/src/updater.rs)。正式リリースに載せるのはvpk upload github ― 目録と包みを、
+      # アプリが読む名前のまま載せる。dev-buildはプレリリースなので、更新の対象にならない
       - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
@@ -160,12 +160,12 @@ jobs:
         run: |
           if [ -n "$TAG" ]; then
             flags=()
-            # v0.2.0-beta.1 のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
+            # v0.2.0-beta.1のように - の付くものはプレリリースにする(アプリの更新の対象にならない)
             if [[ "$TAG" == *-* ]]; then
               flags+=(--pre)
             fi
-            # --channel は必ず付ける(付けないと、動いている OS から linux になる)。
-            # --merge で、同じタグで流し直したときは添付を差し替える
+            # --channelは必ず付ける(付けないと、動いているOSからlinuxになる)。
+            # --mergeで、同じタグで流し直したときは添付を差し替える
             vpk upload github --outputDir dist/releases --channel win \
               --repoUrl "https://github.com/$GITHUB_REPOSITORY" --token "$GH_TOKEN" \
               --publish --merge --releaseName "$TAG" --tag "$TAG" --targetCommitish "$GITHUB_SHA" \
@@ -175,12 +175,12 @@ jobs:
             exit 0
           fi
 
-          # 正式なタグがない場合(main への push や手動実行)は、固定の「dev-build」に置く
+          # 正式なタグがない場合(mainへのpushや手動実行)は、固定の「dev-build」に置く
           RELEASE_TAG=dev-build
           FILES=(dist/artifacts/*)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "既存のリリース($RELEASE_TAG)が見つかりました。ファイルを最新版に差し替えます。"
-            # --clobber で同名ファイルがあっても上書き
+            # --clobberで同名ファイルがあっても上書き
             gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           else
             echo "新しいリリース($RELEASE_TAG)を作成します。"

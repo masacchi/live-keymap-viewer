@@ -1,8 +1,8 @@
 /**
- * 画面のビルド設定。`vite`(npm run dev)/ `vite build` はこれを読む。
+ * 画面のビルド設定。`vite`(npm run dev)/ `vite build`はこれを読む。
  *
- * Tauri は build.devUrl(開発)か frontendDist(配布)からこれを読み込む(src-tauri/tauri.conf.json)。
- * `npm run dev` だけならブラウザで開ける(モックと、Chrome / Edge なら WebHID で実機にも)。
+ * Tauriはbuild.devUrl(開発)かfrontendDist(配布)からこれを読み込む(src-tauri/tauri.conf.json)。
+ * `npm run dev`だけならブラウザで開ける(モックと、Chrome / EdgeならWebHIDで実機にも)。
  */
 
 import { resolve } from 'node:path'
@@ -18,16 +18,16 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     outDir: resolve('out/renderer'),
-    // outDir が root の外にあるので、明示しないと前回の出力が残る
+    // outDirがrootの外にあるので、明示しないと前回の出力が残る
     emptyOutDir: true
   },
   server: {
-    // Tauri の devUrl と合わせる。空いていなければ別の番号にずらさず止める
+    // TauriのdevUrlと合わせる。空いていなければ別の番号にずらさず止める
     port: 5173,
     strictPort: true
   },
   define: {
-    // どのビルドが動いているかを設定パネルに出す(platform/tauri.ts)。dev では空
+    // どのビルドが動いているかを設定パネルに出す(platform/tauri.ts)。devでは空
     __BUILD_TIME__: JSON.stringify(command === 'build' ? new Date().toISOString() : '')
   },
   plugins: [react(), tailwindcss()]

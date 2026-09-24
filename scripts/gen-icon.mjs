@@ -1,14 +1,14 @@
 /**
- * アプリのアイコン(assets/icon.svg)から、icon.png(256px)と icon.ico(16〜256px)を作る。
+ * アプリのアイコン(assets/icon.svg)から、icon.png(256px)とicon.ico(16〜256px)を作る。
  *
  *   npm run gen:icon
  *
- * できたものはコミットする。**手で直さない**(SVG を直して作り直す)。
+ * できたものはコミットする。**手で直さない**(SVGを直して作り直す)。
  *
- * SVG を描けるものが要るが、依存を増やさないよう、開発用に入っている Electron の画面の canvas で
- * 描く(Node から起動すると、自分を Electron で動かし直す)。画面は出さない。
- * ICO は書式が単純なので自前で組み立てる。各サイズは PNG を詰めず、昔ながらの 32bit BMP で入れる
- * ― インストーラーを作る NSIS や古いツールでも読めるように。
+ * SVGを描けるものが要るが、依存を増やさないよう、開発用に入っているElectronの画面のcanvasで
+ * 描く(Nodeから起動すると、自分をElectronで動かし直す)。画面は出さない。
+ * ICOは書式が単純なので自前で組み立てる。各サイズはPNGを詰めず、昔ながらの32bit BMPで入れる
+ * ― インストーラーを作るNSISや古いツールでも読めるように。
  */
 
 import { spawn } from 'node:child_process'
@@ -18,15 +18,15 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const ASSETS = join(ROOT, 'assets')
-/** ICO に入れる大きさ。Windows が表示倍率(100〜250%)やアイコンの表示の大きさに合わせて選ぶ。 */
+/** ICOに入れる大きさ。Windowsが表示倍率(100〜250%)やアイコンの表示の大きさに合わせて選ぶ。 */
 const SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 
-// Electron の中では await しない。ESM のエントリーのトップレベルの await が終わるまで
-// ready が来ないので、render の中で whenReady を待つと止まったままになる
+// Electronの中ではawaitしない。ESMのエントリーのトップレベルのawaitが終わるまで
+// readyが来ないので、renderの中でwhenReadyを待つと止まったままになる
 if (process.versions.electron) void render()
 else await launch()
 
-/** Node から: このファイルを Electron で動かす。ELECTRON_RUN_AS_NODE が立っていると Node として動くので外す。 */
+/** Nodeから: このファイルをElectronで動かす。ELECTRON_RUN_AS_NODEが立っているとNodeとして動くので外す。 */
 async function launch() {
   const { default: electronPath } = await import('electron')
   const env = { ...process.env }
@@ -36,7 +36,7 @@ async function launch() {
       stdio: ['ignore', 'inherit', 'pipe'],
       env
     })
-    // GPU や D-Bus の警告は WSL では毎回出て読めなくなるので、こちらの出したものだけ通す
+    // GPUやD-Busの警告はWSLでは毎回出て読めなくなるので、こちらの出したものだけ通す
     child.stderr.on('data', (chunk) => {
       for (const line of String(chunk).split('\n'))
         if (line.startsWith('[gen-icon]')) console.error(line)
@@ -47,7 +47,7 @@ async function launch() {
   })
 }
 
-/** Electron の中で: SVG を大きさごとに canvas へ描き、PNG と ICO に書き出す。 */
+/** Electronの中で: SVGを大きさごとにcanvasへ描き、PNGとICOに書き出す。 */
 async function render() {
   const { app, BrowserWindow } = await import('electron')
   try {
@@ -55,7 +55,7 @@ async function render() {
     const win = new BrowserWindow({ show: false })
     await win.loadURL('data:text/html,<meta charset="utf-8">')
     const svg = `data:image/svg+xml;base64,${readFileSync(join(ASSETS, 'icon.svg')).toString('base64')}`
-    // 大きさごとに SVG から描き直す(256px を縮めるより、小さいサイズの輪郭がにじまない)
+    // 大きさごとにSVGから描き直す(256pxを縮めるより、小さいサイズの輪郭がにじまない)
     const images = await win.webContents.executeJavaScript(`(async () => {
       const img = new Image()
       img.src = ${JSON.stringify(svg)}
@@ -88,13 +88,13 @@ async function render() {
 }
 
 /**
- * ICO を組み立てる。先頭 6 バイトの見出し、画像ごとに 16 バイトの目次、そのあとに画像を並べる。
- * 大きさの欄は 1 バイトなので、256 は 0 と書く決まり。
+ * ICOを組み立てる。先頭6バイトの見出し、画像ごとに16バイトの目次、そのあとに画像を並べる。
+ * 大きさの欄は1バイトなので、256は0と書く決まり。
  */
 function ico(images) {
   const header = Buffer.alloc(6)
   header.writeUInt16LE(0, 0) // 予約
-  header.writeUInt16LE(1, 2) // 1 = アイコン(2 はカーソル)
+  header.writeUInt16LE(1, 2) // 1 = アイコン(2はカーソル)
   header.writeUInt16LE(images.length, 4)
 
   const entries = []
@@ -106,7 +106,7 @@ function ico(images) {
     entry.writeUInt8(size >= 256 ? 0 : size, 0) // 幅
     entry.writeUInt8(size >= 256 ? 0 : size, 1) // 高さ
     entry.writeUInt16LE(1, 4) // プレーン数
-    entry.writeUInt16LE(32, 6) // 1 画素のビット数
+    entry.writeUInt16LE(32, 6) // 1画素のビット数
     entry.writeUInt32LE(body.length, 8)
     entry.writeUInt32LE(offset, 12)
     offset += body.length
@@ -117,9 +117,9 @@ function ico(images) {
 }
 
 /**
- * ICO の中の 1 枚(32bit BMP)。BITMAPINFOHEADER のあとに、下の行から BGRA の画素と、
- * 透明のマスク(1bit、行ごとに 4 バイト境界まで詰める)を並べる。高さは色とマスクの 2 枚ぶん書く。
- * 32bit なら透明は画素のアルファで決まるが、マスクも入れておかないと古い読み手が四角く塗る。
+ * ICOの中の1枚(32bit BMP)。BITMAPINFOHEADERのあとに、下の行からBGRAの画素と、
+ * 透明のマスク(1bit、行ごとに4バイト境界まで詰める)を並べる。高さは色とマスクの2枚ぶん書く。
+ * 32bitなら透明は画素のアルファで決まるが、マスクも入れておかないと古い読み手が四角く塗る。
  */
 function bitmap(size, rgba) {
   const maskStride = Math.ceil(size / 32) * 4
@@ -128,14 +128,14 @@ function bitmap(size, rgba) {
   header.writeInt32LE(size, 4)
   header.writeInt32LE(size * 2, 8)
   header.writeUInt16LE(1, 12) // プレーン数
-  header.writeUInt16LE(32, 14) // 1 画素のビット数
+  header.writeUInt16LE(32, 14) // 1画素のビット数
   header.writeUInt32LE(0, 16) // 圧縮なし
   header.writeUInt32LE(size * size * 4 + maskStride * size, 20)
 
   const pixels = Buffer.alloc(size * size * 4)
   const mask = Buffer.alloc(maskStride * size)
   for (let y = 0; y < size; y++) {
-    const row = size - 1 - y // BMP は下の行から並べる
+    const row = size - 1 - y // BMPは下の行から並べる
     for (let x = 0; x < size; x++) {
       const from = (y * size + x) * 4
       const to = (row * size + x) * 4

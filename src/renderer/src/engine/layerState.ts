@@ -1,12 +1,12 @@
 /**
  * 押下状態から「いまどのレイヤーが有効か」を決める(HANDOFF §6)。
  *
- * QMK の厳密な再現ではなく、表示のための近似。
+ * QMKの厳密な再現ではなく、表示のための近似。
  * - キーコードは**押した瞬間**のレイヤー状態で確定させる
- * - MO(n) は押している間だけ有効
- * - LT(n, kc) と、on_hold が MO(n) の Tap Dance は
- *   「tapping term を超えた」か「押している間に別のキーが押された」で有効になる
- * - TG(n) / TO(n) / DF(n) は押した時点で反映する
+ * - MO(n)は押している間だけ有効
+ * - LT(n, kc)と、on_holdがMO(n)のTap Danceは
+ *   「tapping termを超えた」か「押している間に別のキーが押された」で有効になる
+ * - TG(n) / TO(n) / DF(n)は押した時点で反映する
  */
 import { decodeKeycode, type Keycode, modifierBitsOf } from '../keycodes/decode'
 import { holdLayerOf, holdModsOf, type TapDanceEntry, tappingTermOf } from '../keycodes/tapDance'
@@ -18,11 +18,11 @@ export interface LayerEngineConfig {
   layers: number
   rows: number
   cols: number
-  /** [layer][row][col] の生キーコード。 */
+  /** [layer][row][col]の生キーコード。 */
   keymap: number[][][]
-  /** 読んでいない枠は undefined(hid/vial.ts の tapDanceToRead)。 */
+  /** 読んでいない枠はundefined(hid/vial.tsのtapDanceToRead)。 */
   tapDance: ReadonlyArray<TapDanceEntry | undefined>
-  /** LT の既定 tapping term。QMK の TAPPING_TERM 相当。 */
+  /** LTの既定tapping term。QMKのTAPPING_TERM相当。 */
   tappingTerm?: number
 }
 
@@ -33,17 +33,17 @@ export interface HeldKey {
   keycode: Keycode
   /** 押した時刻(ms)。 */
   pressedAt: number
-  /** このキーが長押しで出せるレイヤー。出せないなら null。 */
+  /** このキーが長押しで出せるレイヤー。出せないならnull。 */
   holdLayer: number | null
-  /** このキーを長押ししたときに効くモディファイア(MT / Tap Dance)。無ければ 0。 */
+  /** このキーを長押ししたときに効くモディファイア(MT / Tap Dance)。無ければ0。 */
   holdMods: number
-  /** 長押し扱いが確定したときの時刻。まだなら null。 */
+  /** 長押し扱いが確定したときの時刻。まだならnull。 */
   heldSince: number | null
   /** 押している間に他のキーが押されたか。 */
   interrupted: boolean
-  /** このキーの tapping term。 */
+  /** このキーのtapping term。 */
   tappingTerm: number
-  /** いま実際にレイヤーを出しているか(MO は押した瞬間から、LT / TD は長押し確定後)。 */
+  /** いま実際にレイヤーを出しているか(MOは押した瞬間から、LT / TDは長押し確定後)。 */
   holdActive: boolean
 }
 
@@ -52,25 +52,25 @@ export interface LayerSnapshot {
   activeLayers: number[]
   /** 表示に使うレイヤー(有効なうち一番上)。 */
   displayLayer: number
-  /** 既定レイヤー(DF / TO / PDF で動く)。 */
+  /** 既定レイヤー(DF / TO / PDFで動く)。 */
   defaultLayer: number
-  /** TG で固定されているレイヤー。 */
+  /** TGで固定されているレイヤー。 */
   toggledLayers: number[]
   /**
-   * いま効いているモディファイア(MOD_* ビット、左右は区別しない)。
-   * 単独のモディファイアキーは押しているあいだ、MT / Tap Dance は長押しが確定してから。
-   * Shift で入る文字を目立たせるのに使う。
+   * いま効いているモディファイア(MOD_*ビット、左右は区別しない)。
+   * 単独のモディファイアキーは押しているあいだ、MT / Tap Danceは長押しが確定してから。
+   * Shiftで入る文字を目立たせるのに使う。
    */
   mods: number
-  /** いま押されている物理キー。キーは `row,col`。 */
+  /** いま押されている物理キー。キーは`row,col`。 */
   held: Map<string, HeldKey>
 }
 
-/** 1 キー分の、解決済みキーコード。 */
+/** 1キー分の、解決済みキーコード。 */
 export interface ResolvedKey {
-  /** 表示レイヤーでのキーコード(透過ならそのまま 'trns')。 */
+  /** 表示レイヤーでのキーコード(透過ならそのまま'trns')。 */
   own: Keycode
-  /** 透過をたどった先。own が透過でなければ own と同じ。 */
+  /** 透過をたどった先。ownが透過でなければownと同じ。 */
   effective: Keycode
   /** 透過をたどった結果のレイヤー。 */
   sourceLayer: number
@@ -85,16 +85,16 @@ export class LayerEngine {
   private held = new Map<string, HeldKey>()
 
   constructor(config: LayerEngineConfig) {
-    // tappingTerm を「渡さない」と「undefined を渡す」を同じに扱う。
-    // 以前は既定値に config をそのまま重ねていたので、undefined を渡されると既定値が
-    // **上書きされて undefined になり**、`now - pressedAt >= undefined` が常に偽 ―
-    // つまり LT / Tap Dance の長押しが永遠に確定しなかった。
-    // セッションは設定を受け取る前 `tappingTerm: undefined` で作られることがある
+    // tappingTermを「渡さない」と「undefinedを渡す」を同じに扱う。
+    // 以前は既定値にconfigをそのまま重ねていたので、undefinedを渡されると既定値が
+    // **上書きされてundefinedになり**、`now - pressedAt >= undefined`が常に偽 ―
+    // つまりLT / Tap Danceの長押しが永遠に確定しなかった。
+    // セッションは設定を受け取る前`tappingTerm: undefined`で作られることがある
     this.config = { ...config, tappingTerm: config.tappingTerm ?? DEFAULT_TAPPING_TERM }
   }
 
   /**
-   * 長押しと見なすまでの時間(LT の既定)を変える。設定から変えたとき。
+   * 長押しと見なすまでの時間(LTの既定)を変える。設定から変えたとき。
    * これから押すキーに効く(押しているキーは押した時点の時間のまま)。
    */
   setTappingTerm(ms: number): void {
@@ -111,10 +111,10 @@ export class LayerEngine {
   /**
    * キーマップを読み直す前のエンジンから、レイヤーの状態を引き継ぐ。
    *
-   * 既定レイヤー(DF / TO)と TG の固定はキーボード側が覚えたままなので、読み直しのたびに
+   * 既定レイヤー(DF / TO)とTGの固定はキーボード側が覚えたままなので、読み直しのたびに
    * 捨てると表示だけがずれる。押しているキーも、押した時点のキーコードのまま引き継ぐ
    * (キーコードは押した瞬間に確定する扱い)。捨てると次のポーリングで押し直されたことになり、
-   * 押しっぱなしの TG がもう一度効いてしまう。
+   * 押しっぱなしのTGがもう一度効いてしまう。
    *
    * レイヤー数が違えば何も引き継がない。ファームが変わったということなので。
    */
@@ -127,10 +127,10 @@ export class LayerEngine {
   }
 
   /**
-   * matrix のスナップショットを流し込む。
+   * matrixのスナップショットを流し込む。
    *
-   * @param matrix `[row][col]` の押下状態
-   * @param now    ms 単位の時刻(テストから差し込めるように引数にしてある)
+   * @param matrix `[row][col]`の押下状態
+   * @param now    ms単位の時刻(テストから差し込めるように引数にしてある)
    */
   update(matrix: boolean[][], now: number): LayerSnapshot {
     // 1. 離されたキーを落とす
@@ -161,7 +161,7 @@ export class LayerEngine {
 
   private pressKey(row: number, col: number, now: number): void {
     // 先に、いま押されている長押しキーを「割り込まれた」ことにする。
-    // これでこのキーは上のレイヤーで解決される(hold-on-other-key-press 相当)。
+    // これでこのキーは上のレイヤーで解決される(hold-on-other-key-press相当)。
     for (const key of this.held.values()) {
       if (canHold(key)) {
         key.interrupted = true
@@ -199,7 +199,7 @@ export class LayerEngine {
         else this.toggled.add(keycode.layer)
         break
       case 'TO':
-        // QMK の TO は他のレイヤーを落としてから n を有効にする
+        // QMKのTOは他のレイヤーを落としてからnを有効にする
         this.toggled.clear()
         this.defaultLayer = keycode.layer
         break
@@ -212,7 +212,7 @@ export class LayerEngine {
     }
   }
 
-  /** MO は押した瞬間から有効。LT / TD は長押しが確定してから。 */
+  /** MOは押した瞬間から有効。LT / TDは長押しが確定してから。 */
   private isHoldActive(key: HeldKey): boolean {
     if (key.holdLayer === null) return false
     if (key.keycode.kind === 'layer' && key.keycode.op === 'MO') return true
@@ -238,7 +238,7 @@ export class LayerEngine {
     for (const layer of layers) {
       const raw = this.config.keymap[layer]?.[row]?.[col]
       if (raw === undefined) continue
-      if (raw !== 0x0001) return { raw, layer } // KC_TRNS 以外なら確定
+      if (raw !== 0x0001) return { raw, layer } // KC_TRNS以外なら確定
     }
     return { raw: this.config.keymap[0]?.[row]?.[col] ?? 0, layer: 0 }
   }
@@ -264,7 +264,7 @@ export class LayerEngine {
   }
 
   /**
-   * 表示レイヤーでのキー 1 個分のラベル解決。
+   * 表示レイヤーでのキー1個分のラベル解決。
    * 透過なら下の有効レイヤーへたどり、たどったことも返す。
    */
   resolveKey(row: number, col: number, snapshot: LayerSnapshot): ResolvedKey {
@@ -290,7 +290,7 @@ function canHold(key: HeldKey): boolean {
   return key.holdLayer !== null || key.holdMods !== 0
 }
 
-/** matrix の 2 次元配列を作るユーティリティ。 */
+/** matrixの2次元配列を作るユーティリティ。 */
 export function emptyMatrix(rows: number, cols: number): boolean[][] {
   return Array.from({ length: rows }, () => new Array<boolean>(cols).fill(false))
 }

@@ -1,9 +1,9 @@
 /**
  * 接続の持ち方と、切れたときの繋ぎ直し(session/keyboardConnection.ts)。
  *
- * navigator.hid の代わりに偽物を使う。デバイスを開くと MockTransport(ファーム模擬)に
- * 繋がるようにして、抜き差しは「偽物の一覧から消す / 足して connect イベントを出す」、
- * 通信の途切れは「その transport の send を失敗させる」で作る。
+ * navigator.hidの代わりに偽物を使う。デバイスを開くとMockTransport(ファーム模擬)に
+ * 繋がるようにして、抜き差しは「偽物の一覧から消す / 足してconnectイベントを出す」、
+ * 通信の途切れは「そのtransportのsendを失敗させる」で作る。
  */
 import { describe, expect, it } from 'vitest'
 import { MockTransport } from '@/hid/mockTransport'
@@ -28,7 +28,7 @@ class FakeHid extends EventTarget {
     return this.devices.slice(0, 1)
   }
 
-  /** 挿す。一覧に足して connect イベントを出す。 */
+  /** 挿す。一覧に足してconnectイベントを出す。 */
   plug(device: HIDDevice): void {
     this.devices.push(device)
     const event = new Event('connect')
@@ -36,7 +36,7 @@ class FakeHid extends EventTarget {
     this.dispatchEvent(event)
   }
 
-  /** 抜く。一覧から消し、disconnect イベントを出す(Chromium と同じ)。 */
+  /** 抜く。一覧から消し、disconnectイベントを出す(Chromiumと同じ)。 */
   unplug(device: HIDDevice): void {
     this.devices = this.devices.filter((d) => d !== device)
     const event = new Event('disconnect')
@@ -54,7 +54,7 @@ function fakeDevice(): HIDDevice {
   } as unknown as HIDDevice
 }
 
-/** 通信を途切れさせる(ケーブルが抜けた、スリープで USB が落ちた、の代わり)。 */
+/** 通信を途切れさせる(ケーブルが抜けた、スリープでUSBが落ちた、の代わり)。 */
 function breakTransport(transport: MockTransport): void {
   transport.send = async () => {
     throw new Error('デバイスが外れた')
@@ -63,7 +63,7 @@ function breakTransport(transport: MockTransport): void {
 
 function setup(overrides: ConnectionOptions = {}) {
   const hid = new FakeHid()
-  /** 開かれた順の transport。繋ぎ直しのたびに増える。 */
+  /** 開かれた順のtransport。繋ぎ直しのたびに増える。 */
   const opened: MockTransport[] = []
   const connection = new KeyboardConnection({
     hid: hid as unknown as HidLike,
@@ -103,7 +103,7 @@ const pause = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 describe('KeyboardConnection: ログ', () => {
   it('どの相手に繋いだかを残す(名前・ID・往復時間・候補の数)', async () => {
-    // 実機で「繋がらない」ときの切り分けの初手。BT では名前が取れず、往復も桁が違う
+    // 実機で「繋がらない」ときの切り分けの初手。BTでは名前が取れず、往復も桁が違う
     const lines: string[] = []
     const devices = [fakeDevice(), fakeDevice()]
     const { hid, connection } = setup({
@@ -127,15 +127,15 @@ describe('KeyboardConnection: ログ', () => {
 
 describe('KeyboardConnection: 手放す', () => {
   it('release() はセッションを閉じるが、画面の表示はそのまま残す', async () => {
-    // モード切替でウィンドウが壊される直前に呼ぶ。新しいウィンドウの renderer と同時に
-    // 同じ HID を開いていると、応答が混ざって読み込みが壊れる
+    // モード切替でウィンドウが壊される直前に呼ぶ。新しいウィンドウのrendererと同時に
+    // 同じHIDを開いていると、応答が混ざって読み込みが壊れる
     const { hid, connection, opened } = setup()
     hid.devices = [fakeDevice()]
     connection.start()
     await waitFor(connection, (s) => s.status === 'ready')
 
     await connection.release()
-    expect(opened[0].opened).toBe(false) // HID は閉じた
+    expect(opened[0].opened).toBe(false) // HIDは閉じた
     expect(connection.state.status).toBe('ready') // 表示は残す(「未接続」に戻さない)
 
     // 以後は読みに行かない
@@ -289,7 +289,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     connection.start()
     await waitFor(connection, (s) => s.status === 'ready')
 
-    hid.plug(fakeDevice()) // USB で使っているところに BT 側が繋がった、など
+    hid.plug(fakeDevice()) // USBで使っているところにBT側が繋がった、など
     await pause(50)
     expect(opened).toHaveLength(1)
     expect(connection.state.status).toBe('ready')
@@ -322,7 +322,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     const ready = await waitFor(connection, (s) => s.status === 'ready')
     expect(ready.mock).toBe(true)
 
-    connection.toggleMockKey(0, 1) // Q を押したままにする
+    connection.toggleMockKey(0, 1) // Qを押したままにする
     await waitFor(connection, (s) => s.layers?.held.has('0,1') === true)
     connection.toggleMockKey(0, 1) // もう一度で離す
     await waitFor(connection, (s) => s.layers?.held.size === 0)

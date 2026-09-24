@@ -1,12 +1,12 @@
 /**
- * キー 1 個の描画。
+ * キー1個の描画。
  *
- * 見た目は reference/keymap-preview.html をもとにしている:
+ * 見た目はreference/keymap-preview.htmlをもとにしている:
  * 記号キーは一段明るい面、透過は薄く、長押しでレイヤーが出るキーは下端に色帯、
  * 押されているレイヤーキーは「長押し中」と出す。
  *
- * 色の意味は 1 色に 1 つ: 色味(色相)はレイヤー、黄は押下、白い実線の枠は Shift で変わるキー、
- * 白い破線(回る)はアンロックで押すキー。styles.css のトークンを参照。
+ * 色の意味は1色に1つ: 色味(色相)はレイヤー、黄は押下、白い実線の枠はShiftで変わるキー、
+ * 白い破線(回る)はアンロックで押すキー。styles.cssのトークンを参照。
  */
 import { clsx } from 'clsx'
 import type { JSX } from 'react'
@@ -20,7 +20,7 @@ export interface KeyCapProps {
   physical: PhysicalKey
   label: KeyLabel
   keycode: Keycode
-  /** このキーを長押しすると出るレイヤー。無ければ null。 */
+  /** このキーを長押しすると出るレイヤー。無ければnull。 */
   holdLayer: number | null
   /** そのレイヤーの名前。無ければ番号で出す。 */
   holdLayerName?: string
@@ -30,17 +30,17 @@ export interface KeyCapProps {
   transparent: boolean
   /** アンロックのために押すべきキーか。 */
   unlockHint: boolean
-  /** 縁取るか(プレビュー中の、そのレイヤーに入るキー)。色は --trigger。 */
+  /** 縁取るか(プレビュー中の、そのレイヤーに入るキー)。色は--trigger。 */
   highlight?: boolean
   /** 光らせるか(記号の出し方で選んだ記号を打つのに押すキー)。 */
   flash?: boolean
-  /** Shift が効いているか。Shift で入る文字が変わるキーは、そちらを主にして目立たせる。 */
+  /** Shiftが効いているか。Shiftで入る文字が変わるキーは、そちらを主にして目立たせる。 */
   shifted?: boolean
   /**
    * ノブの押し込みキーなら、回したときの割り当て(「↺ 音量−」「↻ 音量+」)。
    * キーを円く描き、右回りを上、左回りを下に挟んで出す(layout/knobButtons.ts)。
    * 右回りが上なのは、音量なら「音量+」が上に来るように(上げる向きが上)
-   * inward は図の中央がどちらにあるか。キーの幅に収まらない文字はそちらへ伸ばす
+   * inwardは図の中央がどちらにあるか。キーの幅に収まらない文字はそちらへ伸ばす
    */
   knob?: { ccw: string; cw: string; inward: 'left' | 'right' }
   unit: number
@@ -48,7 +48,7 @@ export interface KeyCapProps {
 }
 
 const GAP = 0.08
-/** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.css の .key-body)より少し深く。 */
+/** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.cssの.key-body)より少し深く。 */
 const SKIRT = 3
 const BAND_HEIGHT = 17
 /**
@@ -60,12 +60,12 @@ const BAND_INSET = 2
 const KNOB_LABEL_OFFSET = 11
 /** 円いキーで文字を置ける幅の割合。四隅が無いぶん狭い。 */
 const KNOB_TEXT_ROOM = 0.78
-/** ノブの割り当ての文字の大きさ(px)。styles.css の .encoder-label と揃える。 */
+/** ノブの割り当ての文字の大きさ(px)。styles.cssの.encoder-labelと揃える。 */
 const KNOB_FONT = 13
-/** 色帯の文字の大きさ(px)。styles.css の .band-text と揃える。 */
+/** 色帯の文字の大きさ(px)。styles.cssの.band-textと揃える。 */
 const BAND_FONT = 11
 
-/** おおよその文字幅。全角は字の大きさ、半角はその 6 割として数える。 */
+/** おおよその文字幅。全角は字の大きさ、半角はその6割として数える。 */
 function textWidth(text: string, fontSize: number): number {
   let width = 0
   for (const ch of text)
@@ -74,10 +74,10 @@ function textWidth(text: string, fontSize: number): number {
 }
 
 /**
- * 長押しの色帯の文字。行き先のレイヤーだけを書く(「L2 記号」→「記号」→「L2」の順に、入るもの)。
+ * 長押しの色帯の文字。行き先のレイヤーだけを書く(「L2記号」→「記号」→「L2」の順に、入るもの)。
  *
- * 以前は「長押し→L2」と書いていたが、9px でも 1u にぎりぎりで、傾いた親指キーでは読めなかった。
- * 「長押しで」の部分はツールバーの一覧(L2 Space 長押し)とツールチップが言うので、帯は行き先だけに
+ * 以前は「長押し→L2」と書いていたが、9pxでも1uにぎりぎりで、傾いた親指キーでは読めなかった。
+ * 「長押しで」の部分はツールバーの一覧(L2 Space長押し)とツールチップが言うので、帯は行き先だけに
  * して字を大きくする。色でもどのレイヤーかは分かる。
  */
 function bandText(layer: number, name: string | undefined, width: number): string {
@@ -100,12 +100,12 @@ function mainFontSize(text: string): number {
 const TEXT_PADDING = 8
 /** 収まらないときに縮めてよい下限(px)。これより小さいと読めない。 */
 const MIN_FONT = 8
-/** 補足行の文字の大きさ(px)。styles.css の .sub と揃える。 */
+/** 補足行の文字の大きさ(px)。styles.cssの.subと揃える。 */
 const SUB_FONT = 9
-/** 2 行に割ったときの字の大きさの上限。2 行ぶんの高さに収めるため。 */
+/** 2行に割ったときの字の大きさの上限。2行ぶんの高さに収めるため。 */
 const TWO_LINE_FONT = 12
 
-/** 空白のうち、2 つに割ったとき長い方が一番短くなる位置で割る。空白が無ければ null。 */
+/** 空白のうち、2つに割ったとき長い方が一番短くなる位置で割る。空白が無ければnull。 */
 function splitInTwo(text: string): [string, string] | null {
   const words = text.split(' ').filter(Boolean)
   if (words.length < 2) return null
@@ -121,13 +121,13 @@ function splitInTwo(text: string): [string, string] | null {
 interface FittedText {
   lines: string[]
   fontSize: number
-  /** 下限まで縮めても収まらなかったら false(呼び出し側で別の文言に替えるため)。 */
+  /** 下限まで縮めても収まらなかったらfalse(呼び出し側で別の文言に替えるため)。 */
   fits: boolean
 }
 
 /**
- * 主文字をキーの幅に収める。1 行で入らなければ空白で 2 行に割り、それでも入らなければ
- * 字を小さくする。カスタムキーの名前("Switch Output" など)がキーの外にはみ出していた。
+ * 主文字をキーの幅に収める。1行で入らなければ空白で2行に割り、それでも入らなければ
+ * 字を小さくする。カスタムキーの名前("Switch Output"など)がキーの外にはみ出していた。
  */
 function fitMain(text: string, width: number, maxFont = Number.POSITIVE_INFINITY): FittedText {
   const room = width - TEXT_PADDING
@@ -150,7 +150,7 @@ function subFontSize(text: string, width: number): number {
 }
 
 /**
- * 長押し中のキーの補足。キーの名前も添えたいが、1u には「Space 長押し中」が収まらない
+ * 長押し中のキーの補足。キーの名前も添えたいが、1uには「Space長押し中」が収まらない
  * (はみ出していた)。入らなければ「長押し中」だけにする。キーの名前はツールチップにある。
  */
 function holdingSub(keyName: string, width: number): string {
@@ -158,7 +158,7 @@ function holdingSub(keyName: string, width: number): string {
   return textWidth(full, SUB_FONT) <= width - TEXT_PADDING ? full : messages.keyCap.holding
 }
 
-/** 複数行の文字を、中心の y に揃えて縦に並べる。1 行なら tspan を使わない。 */
+/** 複数行の文字を、中心のyに揃えて縦に並べる。1行ならtspanを使わない。 */
 function Lines({ lines, x, fontSize }: { lines: string[]; x: number; fontSize: number }) {
   if (lines.length === 1) return <>{lines[0]}</>
   const lineHeight = fontSize * 1.15
@@ -198,10 +198,10 @@ export function KeyCap({
   const cx = x + width / 2
   const cy = y + height / 2
 
-  // Shift 中は、Shift で入る文字を主文字の位置に大きく出し、ふだんの文字を上に退かせる
+  // Shift中は、Shiftで入る文字を主文字の位置に大きく出し、ふだんの文字を上に退かせる
   const swapShift = shifted && Boolean(label.shift)
-  // styles.css のキーキャップのクラス(Tailwind ではない)なので、tailwind-merge は通さない。
-  // 効く順番はここでの並びではなく styles.css の並び(基本 → 種類 → 状態)で決まる
+  // styles.cssのキーキャップのクラス(Tailwindではない)なので、tailwind-mergeは通さない。
+  // 効く順番はここでの並びではなくstyles.cssの並び(基本 → 種類 → 状態)で決まる
   const className = clsx('key', {
     'key-sym': label.category === 'sym',
     'key-none': label.category === 'none' && label.main === '',
@@ -220,7 +220,7 @@ export function KeyCap({
   const mainText = swapShift ? (label.shift ?? '') : label.main
   const shiftText = swapShift ? label.main : label.shift
 
-  // クリックできるとき(モック)だけボタンとして振る舞う。キーボードでも Enter / Space で押せる
+  // クリックできるとき(モック)だけボタンとして振る舞う。キーボードでもEnter / Spaceで押せる
   const interactive = onClick
     ? {
         role: 'button',
@@ -249,7 +249,7 @@ export function KeyCap({
   const radius = knob ? Math.min(width, height) / 2 : 7
   // ノブの割り当ての文字は、キーの幅に収まればキーの真上・真下に中央揃えで置く
   // (キーどうしの隙間のぶんまでは、はみ出してよい)。収まらなければ図の中央の側へ伸ばす。
-  // 外側は隣のキーとぶつかりやすい(Cornix の右手のホイールの割り当てが、隣の H・N にかかっていた)
+  // 外側は隣のキーとぶつかりやすい(Cornixの右手のホイールの割り当てが、隣のH・Nにかかっていた)
   const knobLabel = (text: string): { x: number; style: React.CSSProperties } => {
     if (!knob || textWidth(text, KNOB_FONT) <= width + GAP * unit) return { x: cx, style: {} }
     return knob.inward === 'left'
@@ -262,11 +262,11 @@ export function KeyCap({
   // 色帯を除いた、文字を置ける範囲の真ん中
   const contentBottom = y + height - (showBand ? BAND_HEIGHT + BAND_INSET : 0)
   const contentCenter = (y + contentBottom) / 2
-  // Shift 側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
+  // Shift側の文字は、キーキャップの印字と同じように主文字の「上」に置く。
   // 左上に小さく出していたときは見落としやすかった。
   const shiftY = y + 13
   const fitted = fitMain(mainText, room)
-  // 2 行に割ったときは、補足行を 2 行目の下まで下げる
+  // 2行に割ったときは、補足行を2行目の下まで下げる
   const extraLines = (fitted.lines.length - 1) * fitted.fontSize * 1.15
   const mainY = (hasShift ? contentCenter + 6 : contentCenter) - (hasSub ? 5 + extraLines / 2 : 0)
   const subY = mainY + 15 + extraLines / 2
@@ -287,8 +287,8 @@ export function KeyCap({
       <rect className="skirt" x={x} y={y + SKIRT} width={width} height={height} rx={radius} />
 
       {/*
-       * 本体。押したときに沈めるのはこの中だけ。外側の g には回転(transform 属性)があり、
-       * CSS の transform を掛けると属性ごと上書きされて親指キーの傾きが消えるため
+       * 本体。押したときに沈めるのはこの中だけ。外側のgには回転(transform属性)があり、
+       * CSSのtransformを掛けると属性ごと上書きされて親指キーの傾きが消えるため
        */}
       <g className="key-body">
         <rect className="cap" x={x} y={y} width={width} height={height} rx={radius} />
@@ -315,7 +315,7 @@ export function KeyCap({
               </text>
             )}
             {hasSub && label.sub && (
-              // .sub の font-size は CSS にあるので、属性ではなく style で上書きする(属性は CSS に負ける)
+              // .subのfont-sizeはCSSにあるので、属性ではなくstyleで上書きする(属性はCSSに負ける)
               <text
                 className="sub"
                 x={cx}
@@ -349,7 +349,7 @@ export function KeyCap({
       {knob && (
         // 回したときの割り当て。押しても沈まないよう本体の外に置く
         <>
-          {/* 文字の揃え方は CSS(中央揃え)に勝たせるため style で渡す */}
+          {/* 文字の揃え方はCSS(中央揃え)に勝たせるためstyleで渡す */}
           <text className="encoder-label" y={y - KNOB_LABEL_OFFSET} {...knobLabel(knob.cw)}>
             {knob.cw}
           </text>

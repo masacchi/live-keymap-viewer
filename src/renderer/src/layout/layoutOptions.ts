@@ -1,12 +1,12 @@
 /**
- * VIA のレイアウトオプション(1 個の整数)を、選択肢ごとの値にほどく。
+ * VIAのレイアウトオプション(1個の整数)を、選択肢ごとの値にほどく。
  *
- * vial-gui の editor/layout_editor.py と同じ扱い:
+ * vial-guiのeditor/layout_editor.pyと同じ扱い:
  * 選択肢ごとに必要なビット数だけを占め、それを順に連結したビット列になっている。
  * **後ろの選択肢ほど下位ビット**に入る("VIA stores option choices backwards")。
  */
 
-/** `layouts.labels` の 1 要素。文字列なら ON/OFF、配列なら [名前, 選択肢…]。 */
+/** `layouts.labels`の1要素。文字列ならON/OFF、配列なら[名前, 選択肢…]。 */
 export type LayoutLabel = string | string[]
 
 function bitLength(value: number): number {
@@ -18,14 +18,14 @@ function bitLength(value: number): number {
   return bits
 }
 
-/** 選択肢 1 個が占めるビット数。 */
+/** 選択肢1個が占めるビット数。 */
 export function optionBits(label: LayoutLabel): number {
   if (typeof label === 'string') return 1 // ON/OFF
   const choices = Math.max(1, label.length - 1)
   return Math.max(1, bitLength(choices - 1))
 }
 
-/** 整数 → 選択肢ごとの値。labels が無ければ空配列。 */
+/** 整数 → 選択肢ごとの値。labelsが無ければ空配列。 */
 export function decodeLayoutOptions(value: number, labels?: unknown[]): number[] {
   if (!labels || labels.length === 0) return []
   const sizes = labels.map((label) => optionBits(label as LayoutLabel))
@@ -39,7 +39,7 @@ export function decodeLayoutOptions(value: number, labels?: unknown[]): number[]
   return out
 }
 
-/** 選択肢ごとの値 → 整数。decodeLayoutOptions の逆。 */
+/** 選択肢ごとの値 → 整数。decodeLayoutOptionsの逆。 */
 export function encodeLayoutOptions(choices: number[], labels?: unknown[]): number {
   if (!labels || labels.length === 0) return 0
   let value = 0

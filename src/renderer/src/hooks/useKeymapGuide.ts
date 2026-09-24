@@ -1,11 +1,11 @@
 /**
  * 読み込んだキーマップから、画面の案内に使うものを作る。
  *
- * - 各レイヤーへの行き方(「Space 長押し」)と、空のレイヤー(engine/layerSummary.ts)
+ * - 各レイヤーへの行き方(「Space長押し」)と、空のレイヤー(engine/layerSummary.ts)
  * - 記号ごとの打ち方(engine/symbolRoutes.ts)
- * - キーの名前(ベースレイヤーでの表示。「W の位置」「Tab と Q を押し続ける」の言い方に使う)
+ * - キーの名前(ベースレイヤーでの表示。「Wの位置」「TabとQを押し続ける」の言い方に使う)
  *
- * どれもキーマップと表記(JIS / US)だけで決まり、押下には左右されない。以前は App に並んでいた。
+ * どれもキーマップと表記(JIS / US)だけで決まり、押下には左右されない。以前はAppに並んでいた。
  */
 import { useCallback, useMemo } from 'react'
 import { describeTrigger, type LayerSummary, summarizeLayers } from '../engine/layerSummary'
@@ -25,7 +25,7 @@ type KeyPosition = { row: number; col: number }
 export interface KeymapGuide {
   summaries: readonly LayerSummary[]
   labelContext: LabelContext
-  /** そのレイヤーへの行き方(「Space 長押し」)。無ければ null。 */
+  /** そのレイヤーへの行き方(「Space長押し」)。無ければnull。 */
   howTo: (layer: number) => string | null
   /** ベースレイヤーでのキーの名前。 */
   baseKeyName: (position: KeyPosition) => string
@@ -33,7 +33,7 @@ export interface KeymapGuide {
   symbolRoutes: ReadonlyMap<string, readonly SymbolRoute[]>
   /** 打ち方を手順(レイヤー → Shift → キー)に分けたもの。 */
   stepsOf: (route: SymbolRoute) => RouteStep[]
-  /** 記号を打つのに押すキー(Shift を足すならベースレイヤーの Shift も)。図で光らせる。 */
+  /** 記号を打つのに押すキー(Shiftを足すならベースレイヤーのShiftも)。図で光らせる。 */
   keysToPress: (route: SymbolRoute) => KeyPosition[]
 }
 

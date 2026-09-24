@@ -27,7 +27,7 @@ function routes(mode: LabelMode = 'jis', reachable?: (layer: number) => boolean)
   })
 }
 
-/** ベースレイヤーでのキーの名前(経路の「W の位置」のような言い方に使う)。 */
+/** ベースレイヤーでのキーの名前(経路の「Wの位置」のような言い方に使う)。 */
 function baseName(route: { row: number; col: number }): string {
   return labelForKeycode(decodeKeycode(snapshot.keymap[0][route.row][route.col]), 'jis').main
 }
@@ -52,7 +52,7 @@ describe('findSymbolRoutes: Cornix を JIS で', () => {
   })
 
   it('タップと長押しを兼ねるキーのタップは 0.5 手で、そう印を付ける', () => {
-    // 右下の TD(3) はタップで `
+    // 右下のTD(3)はタップで`
     expect(routes().get('`')?.[0]).toMatchObject({ layer: 0, tap: true, cost: 0.5 })
   })
 

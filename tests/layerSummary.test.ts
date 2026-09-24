@@ -16,7 +16,7 @@ describe('summarizeLayers: Cornix', () => {
   it('L1〜L4 に、ベースレイヤーのどのキーで入るかを拾う', () => {
     const summary = summarizeLayers(snapshot)
     const first = (layer: number) => summary[layer].triggers[0]
-    // BS = LT1、Space = LT2、Del = LT3、` = TD(3)(長押しで MO(4))
+    // BS = LT1、Space = LT2、Del = LT3、` = TD(3)(長押しでMO(4))
     expect(first(1)).toMatchObject({ fromLayer: 0, row: 3, col: 5, kind: 'hold' })
     expect(first(2)).toMatchObject({ fromLayer: 0, row: 7, col: 5, kind: 'hold' })
     expect(first(3)).toMatchObject({ fromLayer: 0, row: 3, col: 4, kind: 'hold' })
@@ -42,7 +42,7 @@ describe('summarizeLayers: Cornix', () => {
 })
 
 describe('summarizeLayers: 作ったキーマップ', () => {
-  // 3 レイヤー × 1 行 × 3 列
+  // 3レイヤー × 1行 × 3列
   const keymap = (l0: number[], l1: number[], l2: number[] = [KC_TRNS, KC_TRNS, KC_TRNS]) => [
     [l0],
     [l1],
@@ -94,7 +94,7 @@ describe('summarizeLayers: 作ったキーマップ', () => {
       tapDance: [],
       encoders
     })
-    expect(summary[1].blank).toBe(true) // ノブも L0 と同じ
+    expect(summary[1].blank).toBe(true) // ノブもL0と同じ
     expect(summary[2].blank).toBe(false) // ノブだけ違う
   })
 

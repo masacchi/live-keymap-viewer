@@ -1,38 +1,38 @@
 /**
- * Tauri 版の HID。Rust(src-tauri/src/hid.rs)の hidapi を、WebHID と同じ形に見せる。
+ * Tauri版のHID。Rust(src-tauri/src/hid.rs)のhidapiを、WebHIDと同じ形に見せる。
  *
- * Tauri の画面は WebView2 で、WebHID の許可や選択ダイアログを差し込む口が無い
- * (docs/ARCHITECTURE.md §2)。そこで HID は Rust で扱い、ここで `navigator.hid` と `HIDDevice` の
+ * Tauriの画面はWebView2で、WebHIDの許可や選択ダイアログを差し込む口が無い
+ * (docs/ARCHITECTURE.md §2)。そこでHIDはRustで扱い、ここで`navigator.hid`と`HIDDevice`の
  * うち**アプリが使うところだけ**を作る。そうしておけば、接続の管理(session/keyboardConnection.ts)・
- * 候補の確かめ(deviceProbe.ts)・往復(transport.ts の WebHidTransport)は、ブラウザの WebHID と
+ * 候補の確かめ(deviceProbe.ts)・往復(transport.tsのWebHidTransport)は、ブラウザのWebHIDと
  * 同じコードのまま動く。
  *
- * Rust を呼ぶところは NativeHidBackend にまとめてある(platform/tauri.ts)。テストでは偽物に差し替える。
+ * Rustを呼ぶところはNativeHidBackendにまとめてある(platform/tauri.ts)。テストでは偽物に差し替える。
  */
 import type { HidCandidate } from '../../../shared/ipc'
 
-/** Rust から来るデバイスの情報(src-tauri/src/hid.rs の HidDeviceInfo)。 */
+/** Rustから来るデバイスの情報(src-tauri/src/hid.rsのHidDeviceInfo)。 */
 export interface NativeHidInfo {
-  /** OS のデバイスパス。開くときと、同じものかを見分けるのに使う。 */
+  /** OSのデバイスパス。開くときと、同じものかを見分けるのに使う。 */
   path: string
   vendorId: number
   productId: number
-  /** 製品名。Bluetooth では取れず空のことがある。 */
+  /** 製品名。Bluetoothでは取れず空のことがある。 */
   productName: string
   usagePage: number
   usage: number
 }
 
 export interface NativeHidBackend {
-  /** Vial のインターフェースを並べる。grantedOnly なら一度許可したもの(VID/PID)だけ。 */
+  /** Vialのインターフェースを並べる。grantedOnlyなら一度許可したもの(VID/PID)だけ。 */
   devices(grantedOnly: boolean): Promise<NativeHidInfo[]>
   /** 選ばれたキーボードを覚える(次の起動から自動で繋ぐ)。 */
   remember(device: NativeHidInfo): Promise<void>
-  /** 別々のキーボードが並んでいるとき、どれに繋ぐかを人に選ばせる。取り消されたら null。 */
+  /** 別々のキーボードが並んでいるとき、どれに繋ぐかを人に選ばせる。取り消されたらnull。 */
   choose(candidates: HidCandidate[]): Promise<string | null>
-  /** 開いて、入力レポート(32 バイト)を onReport に流す。閉じるのに使う番号を返す。 */
+  /** 開いて、入力レポート(32バイト)をonReportに流す。閉じるのに使う番号を返す。 */
   open(path: string, onReport: (data: Uint8Array) => void): Promise<number>
-  /** 1 つのレポートを書く。先頭の 1 バイトはレポート ID。 */
+  /** 1つのレポートを書く。先頭の1バイトはレポートID。 */
   write(handle: number, data: Uint8Array): Promise<void>
   close(handle: number): Promise<void>
   /** 挿し抜きの知らせを受ける。戻り値を呼ぶと解除。 */
@@ -42,7 +42,7 @@ export interface NativeHidBackend {
   }): () => void
 }
 
-/** `HIDDevice` のうち、アプリが使うところ。 */
+/** `HIDDevice`のうち、アプリが使うところ。 */
 export class NativeHidDevice extends EventTarget {
   private handle: number | null = null
   private opening: Promise<void> | null = null
@@ -53,7 +53,7 @@ export class NativeHidDevice extends EventTarget {
     private readonly backend: NativeHidBackend
   ) {
     super()
-    // isVialDevice(transport.ts)が見るのは usagePage と usage だけ
+    // isVialDevice(transport.ts)が見るのはusagePageとusageだけ
     this.collections = [{ usagePage: info.usagePage, usage: info.usage } as HIDCollectionInfo]
   }
 
@@ -75,7 +75,7 @@ export class NativeHidDevice extends EventTarget {
 
   open(): Promise<void> {
     if (this.handle !== null) return Promise.resolve()
-    // 開いている途中にもう一度呼ばれても、ハンドルを 2 つ作らない
+    // 開いている途中にもう一度呼ばれても、ハンドルを2つ作らない
     this.opening ??= this.backend
       .open(this.info.path, (data) => this.deliver(data))
       .then((handle) => {
@@ -97,8 +97,8 @@ export class NativeHidDevice extends EventTarget {
 
   async sendReport(reportId: number, data: BufferSource): Promise<void> {
     const handle = this.handle
-    // WebHID と同じく、書けないときは TransportError ではない Error で失敗させる。
-    // セッションは TransportError(時間切れ)でなければ待たずに切る(session/keyboardSession.ts)
+    // WebHIDと同じく、書けないときはTransportErrorではないErrorで失敗させる。
+    // セッションはTransportError(時間切れ)でなければ待たずに切る(session/keyboardSession.ts)
     if (handle === null) throw new Error('デバイスが開かれていない')
     const body = toBytes(data)
     const report = new Uint8Array(body.length + 1)
@@ -121,7 +121,7 @@ export class NativeHidDevice extends EventTarget {
   }
 }
 
-/** `navigator.hid` のうち、アプリが使うところ(session/keyboardConnection.ts の HidLike)。 */
+/** `navigator.hid`のうち、アプリが使うところ(session/keyboardConnection.tsのHidLike)。 */
 export class NativeHid extends EventTarget {
   /** 同じパスには同じオブジェクトを返す。接続の管理は、切れたデバイスを === で見分けている。 */
   private readonly known = new Map<string, NativeHidDevice>()
@@ -133,7 +133,7 @@ export class NativeHid extends EventTarget {
       connect: (info) => this.dispatchEvent(connectionEvent('connect', this.device(info))),
       disconnect: (info) => {
         const device = this.known.get(info.path) ?? new NativeHidDevice(info, backend)
-        // 挿し直したら別のデバイスとして扱う(WebHID と同じ)
+        // 挿し直したら別のデバイスとして扱う(WebHIDと同じ)
         this.known.delete(info.path)
         this.dispatchEvent(connectionEvent('disconnect', device))
       }
@@ -145,11 +145,11 @@ export class NativeHid extends EventTarget {
   }
 
   /**
-   * 繋ぐキーボードを選ぶ。Electron 版で main が select-hid-device でしていたことと同じ。
+   * 繋ぐキーボードを選ぶ。Electron版でmainがselect-hid-deviceでしていたことと同じ。
    *
-   * 同じキーボードが USB と Bluetooth の両方で見えていると、候補が 2 つになる。
-   * 名前も VID/PID も同じで人には見分けられないし、許可は VID/PID 単位なので
-   * どちらを選んでも両方が許可される。どちらが答えるかは deviceProbe.ts が確かめる。
+   * 同じキーボードがUSBとBluetoothの両方で見えていると、候補が2つになる。
+   * 名前もVID/PIDも同じで人には見分けられないし、許可はVID/PID単位なので
+   * どちらを選んでも両方が許可される。どちらが答えるかはdeviceProbe.tsが確かめる。
    * 選ばせるのは、別々のキーボードが並んでいるときだけ。
    */
   async requestDevice(options: HIDDeviceRequestOptions): Promise<NativeHidDevice[]> {

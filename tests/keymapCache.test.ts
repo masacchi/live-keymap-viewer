@@ -42,7 +42,7 @@ describe('LocalStorageKeymapCache', () => {
   it('大きさの合わないキーマップは捨てる(そのまま描くと図が崩れる)', () => {
     const storage = memoryStorage()
     const cache = new LocalStorageKeymapCache(storage)
-    // レイヤーが 1 つ足りない / 列が 1 つ足りない
+    // レイヤーが1つ足りない / 列が1つ足りない
     storage.items.set('vial-keymap:1', JSON.stringify({ ...ENTRY, keymap: [[[4, 5, 6]]] }))
     storage.items.set('vial-keymap:2', JSON.stringify({ ...ENTRY, cols: 4 }))
     expect(cache.get('1')).toBeNull()

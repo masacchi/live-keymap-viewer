@@ -3,16 +3,16 @@
 /*
  * ===== 色と字のトークン =====
  *
- * 画面の色はすべてここで決める。@theme に置くと Tailwind のユーティリティになる
+ * 画面の色はすべてここで決める。@themeに置くとTailwindのユーティリティになる
  * (--color-surface → bg-surface / text-surface / border-surface …)。
- * 以前は :root の変数を text-muted のような任意値で 55 か所から参照していた。
- * SVG のキーキャップ(下の .cap など)も同じ変数を var(--color-*) で使う。
+ * 以前は :rootの変数をtext-mutedのような任意値で55か所から参照していた。
+ * SVGのキーキャップ(下の.capなど)も同じ変数をvar(--color-*)で使う。
  *
- * static を付けて、使っていない変数も必ず出力させる。レイヤー色は JS で
- * `var(--color-layer-${n})` と組み立てる(lib/theme.ts)ので、Tailwind からは使っているか見えない。
+ * staticを付けて、使っていない変数も必ず出力させる。レイヤー色はJSで
+ * `var(--color-layer-${n})`と組み立てる(lib/theme.ts)ので、Tailwindからは使っているか見えない。
  *
- * 色づかいは reference/keymap-preview.html を踏襲している。
- * レイヤー色 L0〜L4 は同じ値、それ以上は足したもの。
+ * 色づかいはreference/keymap-preview.htmlを踏襲している。
+ * レイヤー色L0〜L4は同じ値、それ以上は足したもの。
  */
 @theme static {
   --color-ground: #121518;
@@ -28,7 +28,7 @@
   /* 明るい地(レイヤー色・押下の黄色・主ボタン)の上に載せる文字 */
   --color-ink-inverse: #101315;
   /*
-   * 記号キー。以前はティールで塗っていたが、L2(記号レイヤー)の色と同じ系統で、L2 に入ると
+   * 記号キー。以前はティールで塗っていたが、L2(記号レイヤー)の色と同じ系統で、L2に入ると
    * 背景の色とまぎれて一番見分けにくくなっていた。色味(色相)はレイヤーだけに使うことにして、
    * 記号キーは一段明るい面と明るい枠で見せる。
    */
@@ -48,29 +48,29 @@
   --color-layer-8: #e3c56a;
   --color-layer-9: #9ad4c8;
   /*
-   * アンロックで押し続けるキーの色。以前は L4 の色を借りていて、「長押し→L4」の色帯と
+   * アンロックで押し続けるキーの色。以前はL4の色を借りていて、「長押し→L4」の色帯と
    * 見分けが付かなかった。どのレイヤー色とも押下の黄色とも重ならない、白に近い色にする。
    */
   --color-unlock: #f4f7f8;
 
-  /* 接続の状態(ツールバーの丸)とエラー表示。Tailwind の既定色を直に書かない */
+  /* 接続の状態(ツールバーの丸)とエラー表示。Tailwindの既定色を直に書かない */
   --color-ok: #34d399;
   --color-warn: #fbbf24;
   --color-danger: #f43f5e;
 
   /*
-   * 文字の大きさは Tailwind の text-xs(12px)/ text-sm / text-lg と、これ(11px)だけにする。
-   * 以前は 10px と 11px の任意値が混ざっていた。"2xs" は tailwind-merge が文字サイズと
-   * 分かる名前(lib/cn.ts の注意を参照)。
+   * 文字の大きさはTailwindのtext-xs(12px)/ text-sm / text-lgと、これ(11px)だけにする。
+   * 以前は10pxと11pxの任意値が混ざっていた。"2xs"はtailwind-mergeが文字サイズと
+   * 分かる名前(lib/cn.tsの注意を参照)。
    */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
 
   /*
-   * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJK を持つフォントを
-   * 必ず 1 つは拾えるようにしておく。Windows は Yu Gothic UI / Meiryo、macOS は
-   * Hiragino、Linux は Noto CJK 系。どれも無いと豆腐(□)になる。
-   * Tailwind の既定のフォント(html の font-family)もこれになる。
+   * 日本語のラベル(かな / 英数 / 消音 / 長押し→L2 …)を出すので、CJKを持つフォントを
+   * 必ず1つは拾えるようにしておく。WindowsはYu Gothic UI / Meiryo、macOSは
+   * Hiragino、LinuxはNoto CJK系。どれも無いと豆腐(□)になる。
+   * Tailwindの既定のフォント(htmlのfont-family)もこれになる。
    */
   --font-sans:
     "IBM Plex Sans JP", "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans CJK JP",
@@ -93,11 +93,11 @@ body {
   /*
    * 日本語は単語の区切りに空白が無いので、既定では文字の切れ目ならどこでも折り返す。
    * 「キーボード / 側の設定」「表示 / がずれません」のように文節の途中で切れて読みにくかった。
-   * auto-phrase は Chromium が文節の区切りで折り返してくれる(Chrome 119 以降。Electron 44 は満たす)。
+   * auto-phraseはChromiumが文節の区切りで折り返してくれる(Chrome 119以降。Electron 44は満たす)。
    * 効くのは日本語などの区切りの無い言語だけで、英数字の折り返しは変わらない。
    */
   word-break: auto-phrase;
-  /* 最後の行に 1 語だけ残るのを避ける(見出しや短い説明で効く) */
+  /* 最後の行に1語だけ残るのを避ける(見出しや短い説明で効く) */
   text-wrap: pretty;
   /*
    * 画面の文字は選べなくする。ビューアなので選ぶものが無く、キーやレイヤーの札をクリック・
@@ -121,12 +121,12 @@ textarea {
   scrollbar-color: var(--color-line) transparent;
 }
 
-/* SVG の text は body から継承するが、明示しておく */
+/* SVGのtextはbodyから継承するが、明示しておく */
 svg text {
   font-family: var(--font-sans);
 }
 
-/* オーバーレイでは背景を透かす。ウィンドウ自体も transparent で作られている。 */
+/* オーバーレイでは背景を透かす。ウィンドウ自体もtransparentで作られている。 */
 body.overlay {
   background: transparent;
 }
@@ -138,8 +138,8 @@ body.overlay .app-shell {
 }
 
 /*
- * 背景の板。背景色ではなく別の層にしてあるのは、L0 で薄くするときに図と同じだけ
- * opacity を掛けるため(左上のパネルは薄くしないので、.app-shell ごとは薄くできない)
+ * 背景の板。背景色ではなく別の層にしてあるのは、L0で薄くするときに図と同じだけ
+ * opacityを掛けるため(左上のパネルは薄くしないので、.app-shellごとは薄くできない)
  */
 body.overlay .app-shell::before {
   content: "";
@@ -155,8 +155,8 @@ body.overlay .app-shell::before {
 }
 
 /*
- * 後ろをぼかしているあいだは板を薄くする。ぼかし(OS のアクリル)は板の下に描かれるので、
- * 72% のままだと 3 割弱しか見えず、ぼかしが効いていないように見えていた。アクリル自体に
+ * 後ろをぼかしているあいだは板を薄くする。ぼかし(OSのアクリル)は板の下に描かれるので、
+ * 72%のままだと3割弱しか見えず、ぼかしが効いていないように見えていた。アクリル自体に
  * 暗い色味が乗るので、薄くしても字は読める
  */
 body.overlay .app-shell.blurred::before {
@@ -165,7 +165,7 @@ body.overlay .app-shell.blurred::before {
 
 /*
  * ぼかしているあいだは角を丸めない。ぼかしはウィンドウの四角いっぱいに掛かり、角丸にできない
- * (Electron は透明なウィンドウの角丸を切っていて、setShape でも切り抜けなかった。2026-09-23 実機)。
+ * (Electronは透明なウィンドウの角丸を切っていて、setShapeでも切り抜けなかった。2026-09-23実機)。
  * 板だけ丸いと四隅にぼかしがはみ出して見えるので、板を四角にして揃える
  */
 body.overlay .app-shell.blurred {
@@ -173,7 +173,7 @@ body.overlay .app-shell.blurred {
 }
 
 /*
- * ベースレイヤーのあいだは、板も図と同じだけ薄くする(濃さは App.tsx が --faded-opacity で渡す)。
+ * ベースレイヤーのあいだは、板も図と同じだけ薄くする(濃さはApp.tsxが--faded-opacityで渡す)。
  * 以前は板だけ消していたので、薄い図が壁紙の上にじかに乗り、どこまでが図か分かりにくかった。
  * 図と同じく、薄くするのは少し待ってからゆっくり
  */
@@ -184,7 +184,7 @@ body.overlay .app-shell.faded::before {
     background-color 400ms ease 300ms;
 }
 
-/* 角丸に戻すのは、ぼかしが外れるのと同時(薄くし始めて 300ms 後。useOverlayFade.ts) */
+/* 角丸に戻すのは、ぼかしが外れるのと同時(薄くし始めて300ms後。useOverlayFade.ts) */
 body.overlay .app-shell.faded {
   transition: border-radius 0s linear 300ms;
 }
@@ -198,7 +198,7 @@ body.overlay .app-shell.faded {
  * (以前は記号キーの文字色が押下より後ろにあり、黄色の上にシアンの文字が出ていた)
  */
 
-/* --- 基本 --- */
+/* --- 基本--- */
 .cap {
   fill: var(--color-surface);
   stroke: var(--color-line);
@@ -206,7 +206,7 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * キーの厚み。上面より暗い縁を下に 3px 覗かせて、押せるものに見せる。影のフィルタを
+ * キーの厚み。上面より暗い縁を下に3px覗かせて、押せるものに見せる。影のフィルタを
  * 全キーに掛けるより軽い。押すと本体が沈んでこれに重なり、「押し込まれた」と分かる
  */
 .skirt {
@@ -230,8 +230,8 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * Shift 側の文字。キーキャップの印字と同じく主文字の上に、中央揃えで置く。
- * 左上に 11px で出していたときは小さくて見落としていた。
+ * Shift側の文字。キーキャップの印字と同じく主文字の上に、中央揃えで置く。
+ * 左上に11pxで出していたときは小さくて見落としていた。
  */
 .shift {
   fill: var(--color-shift-ink);
@@ -261,7 +261,7 @@ body.overlay .app-shell.faded {
   dominant-baseline: middle;
 }
 
-/* --- 種類 --- */
+/* --- 種類--- */
 .key-sym .cap {
   fill: var(--color-sym-fill);
   stroke: var(--color-sym-line);
@@ -282,7 +282,7 @@ body.overlay .app-shell.faded {
   display: none;
 }
 
-/* --- 状態 --- */
+/* --- 状態--- */
 
 /* モックのキー。クリックで押す/離すを切り替えられる */
 .key-clickable {
@@ -305,7 +305,7 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * プレビュー中の、そのレイヤーに入るキー(L2 なら Space)。レイヤーの色で縁取る。
+ * プレビュー中の、そのレイヤーに入るキー(L2ならSpace)。レイヤーの色で縁取る。
  * 透過で薄く出ていても枠だけは濃くして、「このキーでここに来る」と分かるようにする。
  */
 .key-trigger .cap {
@@ -330,7 +330,7 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * Shift を押しているあいだ、Shift で入る文字が変わるキー。KeyCap が Shift 側の文字を
+ * Shiftを押しているあいだ、Shiftで入る文字が変わるキー。KeyCapがShift側の文字を
  * 主文字の位置に入れ替えているので、ここではキーごと明るくして浮かせる。
  * 押下より前に置く(押している記号キーは押下の配色を優先する)。
  */
@@ -354,20 +354,20 @@ body.overlay .app-shell.faded {
   stroke: var(--color-press);
   /* 押しているあいだは淡く光らせる。色だけより、離れて見ても押下が拾いやすい */
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-press) 55%, transparent));
-  /* 押した瞬間の光(下の press-flash) */
+  /* 押した瞬間の光(下のpress-flash) */
   animation: press-flash 220ms ease-out;
 }
 
-/* 押したら 2px 沈める(縁の 3px が 1px だけ残る)。戻りより速く */
+/* 押したら2px沈める(縁の3pxが1pxだけ残る)。戻りより速く */
 .key-pressed .key-body {
   transform: translateY(2px);
   transition-duration: 50ms;
 }
 
 /*
- * 押した瞬間だけ明るく強く光り、0.22 秒で落ち着く。動きはキーの中で終わる。
+ * 押した瞬間だけ明るく強く光り、0.22秒で落ち着く。動きはキーの中で終わる。
  * 以前は縁から輪を外へ広げていたが、打つたびに周りまで動いて目が疲れる、との声でやめた。
- * 終わりの色は書かない(from だけ)。そのとき効いている色に向かうので、長押しで
+ * 終わりの色は書かない(fromだけ)。そのとき効いている色に向かうので、長押しで
  * レイヤーの色に変わる途中でも黄色を挟まずに落ち着く。クラスが付くたびに最初から再生される
  */
 @keyframes press-flash {
@@ -406,7 +406,7 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * アンロックのために押し続けるキー。白い実線の枠は「Shift で変わるキー」(.key-shifted)と
+ * アンロックのために押し続けるキー。白い実線の枠は「Shiftで変わるキー」(.key-shifted)と
  * 同じに見えていたので、色ではなく**回り続ける破線**で区別する。アンロック中は押下が
  * 読めず、押しても光らないので、動いていること自体が「待っている」合図にもなる。
  */
@@ -418,7 +418,7 @@ body.overlay .app-shell.faded {
   animation: unlock-march 0.9s linear infinite;
 }
 
-/* 破線 1 周期(8 + 5)の倍だけずらすと、継ぎ目なく回る */
+/* 破線1周期(8 + 5)の倍だけずらすと、継ぎ目なく回る */
 @keyframes unlock-march {
   to {
     stroke-dashoffset: -26;
@@ -440,7 +440,7 @@ body.overlay .app-shell.faded {
 /*
  * ===== ノブ =====
  * 回したときの割り当ては、右回り(↻)を上、左回り(↺)を下に挟んで出す(音量なら「音量+」が上)。
- * 押し込みキーが分かるノブ(layout/knobButtons.ts)はそのキーを円く描いて上下に(KeyCap の .key-knob)、
+ * 押し込みキーが分かるノブ(layout/knobButtons.ts)はそのキーを円く描いて上下に(KeyCapの.key-knob)、
  * 分からないノブは図の下に破線の丸を並べて上下に(layout/encoderStrip.ts)。
  */
 .encoder {

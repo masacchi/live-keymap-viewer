@@ -1,11 +1,11 @@
 # コミット前に、型チェック・lint(Biome)・テストを通す(npm run check)。
-# 5 秒ほどかかる。src-tauri/ を触ったときは Rust の検査(npm run check:rust)も通す。
-# 急ぎで飛ばしたいときは `git commit --no-verify`(または HUSKY=0)。
+# 5秒ほどかかる。src-tauri/ を触ったときはRustの検査(npm run check:rust)も通す。
+# 急ぎで飛ばしたいときは`git commit --no-verify`(またはHUSKY=0)。
 #
 # 注意: 見るのは作業ツリー全体で、ステージした内容だけではない。
 # 一部だけステージしてコミットすると、ステージしていない変更も込みで検査される。
 
-# VS Code のソース管理画面などから呼ばれると、nvm の PATH が通っていないことがある
+# VS Codeのソース管理画面などから呼ばれると、nvmのPATHが通っていないことがある
 if ! command -v npm >/dev/null 2>&1; then
   NVM_SH="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
   # shellcheck disable=SC1090
@@ -23,8 +23,8 @@ if ! npm run --silent check; then
   exit 1
 fi
 
-# Rust(src-tauri/)を触ったときだけ、Rust の検査も通す。コンテナで動くので数十秒かかる
-# (WSL からなら scripts/container.mjs が podman で中に入る)
+# Rust(src-tauri/)を触ったときだけ、Rustの検査も通す。コンテナで動くので数十秒かかる
+# (WSLからならscripts/container.mjsがpodmanで中に入る)
 if git diff --cached --name-only | grep -q '^src-tauri/'; then
   if ! npm run --silent check:rust; then
     echo "" >&2

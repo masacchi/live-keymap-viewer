@@ -1,22 +1,22 @@
 /**
  * 記号の出し方(ツールバーの「@ 記号の出し方」から開く)。
  *
- * JIS と US のずれや、記号をレイヤーに置いたキーマップでは「@ はどこ?」で手が止まる。
- * reference/keymap-preview.html にあった一覧をアプリに持ってきた。
+ * JISとUSのずれや、記号をレイヤーに置いたキーマップでは「@ はどこ?」で手が止まる。
+ * reference/keymap-preview.htmlにあった一覧をアプリに持ってきた。
  *
- * 記号ごとに 1 枚のカードにする:
+ * 記号ごとに1枚のカードにする:
  *
  *   ┌────────────────────────────────────┐
- *   │ [ @ ]  →  [Space 長押し] + [W]       │
- *   │           または [Shift] + [2]       │
+ *   │ [ @ ]  →  [Space長押し] + [W]       │
+ *   │           または[Shift] + [2]       │
  *   └────────────────────────────────────┘
  *
- * 左に記号をキーの形で大きく、右に押すキーの組み合わせをキーの形の札で並べる。以前は 3 列に
+ * 左に記号をキーの形で大きく、右に押すキーの組み合わせをキーの形の札で並べる。以前は3列に
  * 詰めて札も「L2」と番号だけにしていたので、どの記号とどの組み合わせが対なのか読み取りにくかった。
  * 押すと、その記号が出るレイヤーを図に出し、押すキーを光らせる(App.tsx)。
  *
  * キーボードで記号を打って探す形にはしない ― このアプリはキーの押下を見ているので、打った時点で
- * 図がそのレイヤーに切り替わり、探すまでもなくなる(Space 長押し + W を打てるなら @ は分かっている)。
+ * 図がそのレイヤーに切り替わり、探すまでもなくなる(Space長押し+ Wを打てるなら@ は分かっている)。
  */
 import { Fragment, type JSX } from 'react'
 import type { RouteStep, SymbolRoute } from '../engine/symbolRoutes'
@@ -41,7 +41,7 @@ export function RouteChips({
   /** sm: 図の縁の札やカードの「または」、md: カードの主な組み合わせ。 */
   size?: 'sm' | 'md'
 }): JSX.Element {
-  // text-xs などは行の高さも決めるので、leading-none はその後ろに置く(前だと tailwind-merge が消す)
+  // text-xsなどは行の高さも決めるので、leading-noneはその後ろに置く(前だとtailwind-mergeが消す)
   const chip = cn(
     'inline-flex items-center rounded-md border border-b-2 font-semibold',
     size === 'md' ? 'h-6 px-2 text-xs' : 'h-5 px-1.5 text-2xs',
@@ -128,8 +128,8 @@ function SymbolCard({
       )}
     >
       {/*
-       * 記号はキーの形で大きく、欧文の等幅で出す。日本語のフォントでは \ が ¥ の形になり、
-       * ¥ のカードと見分けが付かなかった(JIS の Windows では同じ文字だが、キーは別)
+       * 記号はキーの形で大きく、欧文の等幅で出す。日本語のフォントでは\ が ¥ の形になり、
+       * ¥ のカードと見分けが付かなかった(JISのWindowsでは同じ文字だが、キーは別)
        */}
       <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-b-[3px] border-line bg-surface font-mono text-xl font-bold text-ink">
         {symbol}
