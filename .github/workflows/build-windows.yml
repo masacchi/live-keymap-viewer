@@ -182,6 +182,15 @@ jobs:
             echo "既存のリリース($RELEASE_TAG)が見つかりました。ファイルを最新版に差し替えます。"
             # --clobberで同名ファイルがあっても上書き
             gh release upload "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+            # 前のビルドの添付を消す。ファイル名にcommitが入るので、上書きされずにたまっていくため
+            # (新しいものを載せてから消すので、添付が空になる時間は無い)
+            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' |
+              while read -r name; do
+                if [ ! -e "dist/artifacts/$name" ]; then
+                  gh release delete-asset "$RELEASE_TAG" "$name" --repo "$GITHUB_REPOSITORY" --yes
+                fi
+              done
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "Development Build ($LABEL)"
           else
             echo "新しいリリース($RELEASE_TAG)を作成します。"
             gh release create "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
