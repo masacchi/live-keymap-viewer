@@ -18,6 +18,9 @@ WSLにRustを入れる必要は無い。
 - VS CodeのDev Containersで開いてもよい([.devcontainer/devcontainer.json](../.devcontainer/devcontainer.json))。
   podmanならVS Codeの設定で`"dev.containers.dockerPath": "podman"`にする。中では全部のコマンドがそのまま動く
   (Windowsに置く`deploy:win`だけはpowershell.exeが要るので、WSLで打つ)
+- Dev Containersの中でもClaude Code(VS Codeの拡張)が使える。初回だけ中でログインする。
+  ログインと設定は名前付きボリューム(`lkv-claude-config`)に残るので、作り直しても入り直さなくてよい。
+  WSLの`~/.claude`とは別なので、WSLで入れた設定やメモリは中では見えない
 
 Windowsで実機を相手に動かすときは、WSLで`npm run deploy:win`を打ち、Windows側で起動する
 (→ [§5](#5-windowsに置く))。

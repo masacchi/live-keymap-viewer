@@ -53,3 +53,7 @@ RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile min
 # (パッケージの形式と、アプリ側の更新の読み方が食い違わないように)
 ARG VPK_VERSION=1.2.158
 RUN dotnet tool install --global vpk --version "${VPK_VERSION}"
+
+# devcontainerでClaude Codeの設定のボリュームを被せる場所(devcontainer.json)。
+# 上のcargoのRUNに混ぜると、そこから先を作り直すことになる(cargo-xwinのビルドで数分)ので分ける
+RUN mkdir -p /home/ubuntu/.claude

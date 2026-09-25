@@ -14,14 +14,26 @@
   "mounts": [
     // crateと、cargo-xwinがダウンロードするMSVCのCRT / Windows SDK(1GBほど)は、作り直しても残す
     "source=lkv-cargo-registry,target=/home/ubuntu/.cargo/registry,type=volume",
-    "source=lkv-xwin-cache,target=/home/ubuntu/.cache/cargo-xwin,type=volume"
+    "source=lkv-xwin-cache,target=/home/ubuntu/.cache/cargo-xwin,type=volume",
+    // Claude Codeのログインと設定も、作り直すたびにログインし直さなくて済むように残す
+    "source=lkv-claude-config,target=/home/ubuntu/.claude,type=volume"
   ],
+  "containerEnv": {
+    // Claude Codeは既定では.claude.json(初回の設定・プロジェクトの信頼など)をホームの直下に置き、
+    // そこはボリュームの外なので作り直すと消える。設定のフォルダごとボリュームの中に置かせる
+    "CLAUDE_CONFIG_DIR": "/home/ubuntu/.claude"
+  },
   // npm run dev(Vite)。Windowsのブラウザでhttp://localhost:5173を開くと、モックで画面を触れる
   "forwardPorts": [5173],
   "postCreateCommand": "npm ci",
   "customizations": {
     "vscode": {
-      "extensions": ["rust-lang.rust-analyzer", "biomejs.biome", "tauri-apps.tauri-vscode"]
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "biomejs.biome",
+        "tauri-apps.tauri-vscode",
+        "anthropic.claude-code"
+      ]
     }
   }
 }
