@@ -87,7 +87,7 @@ public static class HidProbe {
       if (t.Wait(3000)) {
         Console.WriteLine(string.Format("  reply in {0} ms: {1}", sw.ElapsedMilliseconds, BitConverter.ToString(res, 0, Math.Min(16, res.Length))));
         // Vial なら data[0..3] に vial_protocol が入る。VIA だけの機器は 0xFF(id_unhandled)を返す
-        if (res[1] == 0xFF) Console.WriteLine("  -> 0xFF: Vial ではない(VIA だけの機器)");
+        if (res[1] == 0xFF) Console.WriteLine("  -> 0xFF: Vialではない(VIAだけの機器)");
         else Console.WriteLine("  vial_protocol = " + BitConverter.ToUInt32(res, 1));
       } else {
         Console.WriteLine("  NO REPLY within 3000 ms");

@@ -42,7 +42,7 @@ async function launch() {
         if (line.startsWith('[gen-icon]')) console.error(line)
     })
     child.on('exit', (code) =>
-      code === 0 ? done() : fail(new Error(`electron が ${code} で終わった`))
+      code === 0 ? done() : fail(new Error(`electronが${code}で終わった`))
     )
   })
 }
@@ -78,7 +78,7 @@ async function render() {
     writeFileSync(join(ASSETS, 'icon.png'), png)
     writeFileSync(join(ASSETS, 'icon.ico'), ico(SIZES.map((size) => ({ size, ...images[size] }))))
     console.error(
-      `[gen-icon] assets/icon.png(256px)と assets/icon.ico(${SIZES.join(' / ')}px)を作った`
+      `[gen-icon] assets/icon.png(256px)とassets/icon.ico(${SIZES.join(' / ')}px)を作った`
     )
     app.exit(0)
   } catch (error) {

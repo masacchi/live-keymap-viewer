@@ -47,7 +47,7 @@ function defaultDestination() {
   ])
     .toString('utf8')
     .trim()
-  if (!desktop) fail('Windows のデスクトップの場所が分からなかった。--dest で指定すること')
+  if (!desktop) fail('Windowsのデスクトップの場所が分からなかった。--destで指定すること')
   const wsl = execFileSync('wslpath', ['-u', desktop]).toString('utf8').trim()
   return join(wsl, 'LiveKeymapViewer')
 }
@@ -70,14 +70,14 @@ function parseDestination() {
   const index = process.argv.indexOf('--dest')
   if (index === -1) return defaultDestination()
   const value = process.argv[index + 1]
-  if (!value) fail('--dest の後に置き場所を書くこと')
+  if (!value) fail('--destの後に置き場所を書くこと')
   return resolve(value)
 }
 
 // --- ここから ---
 
 if (!existsSync(join(SOURCE, EXE_NAME))) {
-  fail('dist/win32-x64 が無い。先に `npm run package:win` を実行すること')
+  fail('dist/win32-x64が無い。先に`npm run package:win`を実行すること')
 }
 
 const dest = parseDestination()
@@ -86,7 +86,7 @@ const backup = `${dest}.old`
 
 if (isRunning(dest)) {
   fail(
-    `${EXE_NAME} が起動中なので差し替えられない。\n` +
+    `${EXE_NAME}が起動中なので差し替えられない。\n` +
       '  アプリを閉じてから、もう一度実行すること(このスクリプトは勝手に終了させない)。'
   )
 }
@@ -119,4 +119,4 @@ renameSync(staging, dest)
 rmSync(backup, { recursive: true, force: true })
 
 console.log(`\n✓ 置いた: ${dest}`)
-console.log(`  ${EXE_NAME} を実行する。`)
+console.log(`  ${EXE_NAME}を実行する。`)

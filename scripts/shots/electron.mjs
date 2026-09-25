@@ -213,10 +213,10 @@ function compare(before, after) {
     for (let i = 0; i < pa.length; i += 4) {
       if (pa[i] !== pb[i] || pa[i + 1] !== pb[i + 1] || pa[i + 2] !== pb[i + 2]) pixels++
     }
-    console.log(`${name}: ${pixels === 0 ? '同じ' : `${pixels} 画素ちがう`}`)
+    console.log(`${name}: ${pixels === 0 ? '同じ' : `${pixels}画素ちがう`}`)
     if (pixels > 0) changed++
   }
-  console.log(changed === 0 ? 'すべて同じ' : `${changed} 枚ちがう`)
+  console.log(changed === 0 ? 'すべて同じ' : `${changed}枚ちがう`)
 }
 
 app.whenReady().then(async () => {

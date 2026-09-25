@@ -48,10 +48,10 @@ const versionIndex = process.argv.indexOf('--version')
 const version =
   versionIndex === -1
     ? pkg.version
-    : (process.argv[versionIndex + 1] ?? fail('--version の後に版を書くこと'))
+    : (process.argv[versionIndex + 1] ?? fail('--versionの後に版を書くこと'))
 
 if (!existsSync(join(SOURCE, EXE_NAME))) {
-  fail('dist/win32-x64 が無い。先に `npm run package:win` を実行すること')
+  fail('dist/win32-x64が無い。先に`npm run package:win`を実行すること')
 }
 
 // 手元では毎回作り直す。前のパッケージが残っていると、同じ版を作ろうとしてvpkが止まる

@@ -70,7 +70,7 @@ fn main() {
             logfile::init(dir.join("log.txt"));
             logfile::install_panic_hook();
             logfile::info(
-                &format!("起動 v{} ({})", app.package_info().version, commands::runtime_label()),
+                &format!("起動: v{} ({})", app.package_info().version, commands::runtime_label()),
                 None,
             );
 
@@ -96,7 +96,7 @@ fn main() {
             );
             if let Err(error) = registered {
                 logfile::warn(
-                    &format!("グローバルショートカット {TOGGLE_SHORTCUT} を登録できなかった"),
+                    &format!("グローバルショートカット{TOGGLE_SHORTCUT}を登録できなかった"),
                     Some(&error.to_string()),
                 );
             }

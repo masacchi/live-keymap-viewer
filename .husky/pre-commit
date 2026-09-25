@@ -12,14 +12,14 @@ if ! command -v npm >/dev/null 2>&1; then
   [ -s "$NVM_SH" ] && . "$NVM_SH"
 fi
 if ! command -v npm >/dev/null 2>&1; then
-  echo "pre-commit: npm が見つからない。Node.js の PATH を確かめること(飛ばすなら --no-verify)" >&2
+  echo "pre-commit: npmが見つからない。Node.jsのPATHを確認すること(飛ばすなら「git commit --no-verify」)" >&2
   exit 1
 fi
 
 if ! npm run --silent check; then
   echo "" >&2
-  echo "pre-commit: npm run check が通らなかったのでコミットを止めた。" >&2
-  echo "  直してからコミットし直すこと。整形だけなら npm run format で直る。" >&2
+  echo "pre-commit: 「npm run check」が通らなかったのでコミットを止めた。" >&2
+  echo "  直してからコミットし直すこと。整形だけなら「npm run format」で直る。" >&2
   exit 1
 fi
 
@@ -28,8 +28,8 @@ fi
 if git diff --cached --name-only | grep -q '^src-tauri/'; then
   if ! npm run --silent check:rust; then
     echo "" >&2
-    echo "pre-commit: npm run check:rust が通らなかったのでコミットを止めた。" >&2
-    echo "  整形だけなら npm run container -- cargo fmt --manifest-path src-tauri/Cargo.toml で直る。" >&2
+    echo "pre-commit: 「npm run check:rust」が通らなかったのでコミットを止めた。" >&2
+    echo "  整形だけなら「npm run container -- cargo fmt --manifest-path src-tauri/Cargo.toml」で直る。" >&2
     exit 1
   fi
 fi

@@ -33,7 +33,7 @@ execFileSync(
 )
 
 const built = join(ROOT, 'src-tauri', 'target', TARGET, 'release', 'live-keymap-viewer.exe')
-if (!existsSync(built)) throw new Error(`できているはずの exe が無い: ${built}`)
+if (!existsSync(built)) throw new Error(`できているはずのexeが無い: ${built}`)
 
 rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })

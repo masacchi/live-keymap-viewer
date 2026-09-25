@@ -25,7 +25,7 @@ const DEVCONTAINER = join(ROOT, '.devcontainer')
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: 'inherit' })
   if (result.error) {
-    console.error(`\n✗ ${command} を動かせなかった: ${result.error.message}\n`)
+    console.error(`\n✗ ${command}を動かせなかった: ${result.error.message}\n`)
     return 1
   }
   return result.status ?? 1
@@ -50,7 +50,7 @@ const hash = createHash('sha256')
 const image = `lkv-dev:${hash}`
 
 if (spawnSync(engine, ['image', 'inspect', image], { stdio: 'ignore' }).status !== 0) {
-  console.log(`開発用のイメージ ${image} を作る(初回だけ数分かかる)…`)
+  console.log(`開発用のイメージ${image}を作る(初回だけ数分かかる)…`)
   const status = run(engine, [
     'build',
     '-t',

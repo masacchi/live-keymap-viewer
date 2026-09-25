@@ -38,7 +38,7 @@ const server = await createServer({
 })
 await server.listen()
 const url = server.resolvedUrls?.local[0]
-if (!url) throw new Error('開発サーバーの URL が取れなかった')
+if (!url) throw new Error('開発サーバーのURLが取れなかった')
 
 /** Electronを1回動かす。ツールの中ではELECTRON_RUN_AS_NODEが立っていることがあるので外す。 */
 function electron(args) {
@@ -55,7 +55,7 @@ function electron(args) {
         if (line.startsWith('[shots]')) console.error(line)
     })
     child.on('exit', (code) =>
-      code === 0 ? done() : fail(new Error(`electron が ${code} で終わった`))
+      code === 0 ? done() : fail(new Error(`electronが${code}で終わった`))
     )
   })
 }
