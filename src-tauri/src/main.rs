@@ -30,10 +30,6 @@ use crate::windows::WindowManager;
 /// パスに半角スペースを入れない(コマンドラインやスクリプトで扱うときに引用符が要らないように)。
 const DATA_DIR_NAME: &str = "live-keymap-viewer";
 
-/// 以前の版が設定を置いていたフォルダ(名前にスペースが入っていた)。新しい方に設定が無ければ、
-/// 初回の起動でここから写す(レイヤー名・ウィンドウの位置・許可したキーボードを引き継ぐ)。
-const LEGACY_DATA_DIR_NAME: &str = "Live Keymap Viewer";
-
 /// 通常ウィンドウとオーバーレイの切り替え。オーバーレイ中はクリックが下に抜けるので、
 /// キー操作で戻れるようにしておく。
 const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
@@ -70,21 +66,13 @@ fn main() {
         ])
         .setup(|app| {
             // ログはいちばん先に用意する。これより前に起きたエラーは記録できない
-            let config = app.path().config_dir()?;
-            let dir = config.join(DATA_DIR_NAME);
+            let dir = app.path().config_dir()?.join(DATA_DIR_NAME);
             logfile::init(dir.join("log.txt"));
             logfile::install_panic_hook();
             logfile::info(
                 &format!("起動 v{} ({})", app.package_info().version, commands::runtime_label()),
                 None,
             );
-            match settings::migrate_legacy(&dir, &config.join(LEGACY_DATA_DIR_NAME)) {
-                Ok(true) => logfile::info("以前の版の設定を引き継いだ", None),
-                Ok(false) => {}
-                Err(error) => {
-                    logfile::warn("以前の版の設定を写せなかった", Some(&error.to_string()))
-                }
-            }
 
             let settings = SettingsStore::new(dir.join("settings.json"));
             let hid = HidBridge::new(app.handle().clone());

@@ -10,7 +10,7 @@
 //! 十数回届く。値はその場でメモリに反映し、ファイルにはFLUSH_DELAYごとにまとめて書く。
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -384,21 +384,6 @@ impl SettingsStore {
     }
 }
 
-/// 以前の置き場所(`legacy`)のsettings.jsonを、いまの置き場所(`dir`)に写す。
-/// いまの方にもう設定があれば何もしない(写したらtrue)。
-///
-/// 以前の置き場所は消さない。ログは写さない(診断用なので、新しい置き場所で一から始めてよい)。
-pub fn migrate_legacy(dir: &Path, legacy: &Path) -> std::io::Result<bool> {
-    let target = dir.join("settings.json");
-    let source = legacy.join("settings.json");
-    if target.exists() || !source.exists() {
-        return Ok(false);
-    }
-    std::fs::create_dir_all(dir)?;
-    std::fs::copy(source, target)?;
-    Ok(true)
-}
-
 pub fn is_granted(settings: &Settings, vendor_id: i64, product_id: i64) -> bool {
     settings.granted_devices.iter().any(|d| d.vendor_id == vendor_id && d.product_id == product_id)
 }
@@ -541,27 +526,6 @@ mod tests {
         // 画面より大きければ画面に収める
         let huge = Bounds { x: -5000, y: 0, width: 4000, height: 3000 };
         assert_eq!(ensure_on_screen(huge, &[primary]), primary);
-    }
-
-    #[test]
-    fn 前の置き場所の設定を一度だけ写す() {
-        let root = std::env::temp_dir().join(format!("lkv-migrate-{}", std::process::id()));
-        let legacy = root.join("Live Keymap Viewer");
-        let dir = root.join("live-keymap-viewer");
-        // 前の設定が無ければ何もしない
-        assert!(!migrate_legacy(&dir, &legacy).unwrap());
-        assert!(!dir.exists());
-
-        std::fs::create_dir_all(&legacy).unwrap();
-        std::fs::write(legacy.join("settings.json"), r#"{"labelMode":"us"}"#).unwrap();
-        assert!(migrate_legacy(&dir, &legacy).unwrap());
-        assert_eq!(SettingsStore::new(dir.join("settings.json")).load().label_mode, LabelMode::Us);
-        // 新しい方にもうあれば上書きしない(前の方はそのまま残る)
-        std::fs::write(legacy.join("settings.json"), r#"{"labelMode":"jis"}"#).unwrap();
-        assert!(!migrate_legacy(&dir, &legacy).unwrap());
-        assert_eq!(SettingsStore::new(dir.join("settings.json")).load().label_mode, LabelMode::Us);
-        assert!(legacy.join("settings.json").exists());
-        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
