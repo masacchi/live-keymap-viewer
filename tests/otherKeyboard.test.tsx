@@ -52,7 +52,7 @@ async function readySession(keyboard = PLAIN60) {
   return { session, mock }
 }
 
-describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し・カスタムキーコード無し)', () => {
+describe('Cornix以外のキーボード(Plain60: 5行14列・ノブ無し・カスタムキーコード無し)', () => {
   it('読み込んで、そのキーボードの大きさで図を組む', async () => {
     const { session, mock } = await readySession()
     const { snapshot, geometry } = session.state
@@ -62,7 +62,7 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
     expect(snapshot?.definition.name).toBe('Plain60')
     expect(geometry?.keys).toHaveLength(70)
     expect(geometry?.encoders).toHaveLength(0) // ノブ無し
-    expect(session.state.deviceLabel).toBe('Plain60 (モック)')
+    expect(session.state.deviceLabel).toBe('Plain60(モック)')
     await session.dispose()
     expect(mock.requests.length).toBeGreaterThan(0)
   })
@@ -77,7 +77,7 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
     await session.dispose()
   })
 
-  it('MO と LT でレイヤーが変わる(そのキーボードのキーマップどおりに)', async () => {
+  it('MOとLTでレイヤーが変わる(そのキーボードのキーマップどおりに)', async () => {
     const { session, mock } = await readySession()
 
     mock.press(4, 0) // MO(1)
@@ -126,14 +126,14 @@ describe('Cornix 以外のキーボード(Plain60: 5 行 14 列・ノブ無し�
     )
     expect(html).toContain('Esc') // (0,0)
     expect(html).toContain('MO1') // レイヤーキーは名前で出る
-    expect(html).toContain('長押しで L2') // LT(2, Space)の色帯
+    expect(html).toContain('長押しでL2') // LT(2, Space)の色帯
     expect(html.match(/<g class="key"/g) ?? []).toHaveLength(70)
     await transport.close()
   })
 })
 
 describe('対応できないキーボード', () => {
-  it('matrix state が 1 パケットに収まらない大きさなら、その旨を出して止まる', async () => {
+  it('matrix stateが1パケットに収まらない大きさなら、その旨を出して止まる', async () => {
     // 10行20列 →(20/8 + 1)× 10 = 30バイトで、28バイトに収まらない
     const mock = new MockTransport({ keyboard: BIG_MATRIX, unlocked: true })
     const session = new KeyboardSession(mock, { sleep: yieldSleep })

@@ -63,11 +63,11 @@ describe('KeyboardSession: 接続と読み込み', () => {
     expect(state.snapshot?.layers).toBe(10)
     expect(state.geometry?.keys).toHaveLength(50)
     expect(state.engine).not.toBeNull()
-    expect(state.deviceLabel).toBe('Cornix LP (モック)')
+    expect(state.deviceLabel).toBe('Cornix LP(モック)')
     await session.dispose()
   })
 
-  it('状態の遷移を connecting → loading → ready の順で通知する', async () => {
+  it('状態の遷移をconnecting → loading → readyの順で通知する', async () => {
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, options())
     const seen: string[] = []
@@ -94,7 +94,7 @@ describe('KeyboardSession: 接続と読み込み', () => {
     await session.dispose()
   })
 
-  it('start() は 1 回しか呼べない', async () => {
+  it('start()は1回しか呼べない', async () => {
     const { session } = await readySession()
     await expect(session.start()).rejects.toThrow()
     await session.dispose()
@@ -158,7 +158,7 @@ describe('KeyboardSession: アンロック', () => {
     await session.dispose()
   })
 
-  it('アンロック中は読み直しを受け付けない(VIA コマンドが通らないため)', async () => {
+  it('アンロック中は読み直しを受け付けない(VIAコマンドが通らないため)', async () => {
     const mock = new MockTransport({ unlocked: false })
     const session = new KeyboardSession(mock, options())
     await session.start()
@@ -172,7 +172,7 @@ describe('KeyboardSession: アンロック', () => {
 })
 
 describe('KeyboardSession: ポーリング', () => {
-  it('押したキーが layers に出る', async () => {
+  it('押したキーがlayersに出る', async () => {
     const { session, mock } = await readySession()
     mock.press(0, 1) // Q
     const state = await waitFor(session, (s) => s.layers?.held.has('0,1') === true)
@@ -198,7 +198,7 @@ describe('KeyboardSession: ポーリング', () => {
     mock.send = async (request, opts) => {
       if (request[0] === 0x02 && failuresLeft > 0) {
         failuresLeft--
-        throw new TransportError('デバイスが応答しません(コマンド 0x02 0x03)')
+        throw new TransportError('デバイスが応答しません(コマンド0x02 0x03)')
       }
       return original(request, opts)
     }
@@ -226,8 +226,7 @@ describe('KeyboardSession: ポーリング', () => {
 
     const original = mock.send.bind(mock)
     mock.send = async (request, o) => {
-      if (request[0] === 0x02)
-        throw new TransportError('デバイスが応答しません(コマンド 0x02 0x03)')
+      if (request[0] === 0x02) throw new TransportError('デバイスが応答しません(コマンド0x02 0x03)')
       return original(request, o)
     }
     await waitFor(session, (s) => s.stalled)
@@ -297,7 +296,7 @@ describe('KeyboardSession: キャッシュから始める', () => {
   const keymapReads = (mock: MockTransport): number =>
     mock.requests.filter((request) => request[0] === 0x12).length
 
-  it('2 回目は読まずに図を出し、裏で読み直して確かめる', async () => {
+  it('2回目は読まずに図を出し、裏で読み直して確かめる', async () => {
     // キャッシュが無いと、モードの切り替えや再接続のたびに70往復待つことになる(BTでは30秒)
     const caches = memoryCaches()
     await warmUp(caches)
@@ -356,7 +355,7 @@ describe('KeyboardSession: 読み直し', () => {
     const { session, mock } = await readySession()
     const original = mock.send.bind(mock)
     mock.send = async (request, opts) => {
-      if (request[0] === 0x12) throw new TransportError('デバイスが応答しません(コマンド 0x12)')
+      if (request[0] === 0x12) throw new TransportError('デバイスが応答しません(コマンド0x12)')
       return original(request, opts)
     }
 
@@ -372,7 +371,7 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
-  it('Vial で変えたキーマップを拾い、ポーリングを続ける', async () => {
+  it('Vialで変えたキーマップを拾い、ポーリングを続ける', async () => {
     const { session, mock } = await readySession()
     const geometryBefore = session.state.geometry
 
@@ -427,7 +426,7 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
-  it('キーマップが変わっても、TG で固定したレイヤーは残る(キーボード側は固定したまま)', async () => {
+  it('キーマップが変わっても、TGで固定したレイヤーは残る(キーボード側は固定したまま)', async () => {
     const mock = new MockTransport({ unlocked: true })
     mock.setKeycode(0, 0, 2, 0x5261) // L0のWをTG(1)に
     const { session } = await readySession(mock)
@@ -463,7 +462,7 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
-  it('読み直しを重ねて呼んでも、実際に読むのは 1 回だけ', async () => {
+  it('読み直しを重ねて呼んでも、実際に読むのは1回だけ', async () => {
     const { session, mock } = await readySession()
     const before = mock.requests.filter((r) => r[0] === 0x12).length
     await Promise.all([session.reload(), session.reload(), session.reload()])
@@ -472,7 +471,7 @@ describe('KeyboardSession: 読み直し', () => {
     await session.dispose()
   })
 
-  it('読み直しのあとも、matrix の要求が重なって飛ぶことはない(ループは常に 1 本)', async () => {
+  it('読み直しのあとも、matrixの要求が重なって飛ぶことはない(ループは常に1本)', async () => {
     const mock = new MockTransport({ unlocked: true, latencyMs: 3 })
     const session = new KeyboardSession(mock, options())
     await session.start()
@@ -503,7 +502,7 @@ describe('KeyboardSession: 読み直し', () => {
 })
 
 describe('KeyboardSession: 破棄', () => {
-  it('破棄したら transport を閉じ、以後は通知しない', async () => {
+  it('破棄したらtransportを閉じ、以後は通知しない', async () => {
     const { session, mock } = await readySession()
     let notified = 0
     session.subscribe(() => notified++)

@@ -21,9 +21,7 @@ export function looksLikeLzmaAlone(data: Uint8Array): boolean {
 export async function decompressDefinition(data: Uint8Array): Promise<Uint8Array> {
   if (!looksLikeXz(data)) {
     if (looksLikeLzmaAlone(data)) {
-      throw new Error(
-        'キーボード定義が LZMA-alone 形式でした。このアプリは XZ にしか対応していません'
-      )
+      throw new Error('キーボード定義がLZMA-alone形式でした。このアプリはXZにしか対応していません')
     }
     throw new Error('キーボード定義の圧縮形式が判別できませんでした')
   }

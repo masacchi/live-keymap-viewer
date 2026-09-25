@@ -28,7 +28,12 @@ function KeyNames({ names }: { names: readonly string[] }): JSX.Element {
       {names.map((name, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 同じ名前のキーが2つあり得る。並びは変わらない
         <Fragment key={i}>
-          {i > 0 && (i === names.length - 1 ? messages.unlock.and : messages.unlock.separator)}
+          {i > 0 && (
+            // 枠どうしが詰まって見えないよう、つなぎの前後は余白で空ける
+            <span className="mx-1">
+              {i === names.length - 1 ? messages.unlock.and : messages.unlock.separator}
+            </span>
+          )}
           <kbd className="rounded-md border border-unlock px-1.5 font-sans">{name}</kbd>
         </Fragment>
       ))}
@@ -50,9 +55,11 @@ export function UnlockPanel({
       <p className="text-xs font-semibold md:text-sm">
         {named ? (
           <>
-            <KeyNames names={keyNames} />{' '}
-            {keyNames.length > 1 ? messages.unlock.pressTogether : messages.unlock.pressOne}
-            {messages.unlock.untilFull}
+            <KeyNames names={keyNames} />
+            <span className="ml-1">
+              {keyNames.length > 1 ? messages.unlock.pressTogether : messages.unlock.pressOne}
+              {messages.unlock.untilFull}
+            </span>
           </>
         ) : (
           messages.unlock.pressHighlighted

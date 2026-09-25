@@ -135,8 +135,8 @@ export const NAMED: Readonly<Record<string, Named>> = {
   KC_LGUI: { main: 'Win', category: 'mod' },
   KC_RGUI: { main: 'Win', sub: '右', category: 'mod', us: { sub: 'R' } },
 
-  KC_LANG1: { main: 'かな', sub: 'IME オン', us: { main: 'Lang1', sub: 'Kana' } },
-  KC_LANG2: { main: '英数', sub: 'IME オフ', us: { main: 'Lang2', sub: 'Eisu' } },
+  KC_LANG1: { main: 'かな', sub: 'IMEオン', us: { main: 'Lang1', sub: 'Kana' } },
+  KC_LANG2: { main: '英数', sub: 'IMEオフ', us: { main: 'Lang2', sub: 'Eisu' } },
 
   KC_LEFT: { main: '←' },
   KC_RIGHT: { main: '→' },
@@ -253,7 +253,7 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
 
     case 'modTap': {
       const inner = labelForKeycode(kc.inner, mode, ctx)
-      return { ...inner, sub: `長押し ${modsLabel(kc.mods)}` }
+      return { ...inner, sub: `長押し${modsLabel(kc.mods)}` }
     }
 
     case 'layerTap':

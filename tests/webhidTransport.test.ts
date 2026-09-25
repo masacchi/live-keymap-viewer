@@ -86,7 +86,7 @@ function waitFor(
   })
 }
 
-describe('WebHidTransport 越しの結合', () => {
+describe('WebHidTransport越しの結合', () => {
   it('キーボードを最後まで読み込める', async () => {
     const device = new FirmwareBackedDevice(true)
     const transport = new WebHidTransport(device as unknown as HIDDevice)
@@ -116,7 +116,7 @@ describe('WebHidTransport 越しの結合', () => {
     await session.dispose()
   }, 15000)
 
-  it('接続し直しても(同じ HIDDevice を新しいセッションで開き直しても)応答が返る', async () => {
+  it('接続し直しても(同じHIDDeviceを新しいセッションで開き直しても)応答が返る', async () => {
     const device = new FirmwareBackedDevice(true)
     const first = new KeyboardSession(new WebHidTransport(device as unknown as HIDDevice))
     await first.start()
@@ -147,7 +147,7 @@ class SilentDevice extends EventTarget {
   async sendReport(): Promise<void> {}
 }
 
-describe('答えるインターフェースを選ぶ(USB と Bluetooth の両方で見えているとき)', () => {
+describe('答えるインターフェースを選ぶ(USBとBluetoothの両方で見えているとき)', () => {
   const asHid = (d: EventTarget): HIDDevice => d as unknown as HIDDevice
 
   it('答えない方を先頭に並べても、答える方を選ぶ', async () => {
@@ -170,7 +170,7 @@ describe('答えるインターフェースを選ぶ(USB と Bluetooth の両方
     expect(device).toBe(usb)
   })
 
-  it('どれも答えなければ null', async () => {
+  it('どれも答えなければnull', async () => {
     const { device, results } = await pickResponsiveDevice([
       asHid(new SilentDevice()),
       asHid(new SilentDevice())
@@ -179,7 +179,7 @@ describe('答えるインターフェースを選ぶ(USB と Bluetooth の両方
     expect(results).toHaveLength(2)
   })
 
-  it('候補が 1 つなら確かめずにそれを返す(余計な待ちを作らない)', async () => {
+  it('候補が1つなら確かめずにそれを返す(余計な待ちを作らない)', async () => {
     const only = new SilentDevice()
     const { device, results } = await pickResponsiveDevice([asHid(only)])
     expect(device).toBe(only)
@@ -203,10 +203,10 @@ describe('時間切れのメッセージ', () => {
     await transport.open()
     await expect(
       transport.send(new Uint8Array([0x02, 0x03]), { timeoutMs: 10, retries: 1 })
-    ).rejects.toThrow('デバイスが応答しません(コマンド 0x02 0x03)')
+    ).rejects.toThrow('デバイスが応答しません(コマンド0x02 0x03)')
     await expect(
       transport.send(new Uint8Array([0x01]), { timeoutMs: 10, retries: 1 })
-    ).rejects.toThrow('(コマンド 0x01)')
+    ).rejects.toThrow('(コマンド0x01)')
   })
 })
 
@@ -254,8 +254,8 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
  * 往復そのものがタイムアウトより長いとき(docs/BLUETOOTH.md §3)。往復に合わせてタイムアウトを
  * 延ばす(P3(a))までは通らないので、スキップしてある。P3(a)を入れたら`it.skip`を`it`に戻す。
  */
-describe('BLE 並みの遅さ(docs/BLUETOOTH.md §3)', () => {
-  it.skip('BLE 並みの往復でも、押したキーを正しい回に読む', async () => {
+describe('BLE並みの遅さ(docs/BLUETOOTH.md §3)', () => {
+  it.skip('BLE並みの往復でも、押したキーを正しい回に読む', async () => {
     const device = new FirmwareBackedDevice(true)
     device.latencyMs = 250
     const transport = new WebHidTransport(device as unknown as HIDDevice)

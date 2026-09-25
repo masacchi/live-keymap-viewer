@@ -23,14 +23,14 @@ const ENTRY: CachedKeymap = {
 }
 
 describe('LocalStorageKeymapCache', () => {
-  it('しまったものを UID で返す', () => {
+  it('しまったものをUIDで返す', () => {
     const cache = new LocalStorageKeymapCache(memoryStorage())
     cache.set('123', ENTRY)
     expect(cache.get('123')).toEqual(ENTRY)
     expect(cache.get('456')).toBeNull()
   })
 
-  it('キーボードごとに 1 件だけ持つ(増え続けない)', () => {
+  it('キーボードごとに1件だけ持つ(増え続けない)', () => {
     const storage = memoryStorage()
     const cache = new LocalStorageKeymapCache(storage)
     cache.set('123', ENTRY)
@@ -72,7 +72,7 @@ describe('LocalStorageKeymapCache', () => {
     expect(() => cache.set('123', ENTRY)).not.toThrow()
   })
 
-  it('localStorage が無い環境では、何もしないキャッシュになる', () => {
+  it('localStorageが無い環境では、何もしないキャッシュになる', () => {
     const cache = new LocalStorageKeymapCache(null)
     cache.set('123', ENTRY)
     expect(cache.get('123')).toBeNull()

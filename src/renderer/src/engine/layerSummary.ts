@@ -9,7 +9,7 @@
 import { decodeKeycode, KC_NO, KC_TRNS, type Keycode } from '../keycodes/decode'
 import { type LabelContext, type LabelMode, labelForKeycode } from '../keycodes/labels'
 import { holdLayerOf, type TapDanceEntry } from '../keycodes/tapDance'
-import { messages } from '../messages'
+import { joinWords, messages } from '../messages'
 
 /** そのキーでレイヤーに入る方法。 */
 export type TriggerKind =
@@ -143,5 +143,5 @@ export function describeTrigger(
 ): string {
   const name = labelForKeycode(trigger.keycode, mode, context).main
   const from = trigger.fromLayer === 0 ? '' : messages.trigger.fromLayer(trigger.fromLayer)
-  return `${from}${name} ${messages.trigger[trigger.kind]}`
+  return `${from}${joinWords(name, messages.trigger[trigger.kind])}`
 }

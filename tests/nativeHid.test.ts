@@ -99,7 +99,7 @@ function setup(): { backend: FakeBackend; hid: NativeHid } {
 }
 
 describe('NativeHid: デバイスを選ぶ', () => {
-  it('同じキーボードが USB と BT で見えていても、選ばせずに先頭を使って覚える', async () => {
+  it('同じキーボードがUSBとBTで見えていても、選ばせずに先頭を使って覚える', async () => {
     const { backend, hid } = setup()
     backend.list = [USB, BT]
     const picked = await hid.requestDevice({ filters: [{ usagePage: 0xff60, usage: 0x61 }] })
@@ -131,7 +131,7 @@ describe('NativeHid: デバイスを選ぶ', () => {
     expect(await hid.requestDevice({ filters: [{ vendorId: 0xe118 }] })).toEqual([])
   })
 
-  it('getDevices は許可したものだけ。同じパスには同じオブジェクトを返す', async () => {
+  it('getDevicesは許可したものだけ。同じパスには同じオブジェクトを返す', async () => {
     const { backend, hid } = setup()
     backend.list = [USB, OTHER]
     backend.granted = [USB]
@@ -143,7 +143,7 @@ describe('NativeHid: デバイスを選ぶ', () => {
 })
 
 describe('NativeHid: 挿し抜き', () => {
-  it('connect / disconnect を WebHID と同じ形で配る', async () => {
+  it('connect / disconnectをWebHIDと同じ形で配る', async () => {
     const { backend, hid } = setup()
     backend.list = [USB]
     backend.granted = [USB]
@@ -166,7 +166,7 @@ describe('NativeHid: 挿し抜き', () => {
 })
 
 describe('NativeHidDevice', () => {
-  it('二重に開いてもハンドルは 1 つ。閉じたら Rust にも閉じさせる', async () => {
+  it('二重に開いてもハンドルは1つ。閉じたらRustにも閉じさせる', async () => {
     const { backend, hid } = setup()
     backend.list = [USB]
     const [device] = await hid.requestDevice({ filters: [] })
@@ -178,7 +178,7 @@ describe('NativeHidDevice', () => {
     expect(backend.closed).toEqual([1])
   })
 
-  it('書けなければ TransportError ではない Error で失敗する(時間切れと区別して、待たずに切る)', async () => {
+  it('書けなければTransportErrorではないErrorで失敗する(時間切れと区別して、待たずに切る)', async () => {
     const { backend, hid } = setup()
     backend.list = [USB]
     const [device] = await hid.requestDevice({ filters: [] })
@@ -191,7 +191,7 @@ describe('NativeHidDevice', () => {
     await expect(failure).rejects.not.toBeInstanceOf(TransportError)
   })
 
-  it('WebHidTransport 越しにキーボードを読み込める', async () => {
+  it('WebHidTransport越しにキーボードを読み込める', async () => {
     const { backend, hid } = setup()
     backend.list = [USB]
     const [device] = await hid.requestDevice({ filters: [] })

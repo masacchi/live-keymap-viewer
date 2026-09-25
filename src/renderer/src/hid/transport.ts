@@ -38,7 +38,7 @@ export class TransportError extends Error {}
 /** リクエストを32バイトに詰める。 */
 export function pad(bytes: ArrayLike<number>): Uint8Array {
   if (bytes.length > MSG_LEN) {
-    throw new TransportError(`リクエストが ${MSG_LEN} バイトを超えている`)
+    throw new TransportError(`リクエストが${MSG_LEN}バイトを超えている`)
   }
   const out = new Uint8Array(MSG_LEN)
   out.set(bytes)
@@ -167,7 +167,7 @@ export class WebHidTransport implements Transport {
         // 諦めるだけで、応答はあとから届くかもしれない。届いたら捨てて並びを戻す
         this.abandoned++
         this.abandonedAt = Date.now()
-        reject(new TransportError(`デバイスが応答しません(コマンド ${describeCommand(payload)})`))
+        reject(new TransportError(`デバイスが応答しません(コマンド${describeCommand(payload)})`))
       }, timeoutMs)
       // report IDを持たないデバイスなので0で送る
       const report = new Uint8Array(MSG_LEN)

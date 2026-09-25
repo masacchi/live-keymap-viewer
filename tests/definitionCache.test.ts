@@ -18,7 +18,7 @@ const DEFINITION: VialDefinition = {
 }
 
 describe('LocalStorageDefinitionCache', () => {
-  it('UID とバイト数が合えば、しまったものを返す', () => {
+  it('UIDとバイト数が合えば、しまったものを返す', () => {
     const cache = new LocalStorageDefinitionCache(memoryStorage())
     cache.set('123', 900, DEFINITION)
     expect(cache.get('123', 900)).toEqual(DEFINITION)
@@ -31,7 +31,7 @@ describe('LocalStorageDefinitionCache', () => {
     expect(cache.get('456', 900)).toBeNull()
   })
 
-  it('キーボードごとに 1 件だけ持つ(増え続けない)', () => {
+  it('キーボードごとに1件だけ持つ(増え続けない)', () => {
     const storage = memoryStorage()
     const cache = new LocalStorageDefinitionCache(storage)
     cache.set('123', 900, DEFINITION)
@@ -67,7 +67,7 @@ describe('LocalStorageDefinitionCache', () => {
     expect(() => cache.set('123', 900, DEFINITION)).not.toThrow()
   })
 
-  it('localStorage が無い環境では、何もしないキャッシュになる', () => {
+  it('localStorageが無い環境では、何もしないキャッシュになる', () => {
     const cache = new LocalStorageDefinitionCache(null)
     cache.set('123', 900, DEFINITION)
     expect(cache.get('123', 900)).toBeNull()

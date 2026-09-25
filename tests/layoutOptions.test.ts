@@ -3,18 +3,18 @@ import { decodeLayoutOptions, encodeLayoutOptions, optionBits } from '@/layout/l
 import definition from '../reference/cornix-vial-definition.json'
 
 describe('optionBits', () => {
-  it('ON/OFF は 1 ビット', () => {
+  it('ON/OFFは1ビット', () => {
     expect(optionBits('Split Backspace')).toBe(1)
   })
 
-  it('選択肢が 2 個なら 1 ビット、3〜4 個なら 2 ビット', () => {
+  it('選択肢が2個なら1ビット、3〜4個なら2ビット', () => {
     expect(optionBits(['Bottom row', 'a', 'b'])).toBe(1)
     expect(optionBits(['Bottom row', 'a', 'b', 'c'])).toBe(2)
     expect(optionBits(['Bottom row', 'a', 'b', 'c', 'd'])).toBe(2)
     expect(optionBits(['Bottom row', 'a', 'b', 'c', 'd', 'e'])).toBe(3)
   })
 
-  it('選択肢が 1 個でも 1 ビットは使う(vial-gui の pack と同じ)', () => {
+  it('選択肢が1個でも1ビットは使う(vial-guiのpackと同じ)', () => {
     expect(optionBits(['Firmware Version', 'V1.12'])).toBe(1)
   })
 })
@@ -29,7 +29,7 @@ describe('decodeLayoutOptions', () => {
     expect(decodeLayoutOptions(0b0001, labels)).toEqual([0, 0, 1])
   })
 
-  it('encode と往復する', () => {
+  it('encodeと往復する', () => {
     for (const choices of [
       [0, 0, 0],
       [1, 1, 1],
@@ -40,12 +40,12 @@ describe('decodeLayoutOptions', () => {
     }
   })
 
-  it('labels が無ければ空', () => {
+  it('labelsが無ければ空', () => {
     expect(decodeLayoutOptions(0xff, undefined)).toEqual([])
     expect(decodeLayoutOptions(0xff, [])).toEqual([])
   })
 
-  it('Cornix の定義では選択肢が 1 つだけ', () => {
+  it('Cornixの定義では選択肢が1つだけ', () => {
     expect(decodeLayoutOptions(0, definition.layouts.labels)).toEqual([0])
   })
 })

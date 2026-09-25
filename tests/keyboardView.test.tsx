@@ -75,7 +75,7 @@ describe('KeyboardView', () => {
     expect(html).toContain('rotate(-11.93 ')
   })
 
-  it('ベースレイヤーの JIS ラベルを出す', () => {
+  it('ベースレイヤーのJISラベルを出す', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
@@ -84,7 +84,7 @@ describe('KeyboardView', () => {
     }
   })
 
-  it('US モードでは US 配列の文字になる', () => {
+  it('USモードではUS配列の文字になる', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     expect(render(engine, layers, 'us')).toContain('>Lang1<')
@@ -99,11 +99,11 @@ describe('KeyboardView', () => {
     for (const layer of [1, 2, 3, 4]) {
       expect(html).toContain(`<text class="band-text"`)
       expect(html).toMatch(new RegExp(`class="band-text"[^>]*>L${layer}</text>`))
-      expect(html).toContain(`長押しで L${layer}`)
+      expect(html).toContain(`長押しでL${layer}`)
     }
   })
 
-  it('押されたキーに pressed が付く', () => {
+  it('押されたキーにpressedが付く', () => {
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[0][1] = true // Q
@@ -122,7 +122,7 @@ describe('KeyboardView', () => {
     const html = render(engine, layers)
     // 1uには「Space長押し中」が収まらないので「長押し中」だけにする(キーの名前はツールチップ)
     expect(html).toContain('>長押し中<')
-    expect(html).toContain('<title>Space / 長押しで L2 / raw 0x422c</title>')
+    expect(html).toContain('<title>Space / 長押しでL2 / raw 0x422c</title>')
     expect(html).toContain('>L2<')
     // L2の(0,1)はLSFT(KC_1) → JISでは"!"
     expect(html).toContain('>!<')
@@ -146,7 +146,7 @@ describe('KeyboardView', () => {
     expect(html).toContain('--hold:var(--color-layer-4)')
   })
 
-  it('長いカスタムキーの名前は 2 行に割り、説明はツールチップだけに出す', () => {
+  it('長いカスタムキーの名前は2行に割り、説明はツールチップだけに出す', () => {
     const engine = newEngine()
     const html = render(
       engine,
@@ -182,7 +182,7 @@ describe('KeyboardView', () => {
     expect(plainHtml).not.toContain('key-holding')
   })
 
-  it('Shift 側の文字を主文字の上に中央揃えで出す', () => {
+  it('Shift側の文字を主文字の上に中央揃えで出す', () => {
     const engine = newEngine()
     const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
     const html = render(engine, layers)
@@ -195,7 +195,7 @@ describe('KeyboardView', () => {
     expect(Number(shift![2])).toBeLessThan(Number(main![2])) // Shift側が上
   })
 
-  it('Shift を押しているあいだは、Shift で入る文字を主文字にして目立たせる', () => {
+  it('Shiftを押しているあいだは、Shiftで入る文字を主文字にして目立たせる', () => {
     const engine = newEngine()
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[2][0] = true // KC_LSHIFT
@@ -208,7 +208,7 @@ describe('KeyboardView', () => {
     expect(html).toMatch(/<g class="key"[^>]*>(?:(?!<\/g>).)*>Q</)
   })
 
-  it('Shift を押していなければ入れ替えない', () => {
+  it('Shiftを押していなければ入れ替えない', () => {
     const engine = newEngine()
     const html = render(engine, engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0))
     expect(html).not.toContain('key-shifted')
@@ -223,7 +223,7 @@ describe('KeyboardView', () => {
     expect(layers.displayLayer).toBe(0)
 
     const html = render(engine, layers, 'jis', [], 1)
-    expect(html).toContain('レイヤー 1 のキーマップ')
+    expect(html).toContain('レイヤー1のキーマップ')
     // L1の(0,1)はKC_1
     expect(html).toMatch(/<text class="main"[^>]*>1<\/text>/)
     // 透過のキーはベースの値をたどる(L1の(1,0)は透過 → L0のCtrl)
@@ -244,18 +244,18 @@ describe('KeyboardView', () => {
       names
     )
     // 帯は「L2記号」。入らなければ名前だけ、それも入らなければ番号
-    expect(idle).toContain('>L2 記号<') // Space
-    expect(idle).toContain('>L1 数字<') // BS
+    expect(idle).toContain('>L2記号<') // Space
+    expect(idle).toContain('>L1数字<') // BS
     expect(idle).toMatch(/class="band-text"[^>]*>L3<\/text>/) // 長すぎる名前は番号に戻す
     expect(idle).toMatch(/class="band-text"[^>]*>L4<\/text>/) // 名前が無い
-    expect(idle).toContain('長押しで L2 記号') // ツールチップには名前も出す
+    expect(idle).toContain('長押しでL2記号') // ツールチップには名前も出す
 
     const matrix = emptyMatrix(snapshot.rows, snapshot.cols)
     matrix[7][5] = true // LT2(KC_SPACE)
     engine.update(matrix, 0)
     const holding = render(engine, engine.update(matrix, 300), 'jis', [], null, names)
     expect(holding).toContain('>記号<')
-    expect(holding).toContain('レイヤー 2(記号) のキーマップ')
+    expect(holding).toContain('レイヤー2(記号)のキーマップ')
   })
 
   it('ノブの割り当てを、そのレイヤーの内容で出す', () => {
@@ -265,10 +265,10 @@ describe('KeyboardView', () => {
     expect(html).toContain('↺ 音量−')
     expect(html).toContain('↻ 音量+')
     // ホイールは"↑"だけだと曖昧なので補足が付く
-    expect(html).toContain('↻ ↓ ホイール')
+    expect(html).toContain('↻ ↓ホイール')
   })
 
-  it('ノブは KLE 上の位置には描かない(図の幅はキーの範囲で決まる)', () => {
+  it('ノブはKLE上の位置には描かない(図の幅はキーの範囲で決まる)', () => {
     // Cornixの定義はエンコーダーを図の右端(x=15.25〜)に並べて置いてある。
     // そのまま描くと横に間延びするので、キーだけの幅に合わせる。
     expect(geometry.bounds.maxX).toBeCloseTo(19.75)
@@ -324,9 +324,9 @@ describe('KeyboardView', () => {
     expect(left.labels[1].text).toBe('↺ 音量−')
     expect(left.labels[0].x).toBeCloseTo(left.x + left.width / 2)
     expect(left.labels[0].attrs).not.toContain('text-anchor')
-    // 右手はホイール。「↻ ↓ ホイール」はキーより長いので、右端で揃えて図の中央側(左)へ伸ばす。
+    // 右手はホイール。「↻ ↓ホイール」はキーより長いので、右端で揃えて図の中央側(左)へ伸ばす。
     // 中央揃えだと右隣のH・Nにかかっていた
-    expect(right.labels[0].text).toBe('↻ ↓ ホイール')
+    expect(right.labels[0].text).toBe('↻ ↓ホイール')
     for (const label of right.labels) {
       expect(label.attrs).toContain('text-anchor:end')
       expect(label.x).toBeCloseTo(right.x + right.width)

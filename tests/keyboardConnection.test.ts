@@ -120,13 +120,13 @@ describe('KeyboardConnection: ログ', () => {
     connection.start()
     await waitFor(connection, (s) => s.status === 'ready')
 
-    expect(lines[0]).toBe('接続: Cornix(e118:0001) 往復 3ms (候補 2 個中 1 個が応答)')
+    expect(lines[0]).toBe('接続: Cornix(e118:0001) 往復3ms (候補2個中1個が応答)')
     await connection.dispose()
   })
 })
 
 describe('KeyboardConnection: 手放す', () => {
-  it('release() はセッションを閉じるが、画面の表示はそのまま残す', async () => {
+  it('release()はセッションを閉じるが、画面の表示はそのまま残す', async () => {
     // モード切替でウィンドウが壊される直前に呼ぶ。新しいウィンドウのrendererと同時に
     // 同じHIDを開いていると、応答が混ざって読み込みが壊れる
     const { hid, connection, opened } = setup()
@@ -217,7 +217,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     await connection.dispose()
   })
 
-  it('デバイスが無いあいだは待ち、挿されたら(connect イベントで)すぐ繋ぐ', async () => {
+  it('デバイスが無いあいだは待ち、挿されたら(connectイベントで)すぐ繋ぐ', async () => {
     // タイマーでは間に合わない長さにして、イベントで接続することを確認する
     const { hid, connection, opened } = setup({ reconnectDelayMs: 60_000 })
     const device = fakeDevice()
@@ -279,7 +279,7 @@ describe('KeyboardConnection: 繋ぎ直し', () => {
     hid.plug(fakeDevice())
     await pause(50)
     expect(opened).toHaveLength(0)
-    expect(connection.state.deviceLabel).toBe('Cornix LP (モック)')
+    expect(connection.state.deviceLabel).toBe('Cornix LP(モック)')
     await connection.dispose()
   })
 

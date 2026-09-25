@@ -37,11 +37,11 @@ const ROUND_TRIP: Array<[number, string]> = [
 ]
 
 describe('decodeKeycode', () => {
-  it.each(ROUND_TRIP)('$0 を $1 に戻す', (raw, expected) => {
+  it.each(ROUND_TRIP)('$0を$1に戻す', (raw, expected) => {
     expect(formatKeycode(decodeKeycode(raw))).toBe(expected)
   })
 
-  it('KC_NO と KC_TRNS を区別する', () => {
+  it('KC_NOとKC_TRNSを区別する', () => {
     expect(decodeKeycode(0x0000).kind).toBe('none')
     expect(decodeKeycode(0x0001).kind).toBe('trns')
   })
@@ -63,32 +63,32 @@ describe('decodeKeycode', () => {
     expect(kc.mods & MOD_SHIFT).toBeFalsy()
   })
 
-  it('Layer-Tap からレイヤー番号とタップ側キーを取り出す', () => {
+  it('Layer-Tapからレイヤー番号とタップ側キーを取り出す', () => {
     const kc = decodeKeycode(0x4000 | (3 << 8) | 0x4c) // LT3(KC_DELETE)
     expect(kc).toMatchObject({ kind: 'layerTap', layer: 3 })
     if (kc.kind !== 'layerTap') throw new Error('unreachable')
     expect(kc.inner).toMatchObject({ name: 'KC_DELETE' })
   })
 
-  it('LM(layer, mod) を 0x5000 帯として解釈する', () => {
+  it('LM(layer, mod)を0x5000帯として解釈する', () => {
     // LM(2, MOD_LSFT) = 0x5000 | (2 << 5) | 0x02
     const kc = decodeKeycode(0x5000 | (2 << 5) | MOD_SHIFT)
     expect(kc).toMatchObject({ kind: 'layerMod', layer: 2, mods: MOD_SHIFT })
   })
 
-  it('OSM をレイヤー系と取り違えない', () => {
+  it('OSMをレイヤー系と取り違えない', () => {
     // 0x52A0-0x52BFはOSM。TT(0) = 0x52C0の手前
     expect(decodeKeycode(0x52a2)).toMatchObject({ kind: 'oneShotMod', mods: MOD_SHIFT })
     expect(decodeKeycode(0x52c0)).toMatchObject({ kind: 'layer', op: 'TT', layer: 0 })
   })
 
-  it('USER の範囲は 64 個まで', () => {
+  it('USERの範囲は64個まで', () => {
     expect(decodeKeycode(0x7e3f)).toMatchObject({ kind: 'user', index: 63 })
     // 0x7E40以降はUSERではない
     expect(decodeKeycode(0x7e40).kind).not.toBe('user')
   })
 
-  it('知らない値は unknown として生の値を保つ', () => {
+  it('知らない値はunknownとして生の値を保つ', () => {
     const kc = decodeKeycode(0x6fff)
     expect(kc).toMatchObject({ kind: 'unknown', raw: 0x6fff })
     expect(formatKeycode(kc)).toBe('0x6fff')

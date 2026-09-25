@@ -51,7 +51,7 @@ function plainKeymap(): number[] {
  * **カスタムキーコード無し**・**Tap Dance無し**。
  */
 export const PLAIN60: MockKeyboard = {
-  label: 'Plain60 (モック)',
+  label: 'Plain60(モック)',
   viaProtocol: 9,
   vialProtocol: 6,
   uid: 0x1122334455667788n,
@@ -69,7 +69,7 @@ export const PLAIN60: MockKeyboard = {
  * `(floor(20 / 8) + 1) * 10 = 30 > 28`なので、押下は読めない(docs/PROTOCOL.md §2)。
  */
 export const BIG_MATRIX: MockKeyboard = {
-  label: 'BigMatrix (モック)',
+  label: 'BigMatrix(モック)',
   viaProtocol: 9,
   vialProtocol: 6,
   uid: 0x99aabbccddeeff00n,

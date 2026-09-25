@@ -32,26 +32,26 @@ function baseName(route: { row: number; col: number }): string {
   return labelForKeycode(decodeKeycode(snapshot.keymap[0][route.row][route.col]), 'jis').main
 }
 
-describe('findSymbolRoutes: Cornix を JIS で', () => {
-  it('ベースレイヤーの Shift 面の記号は、Shift + そのキー', () => {
+describe('findSymbolRoutes: CornixをJISで', () => {
+  it('ベースレイヤーのShift面の記号は、Shift + そのキー', () => {
     expect(routes().get('<')?.[0]).toMatchObject({ layer: 0, shift: true, cost: 1 })
     expect(baseName(routes().get('<')![0])).toBe(',')
   })
 
-  it('@ は L2 の W の位置', () => {
+  it('@ はL2のWの位置', () => {
     const best = routes().get('@')![0]
     expect(best).toMatchObject({ layer: 2, shift: false, cost: 1 })
     expect(baseName(best)).toBe('W')
   })
 
-  it('手数の少ない順に並ぶ。! は L2 の Q(1 手)が先で、L1 の Shift + 1(2 手)が後', () => {
+  it('手数の少ない順に並ぶ。! はL2のQ(1手)が先で、L1のShift + 1(2手)が後', () => {
     const list = routes().get('!')!
     expect(list[0]).toMatchObject({ layer: 2, shift: false, cost: 1 })
     expect(baseName(list[0])).toBe('Q')
     expect(list).toContainEqual(expect.objectContaining({ layer: 1, shift: true, cost: 2 }))
   })
 
-  it('タップと長押しを兼ねるキーのタップは 0.5 手で、そう印を付ける', () => {
+  it('タップと長押しを兼ねるキーのタップは0.5手で、そう印を付ける', () => {
     // 右下のTD(3)はタップで`
     expect(routes().get('`')?.[0]).toMatchObject({ layer: 0, tap: true, cost: 0.5 })
   })
@@ -61,13 +61,13 @@ describe('findSymbolRoutes: Cornix を JIS で', () => {
     expect(list.every((route) => route.layer !== 2)).toBe(true)
   })
 
-  it('表記で出る文字が変わる(US では L0 の ; の Shift が :)', () => {
+  it('表記で出る文字が変わる(USではL0の ; のShiftが :)', () => {
     expect(routes('us').get(':')?.[0]).toMatchObject({ layer: 0, shift: true })
   })
 })
 
 describe('shiftKeysOf', () => {
-  it('ベースレイヤーの Shift キーの位置を返す', () => {
+  it('ベースレイヤーのShiftキーの位置を返す', () => {
     expect(shiftKeysOf(snapshot.keymap)).toContainEqual({ row: 2, col: 0 })
   })
 })

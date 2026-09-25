@@ -10,7 +10,7 @@ import { type KeyboardGeometry, keyId, visibleKeys } from '../layout/geometry'
 import { knobButtonsFor } from '../layout/knobButtons'
 import { decodeLayoutOptions } from '../layout/layoutOptions'
 import { layerColor } from '../lib/theme'
-import { messages } from '../messages'
+import { joinWords, messages } from '../messages'
 import { KeyCap } from './KeyCap'
 
 export interface KeyboardViewProps {
@@ -89,7 +89,7 @@ export function KeyboardView({
     () =>
       (raw: number): string => {
         const label = labelForKeycode(decodeKeycode(raw), labelMode, labelContext)
-        if (label.sub && [...label.main].length <= 2) return `${label.main} ${label.sub}`
+        if (label.sub && [...label.main].length <= 2) return joinWords(label.main, label.sub)
         return label.main
       },
     [labelMode, labelContext]

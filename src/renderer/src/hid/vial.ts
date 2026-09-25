@@ -186,7 +186,7 @@ export async function getDefinitionSize(transport: Transport): Promise<number> {
   const data = await send(transport, [CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE], LONG)
   const size = u32le(data, 0)
   if (size === 0 || size > 1 << 20) {
-    throw new ProtocolError(`定義のサイズが異常です(${size} バイト)`)
+    throw new ProtocolError(`定義のサイズが異常です(${size}バイト)`)
   }
   return size
 }
@@ -319,7 +319,7 @@ export async function getTapDance(transport: Transport, index: number): Promise<
     [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_TAP_DANCE_GET, index],
     LONG
   )
-  if (data[0] !== 0) throw new ProtocolError(`Tap Dance ${index} を読めなかった`)
+  if (data[0] !== 0) throw new ProtocolError(`Tap Dance ${index}を読めなかった`)
   return {
     onTap: u16le(data, 1),
     onHold: u16le(data, 3),
@@ -601,7 +601,7 @@ export async function loadKeyboard(
   if (viaProtocol !== SUPPORTED_VIA_PROTOCOL || vialProtocol !== SUPPORTED_VIAL_PROTOCOL) {
     throw new ProtocolError(
       `未対応のプロトコル(VIA ${viaProtocol} / Vial ${vialProtocol})。` +
-        `このアプリは VIA ${SUPPORTED_VIA_PROTOCOL} / Vial ${SUPPORTED_VIAL_PROTOCOL} だけに対応しています`
+        `このアプリはVIA ${SUPPORTED_VIA_PROTOCOL} / Vial ${SUPPORTED_VIAL_PROTOCOL}だけに対応しています`
     )
   }
 

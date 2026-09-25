@@ -40,12 +40,12 @@ async function openMock(unlocked = true): Promise<MockTransport> {
 }
 
 describe('プロトコルの読み出し', () => {
-  it('VIA / Vial のバージョンを読む', async () => {
+  it('VIA / Vialのバージョンを読む', async () => {
     const transport = await openMock()
     expect(await getViaProtocol(transport)).toBe(9)
   })
 
-  it('定義を XZ 展開して JSON にする', async () => {
+  it('定義をXZ展開してJSONにする', async () => {
     const transport = await openMock()
     const snapshot = await loadKeyboard(transport)
     expect(snapshot.definition.matrix).toEqual({ rows: 8, cols: 7 })
@@ -53,7 +53,7 @@ describe('プロトコルの読み出し', () => {
     expect(snapshot.definition.layouts.keymap.length).toBeGreaterThan(0)
   })
 
-  it('キーマップを big-endian u16 として読み、.vil の内容と一致する', async () => {
+  it('キーマップをbig-endian u16として読み、.vilの内容と一致する', async () => {
     const transport = await openMock()
     const keymap = await getKeymap(transport, MOCK_LAYERS, MOCK_ROWS, MOCK_COLS)
     expect(keymap).toHaveLength(MOCK_LAYERS)
@@ -67,7 +67,7 @@ describe('プロトコルの読み出し', () => {
     }
   })
 
-  it('読んだキーマップが Vial の文字列表記に戻る', async () => {
+  it('読んだキーマップがVialの文字列表記に戻る', async () => {
     const transport = await openMock()
     const keymap = await getKeymap(transport, MOCK_LAYERS, MOCK_ROWS, MOCK_COLS)
     expect(formatKeycode(decodeKeycode(keymap[0][7][5]))).toBe('LT2(KC_SPACE)')
@@ -76,7 +76,7 @@ describe('プロトコルの読み出し', () => {
     expect(formatKeycode(decodeKeycode(keymap[4][1][0]))).toBe('USER00')
   })
 
-  it('Tap Dance を u16 LE ×5 として読む', async () => {
+  it('Tap Danceをu16 LE ×5として読む', async () => {
     const transport = await openMock()
     const entry = await getTapDance(transport, 3)
     expect(entry.onTap).toBe(MOCK_TAP_DANCE[3][0])
@@ -92,7 +92,7 @@ describe('プロトコルの読み出し', () => {
     expect(formatKeycode(decodeKeycode(snapshot.encoders[0][0][0]))).toBe('KC_VOLD')
   })
 
-  it('loadKeyboard が一通り揃えて返す', async () => {
+  it('loadKeyboardが一通り揃えて返す', async () => {
     const transport = await openMock()
     const snapshot = await loadKeyboard(transport)
     expect(snapshot).toMatchObject({
@@ -108,7 +108,7 @@ describe('プロトコルの読み出し', () => {
   })
 })
 
-describe('Tap Dance は要る枠だけ読む', () => {
+describe('Tap Danceは要る枠だけ読む', () => {
   const tapDanceReads = (transport: MockTransport): number[] =>
     transport.requests
       .filter(
@@ -119,7 +119,7 @@ describe('Tap Dance は要る枠だけ読む', () => {
       )
       .map((r) => r[3])
 
-  it('キーマップとノブで使っている枠と、先頭の 5 個だけ読む', async () => {
+  it('キーマップとノブで使っている枠と、先頭の5個だけ読む', async () => {
     const transport = await openMock()
     const snapshot = await loadKeyboard(transport)
     // Cornixのキーマップが使っているのはTD(3)だけで、先頭5個に含まれる
@@ -129,7 +129,7 @@ describe('Tap Dance は要る枠だけ読む', () => {
     expect(snapshot.tapDance[5]).toBeUndefined()
   })
 
-  it('先頭 5 個より後ろでも、キーマップで使っていれば読む', async () => {
+  it('先頭5個より後ろでも、キーマップで使っていれば読む', async () => {
     const transport = await openMock()
     transport.setKeycode(1, 0, 1, 0x5700 + 20) // L1にTD(20)
     const snapshot = await loadKeyboard(transport)
@@ -146,7 +146,7 @@ describe('Tap Dance は要る枠だけ読む', () => {
     expect(after.tapDance[20]).toBeDefined()
   })
 
-  it('ノブに割り当てた TD も数え、枠の数を超える番号は無視する', () => {
+  it('ノブに割り当てたTDも数え、枠の数を超える番号は無視する', () => {
     const keymap = [[[0x5700 + 9, 0x5700 + 40]]]
     const encoders = [[[0x5700 + 12, 0x0004]]]
     expect(tapDanceToRead(32, keymap, encoders)).toEqual([0, 1, 2, 3, 4, 9, 12])
@@ -166,7 +166,7 @@ describe('定義のキャッシュ', () => {
     })
   }
 
-  it('2 回目からは定義を読まずにキャッシュを使う', async () => {
+  it('2回目からは定義を読まずにキャッシュを使う', async () => {
     const definitionCache = memoryCache()
     const first = await openMock()
     const a = await loadKeyboard(first, { definitionCache })
@@ -179,7 +179,7 @@ describe('定義のキャッシュ', () => {
     expect(b.keymap).toEqual(a.keymap)
   })
 
-  it('refreshDefinition ならキャッシュがあっても読み直す', async () => {
+  it('refreshDefinitionならキャッシュがあっても読み直す', async () => {
     const definitionCache = memoryCache()
     await loadKeyboard(await openMock(), { definitionCache })
     const transport = await openMock()
@@ -189,7 +189,7 @@ describe('定義のキャッシュ', () => {
 })
 
 describe('読み込みの進み具合', () => {
-  it('段ごとに、1 往復ずつ total まで数え上げる', async () => {
+  it('段ごとに、1往復ずつtotalまで数え上げる', async () => {
     const seen: Array<{ stage: string; done: number; total: number }> = []
     await loadKeyboard(await openMock(), { onProgress: (p) => seen.push(p) })
 
@@ -219,7 +219,7 @@ describe('読み込みの進み具合', () => {
 })
 
 describe('matrix state', () => {
-  it('行ごとに MSB バイトが先に来る並びをほどく', () => {
+  it('行ごとにMSBバイトが先に来る並びをほどく', () => {
     // 3行 × 10列。row_size = 2、col 8は先頭バイトのbit0に入る
     const data = new Uint8Array(32)
     data[2] = 0b0000_0001 // row0の上位バイト → col 8
@@ -234,7 +234,7 @@ describe('matrix state', () => {
     expect(matrix[2].every((v) => !v)).toBe(true)
   })
 
-  it('押したキーが matrix に出る', async () => {
+  it('押したキーがmatrixに出る', async () => {
     const transport = await openMock()
     transport.press(7, 5)
     transport.press(0, 1)
@@ -249,14 +249,14 @@ describe('matrix state', () => {
     expect(after[7][5]).toBe(true)
   })
 
-  it('ロック中は matrix が取れない', async () => {
+  it('ロック中はmatrixが取れない', async () => {
     const transport = await openMock(false)
     transport.press(7, 5)
     const matrix = await getMatrixState(transport, MOCK_ROWS, MOCK_COLS)
     expect(matrix.flat().some((v) => v)).toBe(false)
   })
 
-  it('Cornix のサイズなら matrix tester の条件を満たす', () => {
+  it('Cornixのサイズならmatrix testerの条件を満たす', () => {
     expect(isMatrixTestSupported(6, 8, 7)).toBe(true)
     // vial protocol 2以下は不可
     expect(isMatrixTestSupported(2, 8, 7)).toBe(false)
@@ -276,7 +276,7 @@ describe('アンロック', () => {
     ])
   })
 
-  it('unlock キーを押し続けるとカウンタが減ってアンロックされる', async () => {
+  it('unlockキーを押し続けるとカウンタが減ってアンロックされる', async () => {
     const transport = await openMock(false)
     await unlockStart(transport)
     transport.press(0, 0)
@@ -329,7 +329,7 @@ describe('アンロック', () => {
     expect(nextUnlockAction(progress)).toBe('done')
   })
 
-  it('アンロック進行中は VIA コマンドが通らない', async () => {
+  it('アンロック進行中はVIAコマンドが通らない', async () => {
     const transport = await openMock(false)
     await unlockStart(transport)
     // ファームは書き換えずに返すので、レイヤー数の位置にはリクエストのバイトが残る
@@ -339,7 +339,7 @@ describe('アンロック', () => {
 })
 
 describe('RequestQueue', () => {
-  it('リクエストを 1 本に直列化する', async () => {
+  it('リクエストを1本に直列化する', async () => {
     const queue = new RequestQueue()
     const order: string[] = []
     const slow = queue.run(async () => {
@@ -364,7 +364,7 @@ describe('RequestQueue', () => {
 })
 
 describe('対応バージョンの確認', () => {
-  it('v6 以外はエラーにする', async () => {
+  it('v6以外はエラーにする', async () => {
     const transport = await openMock()
     // Vialプロトコルの応答だけを5に差し替える
     const original = transport.send.bind(transport)
@@ -378,7 +378,7 @@ describe('対応バージョンの確認', () => {
 })
 
 describe('キーマップの読み直し', () => {
-  it('Vial 側で書き換えられたキーマップを拾い直す', async () => {
+  it('Vial側で書き換えられたキーマップを拾い直す', async () => {
     const transport = await openMock()
     const before = await loadKeyboard(transport)
     expect(formatKeycode(decodeKeycode(before.keymap[0][0][1]))).toBe('KC_Q')
@@ -407,7 +407,7 @@ describe('キーマップの読み直し', () => {
     expect(after.definition).toBe(before.definition) // 同じものを使い回している
   })
 
-  it('Tap Dance とエンコーダーも読み直す', async () => {
+  it('Tap Danceとエンコーダーも読み直す', async () => {
     const transport = await openMock()
     const before = await loadKeyboard(transport)
     const after = await reloadKeymap(transport, before)
@@ -450,7 +450,7 @@ describe('他アプリ宛ての応答を弾く', () => {
     return out
   }
 
-  it('コマンド ID が合わないパケットは捨てて、本来の応答を待つ', async () => {
+  it('コマンドIDが合わないパケットは捨てて、本来の応答を待つ', async () => {
     const device = new FakeHidDevice()
     // 先に他アプリ宛て(0x11レイヤー数)が届き、そのあと本命(0x02 0x03)が来る
     device.responder = () => [packet(0x11, 0x0a), packet(0x02, 0x03, 0b0000_0010)]
@@ -462,7 +462,7 @@ describe('他アプリ宛ての応答を弾く', () => {
     expect(matrix[0][0]).toBe(false)
   })
 
-  it('keymap バッファはオフセットとサイズまで照合する', async () => {
+  it('keymapバッファはオフセットとサイズまで照合する', async () => {
     const device = new FakeHidDevice()
     device.responder = (request) => [
       // 同じ0x12でも別のオフセットへの応答は受け取らない

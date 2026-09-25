@@ -14,7 +14,7 @@ import type { Keycode } from '../keycodes/decode'
 import type { KeyLabel } from '../keycodes/labels'
 import type { PhysicalKey } from '../layout/geometry'
 import { layerColor } from '../lib/theme'
-import { messages } from '../messages'
+import { joinWords, messages } from '../messages'
 
 export interface KeyCapProps {
   physical: PhysicalKey
@@ -81,7 +81,7 @@ function textWidth(text: string, fontSize: number): number {
  * 色でもどのレイヤーかは分かる。
  */
 function bandText(layer: number, name: string | undefined, width: number): string {
-  for (const text of name ? [`L${layer} ${name}`, name] : []) {
+  for (const text of name ? [joinWords(`L${layer}`, name), name] : []) {
     if (textWidth(text, BAND_FONT) <= width - 6) return text
   }
   return `L${layer}`

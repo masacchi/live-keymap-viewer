@@ -14,7 +14,7 @@ const items = [
 ]
 
 describe('estimateTextWidth', () => {
-  it('全角は 1em、半角は 0.58em で見積もる', () => {
+  it('全角は1em、半角は0.58emで見積もる', () => {
     expect(estimateTextWidth('音量', 10)).toBe(20)
     expect(estimateTextWidth('ab', 10)).toBeCloseTo(11.6)
   })
@@ -24,7 +24,7 @@ describe('layoutEncoderStrip', () => {
   const layout = (bounds = keyBounds) =>
     layoutEncoderStrip({ items, keyBounds: bounds, unit: UNIT, fontSize: 13 })
 
-  it('ノブが無ければ null', () => {
+  it('ノブが無ければnull', () => {
     expect(layoutEncoderStrip({ items: [], keyBounds, unit: UNIT, fontSize: 13 })).toBeNull()
   })
 

@@ -13,7 +13,7 @@ beforeAll(async () => {
 })
 
 describe('summarizeLayers: Cornix', () => {
-  it('L1〜L4 に、ベースレイヤーのどのキーで入るかを拾う', () => {
+  it('L1〜L4に、ベースレイヤーのどのキーで入るかを拾う', () => {
     const summary = summarizeLayers(snapshot)
     const first = (layer: number) => summary[layer].triggers[0]
     // BS = LT1、Space = LT2、Del = LT3、` = TD(3)(長押しでMO(4))
@@ -23,7 +23,7 @@ describe('summarizeLayers: Cornix', () => {
     expect(first(4)).toMatchObject({ fromLayer: 0, row: 7, col: 0, kind: 'hold' })
   })
 
-  it('L5〜L9 は空(ノブの押し込みが L0 と同じで、ほかは KC_NO)。行き方も無い', () => {
+  it('L5〜L9は空(ノブの押し込みがL0と同じで、ほかはKC_NO)。行き方も無い', () => {
     const summary = summarizeLayers(snapshot)
     expect(summary.map((s) => s.blank)).toEqual([
       false,
@@ -49,7 +49,7 @@ describe('summarizeLayers: 作ったキーマップ', () => {
     [l2]
   ]
 
-  it('TG / MO はその入り方で拾い、自分自身へのキーは行き方にしない', () => {
+  it('TG / MOはその入り方で拾い、自分自身へのキーは行き方にしない', () => {
     const summary = summarizeLayers({
       keymap: keymap(
         [QK_TOGGLE_LAYER | 2, QK_MOMENTARY | 1, 0x04],
@@ -79,7 +79,7 @@ describe('summarizeLayers: 作ったキーマップ', () => {
     ])
   })
 
-  it('ベースレイヤーと違うキーが 1 つでもあれば空ではない。ノブの割り当ても見る', () => {
+  it('ベースレイヤーと違うキーが1つでもあれば空ではない。ノブの割り当ても見る', () => {
     const base = [0x04, 0x05, 0x06]
     expect(
       summarizeLayers({ keymap: keymap(base, [KC_NO, 0x05, KC_TRNS]), tapDance: [] })[1].blank

@@ -213,7 +213,7 @@ export class KeyboardSession {
 
   /** 開いて読み込み、アンロックかポーリングへ進む。読み込みが終わった時点でresolveする。 */
   async start(): Promise<void> {
-    if (this.started) throw new Error('KeyboardSession.start() は 1 回しか呼べない')
+    if (this.started) throw new Error('KeyboardSession.start()は1回しか呼べない')
     this.started = true
     const gen = ++this.generation
     try {

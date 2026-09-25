@@ -21,7 +21,7 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 const root = document.getElementById('root')
-if (!root) throw new Error('index.html に #root が無い')
+if (!root) throw new Error('index.htmlに#rootが無い')
 
 createRoot(root).render(
   <StrictMode>

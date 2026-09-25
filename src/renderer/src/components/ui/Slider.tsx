@@ -11,7 +11,7 @@ export interface SliderProps {
   min: number
   max: number
   step: number
-  /** 右に出す値の書き方(「82%」「200 ms」)。 */
+  /** 右に出す値の書き方(「82%」「200ms」)。 */
   format: (value: number) => string
   onChange: (value: number) => void
   disabled?: boolean

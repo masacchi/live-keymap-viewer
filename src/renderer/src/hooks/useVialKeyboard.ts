@@ -45,7 +45,7 @@ function watchForLog(next: (state: ConnectionState) => void): (state: Connection
       reportInfo('接続: 応答待ちに入った')
     } else if (!state.stalled && stalledSince !== null) {
       const seconds = ((Date.now() - stalledSince) / 1000).toFixed(1)
-      reportInfo(`接続: 応答待ちから戻った(${seconds} 秒)`)
+      reportInfo(`接続: 応答待ちから戻った(${seconds}秒)`)
       stalledSince = null
     }
     next(state)

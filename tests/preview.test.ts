@@ -47,7 +47,7 @@ describe('プレビュー: 戻す', () => {
     expect(previewReducer(state, { type: 'keyPressed' })).toEqual(NO_PREVIEW)
   })
 
-  it('Esc は固定と記号の案内をやめ、乗せているものはそのまま(外せば戻る)', () => {
+  it('Escは固定と記号の案内をやめ、乗せているものはそのまま(外せば戻る)', () => {
     const state = run({ type: 'pin', layer: 3 }, { type: 'hover', layer: 1 }, { type: 'escape' })
     expect(state).toEqual({ hovered: 1, pinned: null, lookup: null })
   })

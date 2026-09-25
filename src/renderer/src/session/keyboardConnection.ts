@@ -274,7 +274,7 @@ export class KeyboardConnection {
    */
   private readonly onHidDisconnect = (event: HIDConnectionEvent): void => {
     if (this.disposed || this.device === null || event.device !== this.device) return
-    this.options.log?.('info', `切断: ${describeDevice(event.device)} が外れた`)
+    this.options.log?.('info', `切断: ${describeDevice(event.device)}が外れた`)
 
     const session = this.session
     this.session = null
@@ -343,8 +343,8 @@ export class KeyboardConnection {
     this.options.log?.(
       'info',
       `接続: ${describeDevice(device)}` +
-        (picked?.latencyMs != null ? ` 往復 ${Math.round(picked.latencyMs)}ms` : '') +
-        (results.length > 1 ? ` (候補 ${results.length} 個中 ${answered} 個が応答)` : '')
+        (picked?.latencyMs != null ? ` 往復${Math.round(picked.latencyMs)}ms` : '') +
+        (results.length > 1 ? ` (候補${results.length}個中${answered}個が応答)` : '')
     )
 
     const open = this.options.openTransport ?? ((d: HIDDevice) => new WebHidTransport(d))

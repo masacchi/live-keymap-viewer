@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from 'react'
 import { layerColor } from '../lib/theme'
-import { messages } from '../messages'
+import { joinWords, messages } from '../messages'
 import { Button } from './ui/Button'
 
 /**
@@ -28,10 +28,7 @@ export function PreviewNotice({
     >
       {hint ?? (
         <span>
-          <b className="font-semibold">
-            L{layer}
-            {name ? ` ${name}` : ''}
-          </b>{' '}
+          <b className="font-semibold">{joinWords(`L${layer}`, name ?? '')}</b>
           {messages.preview.previewing}
         </span>
       )}

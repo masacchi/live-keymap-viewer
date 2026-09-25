@@ -4,7 +4,7 @@ import { parseKle } from '@/layout/kle'
 import definition from '../reference/cornix-vial-definition.json'
 
 describe('parseKle', () => {
-  it('行が進むごとに y が 1 増え、x は行頭に戻る', () => {
+  it('行が進むごとにyが1増え、xは行頭に戻る', () => {
     const { keys } = parseKle([['a', 'b'], ['c']])
     expect(keys.map((k) => [k.x, k.y])).toEqual([
       [0, 0],
@@ -13,7 +13,7 @@ describe('parseKle', () => {
     ])
   })
 
-  it('x / y / w のプロパティを次のキーに効かせる', () => {
+  it('x / y / wのプロパティを次のキーに効かせる', () => {
     const { keys } = parseKle([[{ x: 2 }, 'a', { w: 2 }, 'b', 'c']])
     expect(keys.map((k) => [k.x, k.width])).toEqual([
       [2, 1],
@@ -22,7 +22,7 @@ describe('parseKle', () => {
     ])
   })
 
-  it('rx / ry がクラスタ原点をリセットする', () => {
+  it('rx / ryがクラスタ原点をリセットする', () => {
     const { keys } = parseKle([['a'], [{ r: 15, rx: 5, ry: 4 }, 'b'], ['c']])
     expect(keys[1]).toMatchObject({ x: 5, y: 4, rotationAngle: 15, rotationX: 5, rotationY: 4 })
     // 次の行はクラスタ原点のxに戻り、yだけ1進む
@@ -33,7 +33,7 @@ describe('parseKle', () => {
     expect(() => parseKle([['a', { r: 10 }, 'b']])).toThrow()
   })
 
-  it('align に合わせてラベルを並べ替える', () => {
+  it('alignに合わせてラベルを並べ替える', () => {
     // 既定align=4では入力位置9がlabels[4]になる(エンコーダーの目印)
     const { keys } = parseKle([['0,0\n\n\n\n\n\n\n\n\ne']])
     expect(keys[0].labels[0]).toBe('0,0')
@@ -41,24 +41,24 @@ describe('parseKle', () => {
   })
 })
 
-describe('buildGeometry (Cornix LP の実定義)', () => {
+describe('buildGeometry (Cornix LPの実定義)', () => {
   const geometry = buildGeometry(definition.layouts.keymap, definition.matrix)
 
-  it('matrix のキーとエンコーダーを分けて取り出す', () => {
+  it('matrixのキーとエンコーダーを分けて取り出す', () => {
     // 8行7列のmatrixのうち、実際に配線されている50キーだけがKLEに載っている
     expect(geometry.keys).toHaveLength(50) // 片手25キー × 2
     expect(geometry.encoders).toHaveLength(4) // 2個 × 2方向
     expect(new Set(geometry.encoders.map((e) => e.index))).toEqual(new Set([0, 1]))
   })
 
-  it('すべてのキーが宣言された matrix に収まる', () => {
+  it('すべてのキーが宣言されたmatrixに収まる', () => {
     for (const key of geometry.keys) {
       expect(key.row).toBeLessThan(definition.matrix.rows)
       expect(key.col).toBeLessThan(definition.matrix.cols)
     }
   })
 
-  it('同じ row,col のキーが重複しない', () => {
+  it('同じrow,colのキーが重複しない', () => {
     const ids = geometry.keys.map((k) => `${k.row},${k.col}`)
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -86,7 +86,7 @@ describe('buildGeometry (Cornix LP の実定義)', () => {
     }
   })
 
-  it('matrix をはみ出すキーはエラーにする', () => {
+  it('matrixをはみ出すキーはエラーにする', () => {
     expect(() => buildGeometry([['9,9']], { rows: 8, cols: 7 })).toThrow()
   })
 })

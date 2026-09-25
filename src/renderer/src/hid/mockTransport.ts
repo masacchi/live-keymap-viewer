@@ -82,7 +82,7 @@ export interface MockKeyboard {
 
 /** 既定のモック。reference/ の実物から生成したもの(mock/cornix.generated.ts)。 */
 export const CORNIX_MOCK: MockKeyboard = {
-  label: 'Cornix LP (モック)',
+  label: 'Cornix LP(モック)',
   viaProtocol: MOCK_VIA_PROTOCOL,
   vialProtocol: MOCK_VIAL_PROTOCOL,
   uid: MOCK_UID,

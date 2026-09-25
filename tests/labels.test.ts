@@ -29,22 +29,22 @@ const L0_JIS_MAIN: string[][] = [
   ['`', '\\', '/', 'かな', 'Enter', 'Space', '']
 ]
 
-describe('JIS ラベル', () => {
-  it('ベースレイヤーが reference/keymap-preview.html の L0 と一致する', () => {
+describe('JISラベル', () => {
+  it('ベースレイヤーがreference/keymap-preview.htmlのL0と一致する', () => {
     const actual = Array.from({ length: MOCK_ROWS }, (_, row) =>
       Array.from({ length: MOCK_COLS }, (_, col) => labelAt(0, row, col).main)
     )
     expect(actual).toEqual(L0_JIS_MAIN)
   })
 
-  it('Shift 面の文字を併記する', () => {
+  it('Shift面の文字を併記する', () => {
     expect(labelAt(0, 4, 0)).toMatchObject({ main: '-', shift: '=' }) // KC_MINUS
     expect(labelAt(0, 5, 0)).toMatchObject({ main: ':', shift: '*' }) // KC_QUOTE
     expect(labelAt(0, 6, 0)).toMatchObject({ main: ']', shift: '}' }) // KC_NONUS_HASH
     expect(labelAt(0, 7, 1)).toMatchObject({ main: '\\', shift: '_' }) // KC_RO
   })
 
-  it('LSFT(x) は x の Shift 側の文字そのものを出す', () => {
+  it('LSFT(x)はxのShift側の文字そのものを出す', () => {
     // L2の(0,1)はLSFT(KC_1) → JISでは"!"
     expect(labelAt(2, 0, 1).main).toBe('!')
     // L2の(1,3)はLSFT(KC_SCOLON) → JISでは"+"
@@ -53,24 +53,24 @@ describe('JIS ラベル', () => {
     expect(labelAt(2, 7, 1).main).toBe('|')
   })
 
-  it('JIS 固有のキーを日本語で出す', () => {
-    expect(labelAt(0, 7, 3)).toMatchObject({ main: 'かな', sub: 'IME オン' })
-    expect(labelAt(0, 3, 3)).toMatchObject({ main: '英数', sub: 'IME オフ' })
+  it('JIS固有のキーを日本語で出す', () => {
+    expect(labelAt(0, 7, 3)).toMatchObject({ main: 'かな', sub: 'IMEオン' })
+    expect(labelAt(0, 3, 3)).toMatchObject({ main: '英数', sub: 'IMEオフ' })
     expect(labelAt(2, 2, 2).main).toBe('¥') // KC_JYEN
   })
 
-  it('Layer-Tap はタップ側の文字を出す', () => {
+  it('Layer-Tapはタップ側の文字を出す', () => {
     expect(labelAt(0, 7, 5).main).toBe('Space') // LT2(KC_SPACE)
     expect(labelAt(0, 3, 5).main).toBe('BS') // LT1(KC_BSPACE)
     expect(labelAt(0, 3, 4).main).toBe('Del') // LT3(KC_DELETE)
   })
 
-  it('Tap Dance はタップ側のキーコードで表示する', () => {
+  it('Tap Danceはタップ側のキーコードで表示する', () => {
     // TD(3)のon_tapはLSFT(KC_LBRACKET) → JISでは"`"
     expect(labelAt(0, 7, 0).main).toBe('`')
   })
 
-  it('USER キーコードを customKeycodes の名前で出す', () => {
+  it('USERキーコードをcustomKeycodesの名前で出す', () => {
     // L4の(1,0)はUSER00 = BT0
     expect(labelAt(4, 1, 0)).toMatchObject({ main: 'BT0', category: 'user' })
     // USER06のshortNameは"Switch\nOutput"
@@ -80,13 +80,13 @@ describe('JIS ラベル', () => {
     expect(labelAt(4, 0, 0).sub).toBeUndefined()
   })
 
-  it('透過キーは ▽ を返す(たどる先を決めるのは LayerEngine の仕事)', () => {
+  it('透過キーは ▽ を返す(たどる先を決めるのはLayerEngineの仕事)', () => {
     expect(labelAt(1, 1, 0)).toMatchObject({ main: '▽', category: 'none' })
   })
 })
 
-describe('US ラベル', () => {
-  it('同じキーコードでも US 配列の文字を出す', () => {
+describe('USラベル', () => {
+  it('同じキーコードでもUS配列の文字を出す', () => {
     expect(labelAt(0, 4, 0, 'us')).toMatchObject({ main: '-', shift: '_' }) // KC_MINUS
     expect(labelAt(0, 5, 0, 'us')).toMatchObject({ main: "'", shift: '"' }) // KC_QUOTE
     expect(labelAt(0, 6, 1, 'us')).toMatchObject({ main: ']', shift: '}' }) // KC_RBRACKET
@@ -99,7 +99,7 @@ describe('US ラベル', () => {
     expect(labelAt(0, 3, 3, 'us')).toMatchObject({ main: 'Lang2' })
   })
 
-  it('アルファベットと名前付きキーは JIS と同じ', () => {
+  it('アルファベットと名前付きキーはJISと同じ', () => {
     expect(labelAt(0, 0, 1, 'us').main).toBe('Q')
     expect(labelAt(0, 0, 0, 'us').main).toBe('Tab')
   })

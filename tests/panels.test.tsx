@@ -29,7 +29,7 @@ describe('LoadingPanel', () => {
     const html = renderToStaticMarkup(
       <LoadingPanel deviceLabel="Cornix" progress={{ stage: 'keymap', done: 12, total: 40 }} />
     )
-    expect(html).toContain('Cornix を読み込み中')
+    expect(html).toContain('Cornixを読み込み中')
     expect(html).toContain('キーマップ')
     expect(html).toContain('12 / 40')
     expect(html).toContain('width:30%')
@@ -71,7 +71,7 @@ function strip(props: Partial<Parameters<typeof LayerStrip>[0]> = {}): string {
   )
 }
 
-describe('Toolbar の接続の状態', () => {
+describe('Toolbarの接続の状態', () => {
   const toolbar = (props: Partial<ToolbarProps>): string =>
     renderToStaticMarkup(
       <Toolbar
@@ -130,16 +130,16 @@ describe('LayerStrip', () => {
     expect(html).not.toContain('background-color:var(--color-layer-1)')
   })
 
-  it('中身の無いレイヤーは「+5 空」に畳む', () => {
+  it('中身の無いレイヤーは「+5空」に畳む', () => {
     const html = strip()
     expect(html.match(/>L\d</g)).toEqual(['>L0<', '>L1<', '>L2<', '>L3<', '>L4<'])
-    expect(html).toContain('+5 空')
+    expect(html).toContain('+5空')
   })
 
   it('空のレイヤーでも、有効になっていれば畳まずに出す', () => {
     const html = strip({ activeLayers: [0, 7], shownLayer: 7 })
     expect(html).toContain('>L7<')
-    expect(html).toContain('+4 空')
+    expect(html).toContain('+4空')
   })
 
   it('行き方は既定ではツールチップだけに出し、設定で番号の横にも並べられる', () => {
@@ -152,12 +152,12 @@ describe('LayerStrip', () => {
       keycode: decodeKeycode(QK_LAYER_TAP | (2 << 8) | 0x2c) // LT2(KC_SPACE)
     }
     const hidden = strip({ summaries: cornixLike({ 2: [space] }) })
-    expect(hidden).not.toContain('>Space 長押し<')
-    expect(hidden).toContain('title="L2: Space 長押し。')
+    expect(hidden).not.toContain('>Space長押し<')
+    expect(hidden).toContain('title="L2: Space長押し。')
 
     const shown = strip({ summaries: cornixLike({ 2: [space] }), showTriggers: true })
-    expect(shown).toContain('>Space 長押し<')
-    expect(shown).toContain('title="L2: Space 長押し。')
+    expect(shown).toContain('>Space長押し<')
+    expect(shown).toContain('title="L2: Space長押し。')
   })
 
   it('名前があれば番号の横に出す', () => {
@@ -172,10 +172,10 @@ describe('describeTrigger', () => {
   const at = (fromLayer: number, raw: number, kind: LayerTrigger['kind']) =>
     describeTrigger({ fromLayer, row: 0, col: 0, kind, keycode: decodeKeycode(raw) }, 'jis', {})
 
-  it('LT はタップ側の文字、TG はキーの名前で言い、ベース以外にあるキーはレイヤーを先に書く', () => {
-    expect(at(0, QK_LAYER_TAP | (1 << 8) | 0x2a, 'hold')).toBe('BS 長押し')
-    expect(at(0, QK_TOGGLE_LAYER | 3, 'toggle')).toBe('TG3 で固定')
-    expect(at(1, QK_MOMENTARY | 4, 'momentary')).toBe('L1 → MO4 押している間')
+  it('LTはタップ側の文字、TGはキーの名前で言い、ベース以外にあるキーはレイヤーを先に書く', () => {
+    expect(at(0, QK_LAYER_TAP | (1 << 8) | 0x2a, 'hold')).toBe('BS長押し')
+    expect(at(0, QK_TOGGLE_LAYER | 3, 'toggle')).toBe('TG3で固定')
+    expect(at(1, QK_MOMENTARY | 4, 'momentary')).toBe('L1 → MO4押している間')
   })
 })
 
@@ -183,7 +183,7 @@ describe('PreviewNotice', () => {
   it('押して固定したプレビューは、戻り方と「戻る」を出す', () => {
     const html = renderToStaticMarkup(<PreviewNotice layer={5} pinned onExit={noop} />)
     expect(html).toContain('をプレビュー中')
-    expect(html).toContain('キーを押すか Esc で戻ります')
+    expect(html).toContain('キーを押すかEscで戻ります')
     expect(html).toContain('>戻る<')
   })
 
@@ -191,7 +191,7 @@ describe('PreviewNotice', () => {
     const html = renderToStaticMarkup(
       <PreviewNotice layer={3} name="記号" pinned={false} onExit={noop} />
     )
-    expect(html).toContain('L3 記号')
+    expect(html).toContain('L3記号')
     expect(html).toContain('ポインタを外すと戻ります')
     expect(html).not.toContain('>戻る<')
   })
@@ -235,7 +235,7 @@ describe('オーバーレイの自動フェード', () => {
 
   it('操作パネルに切り替えのチェックボックスを出す', () => {
     const html = controls()
-    expect(html).toContain('L0 で薄く')
+    expect(html).toContain('L0で薄く')
     expect(html).toMatch(/type="checkbox"[^>]*checked/)
     // ふだんは畳んでおき、ポインタを乗せたら広げる
     // (cnがdisplayのぶつかりを解くので、flexは消えてhiddenだけが残る)
@@ -270,7 +270,7 @@ describe('Button', () => {
 })
 
 describe('ModifierBadges', () => {
-  it('4 つとも並べ、効いているものだけ点ける', () => {
+  it('4つとも並べ、効いているものだけ点ける', () => {
     const html = renderToStaticMarkup(<ModifierBadges mods={MOD_CTRL | MOD_SHIFT} />)
     const on = [...html.matchAll(/title="(\w+)[^"]*" data-on="(true|false)"/g)].map((m) => [
       m[1],
@@ -297,7 +297,9 @@ describe('UnlockPanel', () => {
 
   it('押すキーを名前で言う', () => {
     const html = renderToStaticMarkup(<UnlockPanel unlock={unlock} keyNames={['Tab', 'Q']} />)
-    expect(html).toMatch(/<kbd[^>]*>Tab<\/kbd> と <kbd[^>]*>Q<\/kbd> を同時に、/)
+    expect(html).toMatch(
+      /<kbd[^>]*>Tab<\/kbd><span[^>]*>と<\/span><kbd[^>]*>Q<\/kbd><span[^>]*>を同時に、/
+    )
     expect(html).toContain('width:50%')
   })
 
@@ -322,7 +324,7 @@ describe('SettingsPanel', () => {
       <SettingsPanel
         layers={[
           { layer: 0, how: null },
-          { layer: 2, how: 'Space 長押し' }
+          { layer: 2, how: 'Space長押し' }
         ]}
         names={['', '', '記号']}
         onRename={noop}
@@ -373,7 +375,7 @@ describe('SettingsPanel', () => {
 
     it('新しい版があれば、版と「更新して再起動」を出す', () => {
       const html = panel({ appInfo, update: { phase: 'available', version: '0.2.0' } })
-      expect(html).toContain('v0.2.0 があります')
+      expect(html).toContain('v0.2.0があります')
       expect(html).toContain('更新して再起動')
       expect(html).not.toContain('更新を確認')
     })
@@ -398,7 +400,7 @@ describe('SettingsPanel', () => {
     })
   })
 
-  it('Rust から来た更新の状態を、画面の状態に読み替える', () => {
+  it('Rustから来た更新の状態を、画面の状態に読み替える', () => {
     expect(toAppUpdate({ kind: 'unsupported' })).toEqual({ phase: 'unsupported' })
     expect(toAppUpdate({ kind: 'latest', current: '0.1.0' })).toEqual({ phase: 'latest' })
     expect(toAppUpdate({ kind: 'available', current: '0.1.0', version: '0.2.0' })).toEqual({
@@ -409,15 +411,15 @@ describe('SettingsPanel', () => {
 
   it('中身のあるレイヤーに名前の欄を出し、行き方を薄く添える', () => {
     const html = panel()
-    expect(html).toContain('aria-label="L0 の名前"')
-    expect(html).toContain('aria-label="L2 の名前"')
-    expect(html).toMatch(/placeholder="Space 長押し"[^>]*value="記号"/)
+    expect(html).toContain('aria-label="L0の名前"')
+    expect(html).toContain('aria-label="L2の名前"')
+    expect(html).toMatch(/placeholder="Space長押し"[^>]*value="記号"/)
   })
 
   it('繋いでいなければ名前の欄の代わりに案内を出す', () => {
     const html = panel({ layers: [], onRename: undefined })
     expect(html).not.toContain('の名前"')
-    expect(html).toContain('キーボードに繋ぐと付けられます')
+    expect(html).toContain('キーボードに接続すると付けられます')
   })
 
   it('オーバーレイの設定は、いまの値で出す', () => {
@@ -426,10 +428,10 @@ describe('SettingsPanel', () => {
     expect(html).not.toMatch(/type="checkbox"[^>]*checked/)
   })
 
-  it('長押しの判定時間を ms で出す', () => {
+  it('長押しの判定時間をmsで出す', () => {
     const html = panel()
     expect(html).toMatch(/type="range" min="100" max="500" step="10"[^>]*value="250"/)
-    expect(html).toContain('>250 ms<')
+    expect(html).toContain('>250ms<')
   })
 
   it('許可したキーボードを並べ、保存できるときだけ「忘れる」を出す', () => {
@@ -442,10 +444,10 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('後ろのぼかしは、使えない OS では押せなくしてそう書く', () => {
+  it('後ろのぼかしは、使えないOSでは押せなくしてそう書く', () => {
     expect(panel()).toMatch(/type="checkbox"[^>]*disabled=""/)
-    expect(panel()).toContain('Windows 11 でだけ使えます')
-    expect(panel({ blurSupported: true })).toContain('強さは OS が決めます')
+    expect(panel()).toContain('Windows 11でだけ使えます')
+    expect(panel({ blurSupported: true })).toContain('強さはOSが決めます')
   })
 })
 
@@ -466,27 +468,27 @@ describe('SymbolFinder', () => {
           routeSteps(
             r,
             r.layer === 2 ? 'W' : r.shift ? '2' : ',',
-            r.layer === 2 ? 'Space 長押し' : null
+            r.layer === 2 ? 'Space長押し' : null
           )
         }
         onPick={noop}
       />
     )
 
-  it('記号ごとに 1 枚のカードにし、記号と押すキーの組み合わせを対で出す', () => {
+  it('記号ごとに1枚のカードにし、記号と押すキーの組み合わせを対で出す', () => {
     const html = finder(new Map([['@', [route(2)]]]))
     // 読み上げでも「@ はSpace長押し+ W」と分かる
-    expect(html).toContain('aria-label="@: Space 長押し + W"')
+    expect(html).toContain('aria-label="@: Space長押し + W"')
     // レイヤーは番号ではなく行き方で言う
-    expect(html).toMatch(/background-color:var\(--color-layer-2\)">Space 長押し</)
+    expect(html).toMatch(/background-color:var\(--color-layer-2\)">Space長押し</)
     expect(html).toMatch(/>W<\/span>/)
   })
 
-  it('2 番目の打ち方を「または」で小さく添える', () => {
+  it('2番目の打ち方を「または」で小さく添える', () => {
     const html = finder(new Map([['"', [route(2), route(0, true)]]]))
     expect(html).toContain('または')
     expect(html).toContain('>Shift<')
-    expect(html).toContain('title="Space 長押し + W / または Shift + 2"')
+    expect(html).toContain('title="Space長押し + W、またはShift + 2"')
   })
 
   it('出せない記号のカードは押せなくし、そう書く', () => {
@@ -495,8 +497,6 @@ describe('SymbolFinder', () => {
   })
 
   it('タップと長押しを兼ねるキーは「タップ」と添える', () => {
-    expect(routeSteps(route(0, false, true), '`', null)).toEqual([
-      { kind: 'key', text: '` タップ' }
-    ])
+    expect(routeSteps(route(0, false, true), '`', null)).toEqual([{ kind: 'key', text: '`タップ' }])
   })
 })
