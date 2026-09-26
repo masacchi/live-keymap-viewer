@@ -152,6 +152,7 @@ export default function App(): JSX.Element {
           settings={settings}
           onChange={updateSettings}
           blurSupported={BLUR_SUPPORTED}
+          stalled={keyboard.stalled}
           onExit={onToggleWindowMode}
         />
       )}

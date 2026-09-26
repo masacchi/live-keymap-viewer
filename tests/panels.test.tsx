@@ -249,6 +249,14 @@ describe('オーバーレイの自動フェード', () => {
     )
   })
 
+  it('応答が途切れたら、畳んでいても「応答待ち」を出し、パネルを濃くする', () => {
+    expect(controls()).not.toContain('応答待ち')
+    const html = controls({}, { stalled: true })
+    expect(html).toContain('応答待ち')
+    expect(html).toContain('opacity-100')
+    expect(html).not.toContain('opacity-45')
+  })
+
   it('後ろのぼかしは、使えるときだけ欄を出す', () => {
     expect(controls()).toContain('後ろをぼかす')
     expect(controls({}, { blurSupported: false })).not.toContain('後ろをぼかす')

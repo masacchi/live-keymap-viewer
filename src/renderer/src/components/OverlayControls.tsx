@@ -31,6 +31,11 @@ export interface OverlayControlsProps {
   onChange: (patch: SettingsPatch) => void
   /** ぼかしが使えるか(Windowsのときだけ)。使えなければ欄を出さない。 */
   blurSupported: boolean
+  /**
+   * 応答が途切れているか。オーバーレイにはツールバーの状態の丸が無いので、ここで知らせる
+   * (出さないと、図が止まったまま切断まで最大15秒、何も分からない)。
+   */
+  stalled?: boolean
   onExit: () => void
 }
 
@@ -40,6 +45,7 @@ export function OverlayControls({
   settings,
   onChange,
   blurSupported,
+  stalled = false,
   onExit
 }: OverlayControlsProps): JSX.Element {
   /** ドラッグ中は前回のポインタ位置(画面座標)。していなければnull。 */
@@ -110,7 +116,8 @@ export function OverlayControls({
         className={cn(
           'absolute left-2 top-2 z-20 flex items-center gap-2 rounded-lg border px-2 py-1.5',
           'border-line bg-surface transition-opacity',
-          active ? 'opacity-100' : 'opacity-45'
+          // 応答待ちのあいだは、見落とさないよう濃く出す
+          active || stalled ? 'opacity-100' : 'opacity-45'
         )}
       >
         {/*
@@ -134,6 +141,17 @@ export function OverlayControls({
             {displayLayerName && <span className="ml-1 font-semibold">{displayLayerName}</span>}
           </span>
         </span>
+
+        {/* 畳んでいても出す(ツールバーの丸と同じ黄色) */}
+        {stalled && (
+          <span
+            title={messages.status.stalledHint}
+            className="flex shrink-0 items-center gap-1.5 text-2xs font-semibold text-warn"
+          >
+            <span className="inline-block size-2 rounded-full bg-warn" />
+            {messages.status.stalled}
+          </span>
+        )}
 
         {/* 畳んでいるあいだは隠すだけ(外すと、広げた瞬間にパネルの幅が決まらずポインタが外れる) */}
         <div
