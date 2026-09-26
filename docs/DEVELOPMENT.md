@@ -155,6 +155,8 @@ tests/
   keyboardConnection                          接続の持ち方と再接続
   webhidTransport                             本物と同じWebHidTransportの経路での読み込み、
                                               答えるインターフェースの選び方
+  bluetoothLatency                            Bluetoothの遅さ(往復250〜500ms)でも正しい回に読めるか。
+                                              本物の時間で待つので、ファイルを分けて並べて走らせる
   nativeHid                                   デスクトップ版のHID(RustのhidapiをWebHIDの形に)
   otherKeyboard                               Cornix以外のキーボード(別の機種を名乗るモック)
   keyboardView / panels                       SVGの描画と部品(react-dom/serverで静的に)
