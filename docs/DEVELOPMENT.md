@@ -274,6 +274,30 @@ LinuxからWindows向けのパッケージを作れる(`vpk [win] pack`)ので�
 リポジトリが公開なので、認証は要らない(exeにトークンを埋め込まない)。`deploy:win`で置いたexeや
 開発中のものはVelopackの管理下に無いので、更新の欄には「更新は、インストーラーで入れたときに使えます」と出る。
 
+### 開発版とリリース版
+
+mainへのpushでCIが作る**開発版**は、リリース版とは別のアプリとして入る。1台に両方を並べて入れられ、
+開発版は開発版どうしで更新する。リリース版には自動では移らない(使い続けるなら、リリース版を別に入れる)。
+
+| | リリース版 | 開発版 |
+|---|---|---|
+| 作るきっかけ | `v*`のタグ | mainへのpush |
+| パッケージID・入る場所 | `live-keymap-viewer` | `live-keymap-viewer-dev` |
+| 表示名(ショートカット・ウィンドウ) | Live Keymap Viewer | Live Keymap Viewer Dev |
+| 設定とログ | `%APPDATA%\live-keymap-viewer` | `%APPDATA%\live-keymap-viewer-dev` |
+| WebView2のデータ(キャッシュ) | identifierが`io.github.masacchi.live-keymap-viewer` | 同じく`…-dev` |
+| 更新を探す場所 | `releases/latest/download`(最新の正式リリース) | `releases/download/dev-build` |
+| 版 | package.jsonの版(`0.1.0`) | 次のパッチ版 + 実行番号(`0.1.1-dev.42`) |
+
+- 分けるのは、並べて動かしたときに同じ`settings.json`を書き合わないようにするため。どちらになるかは
+  ビルドのときに決まる(`package-win.mjs --dev`が環境変数`LKV_DEV`を立て、Rustの`src-tauri/src/channel.rs`が読む。
+  identifierは`tauri build --config`で差し替える)。パッケージは`pack-win.mjs --dev`で開発版のIDにする
+- 開発版の版に実行番号を使うのは、ビルドのたびに必ず増やすため(commitのハッシュでは新しい順に並ばない)。
+  次のパッチ版にするのは、`0.1.0-dev.N`だと出したばかりの`0.1.0`より古い扱いになるため
+- 2つを同時に起動すると、`Ctrl+Alt+K`は先に起動した方だけが受け取る(後の方はログに警告を残す)
+- 手元で開発版を作るなら`npm run package:win -- --dev --version 0.1.1-dev.0`のあと
+  `npm run container -- node scripts/pack-win.mjs --dev --version 0.1.1-dev.0`
+
 ### GitHub Actionsでのビルド
 
 [.github/workflows/build-windows.yml](../.github/workflows/build-windows.yml)。Ubuntuのランナーで、
@@ -288,7 +312,7 @@ CIも読む(入れたcargo-xwinもキャッシュに残るので、ビルドし�
 
 | きっかけ | やること |
 |---|---|
-| mainへのpush(PRのマージを含む) | ビルドして、GitHubのリリース**dev-build**(プレリリース)にインストーラーとポータブル版を置く。前のビルドのファイルは消す。プレリリースなので、インストール済みのアプリの更新の対象にはならない |
+| mainへのpush(PRのマージを含む) | **開発版**をビルドして、GitHubのリリース**dev-build**(プレリリース)にインストーラー・ポータブル版・更新用のパッケージとリリースの一覧を置く。前のビルドのファイルは消す。入っている開発版はここから更新する。プレリリースなので、リリース版の更新の対象にはならない |
 | `v*`のタグのpush | ビルドして、GitHubのリリースを作って載せる(`vpk upload github`)。**インストール済みのアプリはここから更新する** |
 | 手動(Actions → 「Windows版のビルド」→ Run workflow) | 選んだブランチでビルドする。「タグ」を書けばリリースも作る(無いタグなら、ビルドしたcommitに付ける)。書かなければdev-buildを更新する |
 
@@ -308,9 +332,8 @@ git push --follow-tags                         # タグのpushでリリースま
 - 同じタグでもう一度流すと、リリースは作り直さずに添付だけ差し替える
 - リリースに載せるのは、Setup.exe・更新用のパッケージ・リリースの一覧(`releases.win.json`など)とポータブル版。
   リリースの一覧とパッケージは、vpkが付けた名前のまま載せる(アプリはその名前で取りに来る)
-- リリースしないビルドは、ファイル名にcommitの先頭7文字が付く
-  (`LiveKeymapViewer-0.1.0-abc1234-win-x64-setup.exe`)。パッケージの版は`0.1.0-gabc1234`
-  (SemVerにするため。commitが数字だけで0から始まると、SemVerとして正しくない)
+- リリースしないビルドは開発版になり、ファイル名に開発版の版が付く
+  (`LiveKeymapViewer-Dev-0.1.1-dev.42-win-x64-setup.exe`)。どのcommitかはリリースの題名に出る
 
 ## 6. よくある変更
 

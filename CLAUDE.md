@@ -39,6 +39,7 @@ Vialキーボード(Cornix LP)の押しているキーとレイヤーをリア�
 - 設定の範囲・既定値は`src/shared/settings.ts`と`src-tauri/src/settings.rs`の2か所にある。変えるときは両方
 - 画面はTauriを直接呼ばない。Rustとのやり取りは`src/renderer/src/platform/tauri.ts`だけで行う
 - インストーラーのパッケージID(`live-keymap-viewer`)は変えない(変えると、入っているものが更新されない)。
+  開発版(mainへのpushでCIが作る)は`-dev`の付いた別のアプリにしている(docs/DEVELOPMENT.md「開発版とリリース版」)。
   vpk(Dockerfileの`VPK_VERSION`)と`velopack` crateは同じ版にする
 - パス(フォルダ・ファイル名)に半角スペースを入れない。表示名(ショートカット・アプリ一覧)は「Live Keymap Viewer」
 - コミットは小さくこまめに。pushは頼まれたときだけ
