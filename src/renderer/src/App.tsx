@@ -153,6 +153,9 @@ export default function App(): JSX.Element {
           onChange={updateSettings}
           blurSupported={BLUR_SUPPORTED}
           stalled={keyboard.stalled}
+          onReload={() => void keyboard.reload()}
+          canReload={keyboard.status === 'ready'}
+          reloading={keyboard.reloading}
           onExit={onToggleWindowMode}
         />
       )}

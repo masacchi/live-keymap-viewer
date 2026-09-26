@@ -36,6 +36,15 @@ export interface OverlayControlsProps {
    * (出さないと、図が止まったまま切断まで最大15秒、何も分からない)。
    */
   stalled?: boolean
+  /**
+   * キーマップを読み直す。Vialで編集したあと、通常ウィンドウに戻らなくても読み直せるように。
+   * 渡さなければボタンを出さない。
+   */
+  onReload?: () => void
+  /** 読み直せるか(押下を読んでいるときだけ)。 */
+  canReload?: boolean
+  /** 読み直している最中か。 */
+  reloading?: boolean
   onExit: () => void
 }
 
@@ -46,6 +55,9 @@ export function OverlayControls({
   onChange,
   blurSupported,
   stalled = false,
+  onReload,
+  canReload = false,
+  reloading = false,
   onExit
 }: OverlayControlsProps): JSX.Element {
   /** ドラッグ中は前回のポインタ位置(画面座標)。していなければnull。 */
@@ -203,6 +215,16 @@ export function OverlayControls({
           )}
 
           {/* パネル自体がbg-surfaceなので、ボタンは一段明るい面にする */}
+          {onReload && (
+            <Button
+              size="sm"
+              onClick={onReload}
+              disabled={!canReload || reloading}
+              className="bg-raised hover:bg-line"
+            >
+              {reloading ? messages.status.reloading : messages.deviceMenu.reload}
+            </Button>
+          )}
           <Button size="sm" onClick={onExit} className="bg-raised hover:bg-line">
             {messages.overlay.exit}
           </Button>

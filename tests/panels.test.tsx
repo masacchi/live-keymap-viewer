@@ -262,6 +262,17 @@ describe('オーバーレイの自動フェード', () => {
     expect(html).not.toContain('opacity-45')
   })
 
+  it('キーマップを読み直せる。押下を読んでいないときと、読み直している最中は押せない', () => {
+    expect(controls()).not.toContain('キーマップを読み直す')
+    const reload = (props: Partial<Parameters<typeof OverlayControls>[0]>) =>
+      controls({}, { onReload: noop, ...props })
+    expect(reload({ canReload: true })).toMatch(
+      /<button[^>]*type="button"[^>]*>キーマップを読み直す/
+    )
+    expect(reload({ canReload: false })).toMatch(/disabled=""[^>]*>キーマップを読み直す/)
+    expect(reload({ canReload: true, reloading: true })).toMatch(/disabled=""[^>]*>読み直し中…/)
+  })
+
   it('後ろのぼかしは、使えるときだけ欄を出す', () => {
     expect(controls()).toContain('後ろをぼかす')
     expect(controls({}, { blurSupported: false })).not.toContain('後ろをぼかす')
