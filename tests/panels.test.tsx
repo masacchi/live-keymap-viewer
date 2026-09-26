@@ -119,6 +119,11 @@ describe('Toolbarの接続の状態', () => {
     expect(spinning(toolbar({ status: 'unlocking' }))).toBe(false)
   })
 
+  it('切り替えのボタンに、設定したショートカットを添える', () => {
+    expect(toolbar({})).toContain('Ctrl+Alt+Kでも切り替えられます')
+    expect(toolbar({ toggleShortcut: 'Alt+Super+O' })).toContain('Alt+Win+O')
+  })
+
   it('往復時間が分かれば、状態のツールチップにデバイス名と続けて添える', () => {
     expect(toolbar({ roundTripMs: 470 })).toContain('title="接続済み Cornix(往復470ms)"')
     expect(toolbar({})).toContain('title="接続済み Cornix"')
@@ -336,6 +341,7 @@ describe('UnlockPanel', () => {
 describe('SettingsPanel', () => {
   const panelSettings = {
     tappingTerm: 250,
+    toggleShortcut: 'Ctrl+Alt+K',
     grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
     overlayOpacity: 0.6,
     overlayAutoFade: false,
@@ -358,6 +364,29 @@ describe('SettingsPanel', () => {
         {...props}
       />
     )
+
+  it('切り替えのショートカットを出す。変えていれば既定に戻せる', () => {
+    const html = panel()
+    expect(html).toContain('Ctrl+Alt+K')
+    expect(html).not.toContain('既定に戻す')
+    const changed = panel({
+      settings: { ...panelSettings, toggleShortcut: 'Ctrl+Super+F9', grantedDevices: [] }
+    })
+    expect(changed).toContain('Ctrl+Win+F9')
+    expect(changed).toContain('既定に戻す')
+  })
+
+  it('ショートカットを登録できなかったら(ほかのアプリが使っている)、別の組み合わせを勧める', () => {
+    expect(panel()).not.toContain('ほかのアプリが使っている')
+    expect(panel({ shortcutRegistered: false })).toContain('ほかのアプリが使っているため')
+  })
+
+  it('長押しの判定時間をキーボードから読めていれば、スライダーを止めてその値を出す', () => {
+    expect(panel()).not.toContain('msで判定しています')
+    const html = panel({ keyboardTappingTerm: 280 })
+    expect(html).toContain('キーボードに設定された280msで判定しています')
+    expect(html).toMatch(/type="range"[^>]*disabled=""[^>]*value="250"/)
+  })
 
   it('ツールバーの節に、レイヤーの行き方を添えるかのチェックを出す', () => {
     const html = panel()

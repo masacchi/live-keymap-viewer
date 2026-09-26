@@ -22,6 +22,7 @@ use crate::settings::{
     GrantedDevice, MAX_LAYERS, Settings, SettingsStore, WindowMode, is_granted, is_keyboard_uid,
     patch, pick_renderer_patch, remembered_name, with_layer_name,
 };
+use crate::shortcut;
 use crate::updater::{self, UpdateStatus};
 use crate::windows::WindowManager;
 
@@ -65,13 +66,25 @@ pub fn settings_get(settings: State<'_, Arc<SettingsStore>>) -> Settings {
 /// 変えてよい項目だけを取り出し、値は保存するときに確認する。ウィンドウに効くものはその場で反映する。
 #[tauri::command]
 pub fn settings_update(
+    app: AppHandle,
     patch: Value,
     settings: State<'_, Arc<SettingsStore>>,
     windows: State<'_, Arc<WindowManager>>,
 ) -> Settings {
+    let before = settings.load().toggle_shortcut;
     let saved = settings.save(pick_renderer_patch(&patch));
     windows.apply_settings(&saved);
+    if saved.toggle_shortcut != before {
+        shortcut::apply(&app, &saved.toggle_shortcut);
+    }
     saved
+}
+
+/// 切り替えのショートカットとして`shortcut`を登録できているか。ほかのアプリが同じ組み合わせを
+/// 使っていると登録できないので、設定パネルで案内する。
+#[tauri::command]
+pub fn shortcut_registered(shortcut: String, state: State<'_, shortcut::ToggleShortcut>) -> bool {
+    state.is_registered(&shortcut)
 }
 
 #[tauri::command]

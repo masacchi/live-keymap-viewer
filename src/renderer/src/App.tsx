@@ -58,6 +58,12 @@ export default function App(): JSX.Element {
     void window.api?.getMode().then(setWindowMode)
   }, [])
   useEffect(() => window.api?.onChooseDevice(setCandidates), [])
+  // 切り替えのショートカットを登録できたか。変えるたびに確かめる。変更(updateSettings)と
+  // 問い合わせはどちらもRustのメインスレッドで送った順に処理されるので、登録し直したあとの状態が返る
+  const [shortcutRegistered, setShortcutRegistered] = useState(true)
+  useEffect(() => {
+    void window.api?.isShortcutRegistered(settings.toggleShortcut).then(setShortcutRegistered)
+  }, [settings.toggleShortcut])
   useEffect(() => {
     void window.api?.getAppInfo().then(setAppInfo)
   }, [])
@@ -189,6 +195,7 @@ export default function App(): JSX.Element {
               names={names}
               onRename={canSave && uid ? onRename : undefined}
               keyboardTappingTerm={snapshot?.tappingTerm}
+              shortcutRegistered={shortcutRegistered}
               settings={settings}
               onChange={updateSettings}
               onForgetDevice={canSave ? forgetDevice : undefined}
@@ -217,6 +224,7 @@ export default function App(): JSX.Element {
           mods={live ? layers.mods : null}
           stalled={keyboard.stalled}
           roundTripMs={keyboard.roundTripMs}
+          toggleShortcut={settings.toggleShortcut}
           labelMode={settings.labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}

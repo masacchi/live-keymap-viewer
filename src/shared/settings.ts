@@ -50,6 +50,11 @@ export interface Settings {
    * 早く / 遅くレイヤーが切り替わる。Tap Danceはキーボードに設定された時間を使う。
    */
   tappingTerm: number
+  /**
+   * 通常ウィンドウとオーバーレイを切り替えるショートカット(`Ctrl+Alt+K`の形)。
+   * Ctrl・Alt・Winのどれかを含むものだけ(ふだんの入力を奪わないように)。検証はRustのsettings.rs。
+   */
+  toggleShortcut: string
   /** 一度許可したHIDデバイス。次回から自動で接続する。 */
   grantedDevices: GrantedDevice[]
   /**
@@ -69,6 +74,7 @@ export interface Settings {
 export const RENDERER_SETTINGS_KEYS = [
   'labelMode',
   'tappingTerm',
+  'toggleShortcut',
   'overlayOpacity',
   'overlayAutoFade',
   'overlayFadedOpacity',
@@ -96,6 +102,8 @@ export const TAPPING_TERM_MIN = 100
 export const TAPPING_TERM_MAX = 500
 /** レイヤー名の長さの上限(文字数)。ツールバーやキーの色帯に収まるように。 */
 export const LAYER_NAME_MAX_LENGTH = 12
+/** 切り替えのショートカットの既定(settings.rsのDEFAULT_TOGGLE_SHORTCUTと同じ)。 */
+export const DEFAULT_TOGGLE_SHORTCUT = 'Ctrl+Alt+K'
 
 export const DEFAULT_BOUNDS: Bounds = { x: 80, y: 80, width: 1180, height: 620 }
 
@@ -111,6 +119,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showLayerTriggers: false,
   // QMKのTAPPING_TERMの既定値(engine/layerState.tsのDEFAULT_TAPPING_TERMと同じ)
   tappingTerm: 200,
+  toggleShortcut: DEFAULT_TOGGLE_SHORTCUT,
   grantedDevices: [],
   layerNames: {}
 }

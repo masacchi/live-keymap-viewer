@@ -10,9 +10,10 @@
  *
  * 表記(JIS / US)はよく切り替えるので、ここではなくツールバーに置いたまま。
  */
-import type { JSX, ReactNode } from 'react'
+import { type JSX, type KeyboardEvent, type ReactNode, useState } from 'react'
 import type { AppInfo } from '../../../shared/ipc'
 import {
+  DEFAULT_TOGGLE_SHORTCUT,
   LAYER_NAME_MAX_LENGTH,
   OVERLAY_FADED_OPACITY_MAX,
   OVERLAY_OPACITY_MIN,
@@ -24,6 +25,7 @@ import {
 } from '../../../shared/settings'
 import type { AppUpdate } from '../hooks/useAppUpdate'
 import { cn } from '../lib/cn'
+import { formatShortcut, isModifierCode, shortcutFromKeyboardEvent } from '../lib/shortcut'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
 import { Button } from './ui/Button'
@@ -42,7 +44,16 @@ export interface SettingsPanelProps {
   /** 名前を付けた(空なら消した)とき。渡さなければ名前の欄は出さない。 */
   onRename?: (layer: number, name: string) => void
   /** いまの設定(このパネルで変える項目)。 */
-  settings: Pick<Settings, 'tappingTerm' | 'grantedDevices' | 'showLayerTriggers'> & OverlaySettings
+  settings: Pick<
+    Settings,
+    'tappingTerm' | 'toggleShortcut' | 'grantedDevices' | 'showLayerTriggers'
+  > &
+    OverlaySettings
+  /**
+   * 切り替えのショートカットを登録できているか。ほかのアプリが同じ組み合わせを使っていると
+   * falseになるので、別の組み合わせを勧める。
+   */
+  shortcutRegistered?: boolean
   onChange: (patch: SettingsPatch) => void
   /**
    * キーボードから読めた長押しの判定時間(ms)。読めていればそちらで判定するので、
@@ -112,6 +123,68 @@ function formatBuildTime(iso: string): string {
   return date.toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+/**
+ * 切り替えのショートカット。押すと「キーを押してください」になり、次に押した組み合わせを登録する。
+ * Escでやめる。使えない組み合わせ(Ctrl・Alt・Winを含まない)は登録せずに理由を出す。
+ */
+function ShortcutField({
+  value,
+  registered,
+  onChange
+}: {
+  value: string
+  registered: boolean
+  onChange: (shortcut: string) => void
+}): JSX.Element {
+  const [recording, setRecording] = useState(false)
+  const [invalid, setInvalid] = useState(false)
+  const text = messages.settings
+
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
+    if (!recording) return
+    // 押したキーで、ボタンが押されたりパネルが閉じたりしないように
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.code === 'Escape') {
+      setRecording(false)
+      setInvalid(false)
+      return
+    }
+    if (isModifierCode(event.code)) return // 本体のキーを待つ
+    const shortcut = shortcutFromKeyboardEvent(event)
+    setInvalid(shortcut === null)
+    if (shortcut === null) return
+    setRecording(false)
+    onChange(shortcut)
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 text-xs text-ink">
+        <span className="w-20 shrink-0">{text.toggleShortcut}</span>
+        <Button
+          size="sm"
+          onClick={() => setRecording(true)}
+          onKeyDown={onKeyDown}
+          onBlur={() => setRecording(false)}
+          aria-pressed={recording}
+          className={cn('min-w-28 justify-center font-mono', recording && 'ring-2 ring-ink/60')}
+        >
+          {recording ? text.shortcutRecording : formatShortcut(value)}
+        </Button>
+        {value !== DEFAULT_TOGGLE_SHORTCUT && (
+          <Button size="sm" variant="ghost" onClick={() => onChange(DEFAULT_TOGGLE_SHORTCUT)}>
+            {text.shortcutReset}
+          </Button>
+        )}
+      </div>
+      <p className={cn('text-2xs', invalid || !registered ? 'text-warn' : 'text-muted')}>
+        {invalid ? text.shortcutInvalid : registered ? text.shortcutHint : text.shortcutTaken}
+      </p>
+    </div>
+  )
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
   return (
     <section className="space-y-2 px-2 py-2.5">
@@ -128,6 +201,7 @@ export function SettingsPanel({
   settings,
   onChange,
   keyboardTappingTerm = null,
+  shortcutRegistered = true,
   onForgetDevice,
   blurSupported,
   appInfo,
@@ -197,6 +271,14 @@ export function SettingsPanel({
             </span>
           </span>
         </label>
+      </Section>
+
+      <Section title={messages.settings.shortcut}>
+        <ShortcutField
+          value={settings.toggleShortcut}
+          registered={shortcutRegistered}
+          onChange={(toggleShortcut) => onChange({ toggleShortcut })}
+        />
       </Section>
 
       <Section title={messages.settings.keys}>

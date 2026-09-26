@@ -113,6 +113,7 @@ function createApi(chooser: DeviceChooser): RendererApi {
       invoke<string[]>('settings_set_layer_name', { uid, layer, name }),
     forgetDevice: (vendorId, productId) =>
       invoke<GrantedDevice[]>('settings_forget_device', { vendorId, productId }),
+    isShortcutRegistered: (shortcut) => invoke<boolean>('shortcut_registered', { shortcut }),
 
     getMode: () => invoke<WindowMode>('window_get_mode'),
     toggleMode: () => invoke<WindowMode>('window_toggle_mode'),

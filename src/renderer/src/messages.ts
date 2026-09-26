@@ -69,8 +69,7 @@ export const messages = {
   toolbar: {
     toOverlay: 'オーバーレイへ',
     toNormal: '通常ウィンドウへ',
-    modeShortcut: 'Ctrl+Alt+K',
-    modeShortcutHint: 'Ctrl+Alt+Kでも切り替えられます',
+    modeShortcutHint: (shortcut: string) => `${shortcut}でも切り替えられます`,
     symbols: '記号の出し方',
     settings: '設定',
     /** 新しい版があるとき、設定ボタンに付ける印の説明。 */
@@ -173,7 +172,7 @@ export const messages = {
   /** 画面そのものが落ちたとき(components/ErrorBoundary.tsx)。 */
   crash: {
     title: '画面でエラーが起きました',
-    hint: '詳しい記録は、設定の「このアプリ」から開けるログに残っています。Ctrl+Alt+Kでも通常ウィンドウとオーバーレイを行き来できます',
+    hint: '詳しい記録は、設定の「このアプリ」から開けるログに残っています。切り替えのショートカット(既定はCtrl+Alt+K)でも通常ウィンドウとオーバーレイを行き来できます',
     reload: '画面を読み込み直す',
     toNormal: '通常ウィンドウへ'
   },
@@ -208,6 +207,16 @@ export const messages = {
       'すりガラスのようにぼかします(Windows 11)。強さはOSが決めます。薄くしているあいだは外れます',
     blurUnsupported: 'Windows 11でだけ使えます',
     overlayPanelToo: 'オーバーレイの左上のパネルからも変えられます',
+    shortcut: 'ショートカット',
+    toggleShortcut: '切り替え',
+    shortcutRecording: 'キーを押してください…',
+    shortcutReset: '既定に戻す',
+    shortcutHint:
+      '通常ウィンドウとオーバーレイを切り替えます。押して、登録したい組み合わせを押してください(Escでやめる)',
+    shortcutInvalid:
+      'Ctrl・Alt・Winのどれかと、ほかのキーを一緒に押してください(Shiftと文字だけは、ふだんの入力とぶつかるので使えません)',
+    shortcutTaken:
+      'この組み合わせは、ほかのアプリが使っているため登録できませんでした。別の組み合わせにしてください',
     keys: 'キーの判定',
     tappingTerm: '長押しまで',
     tappingTermValue: (ms: number) => `${ms}ms`,

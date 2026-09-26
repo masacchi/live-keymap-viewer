@@ -72,6 +72,11 @@ export interface RendererApi {
    * 残った並びを返す。いま繋いでいる接続はそのまま。
    */
   forgetDevice(vendorId: number, productId: number): Promise<GrantedDevice[]>
+  /**
+   * 切り替えのショートカットとして、その組み合わせを登録できているか。ほかのアプリが同じ組み合わせを使っていると
+   * 登録できないので、設定パネルで案内する。
+   */
+  isShortcutRegistered(shortcut: string): Promise<boolean>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

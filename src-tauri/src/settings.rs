@@ -11,11 +11,13 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
 use serde_json::{Map, Value, json};
+use tauri_plugin_global_shortcut::{Modifiers, Shortcut};
 
 use crate::logfile;
 
@@ -31,11 +33,14 @@ const TAPPING_TERM_MAX: f64 = 500.0;
 const LAYER_NAME_MAX_LENGTH: usize = 12;
 /// 名前を持てるレイヤーの数。Vialの上限(32)に合わせる。
 pub const MAX_LAYERS: usize = 32;
+/// 通常ウィンドウとオーバーレイを切り替えるショートカットの既定(src/shared/settings.tsと同じ)。
+pub const DEFAULT_TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 /// 画面から変えてよい項目。ウィンドウの位置・モード・許可したデバイス・レイヤー名は専用の手順で書く。
-const RENDERER_SETTINGS_KEYS: [&str; 7] = [
+const RENDERER_SETTINGS_KEYS: [&str; 8] = [
     "labelMode",
     "tappingTerm",
+    "toggleShortcut",
     "overlayOpacity",
     "overlayAutoFade",
     "overlayFadedOpacity",
@@ -94,6 +99,8 @@ pub struct Settings {
     pub overlay_blur: bool,
     pub show_layer_triggers: bool,
     pub tapping_term: i64,
+    /// 通常ウィンドウとオーバーレイを切り替えるショートカット(`Ctrl+Alt+K`の形。shortcut.rs)。
+    pub toggle_shortcut: String,
     pub granted_devices: Vec<GrantedDevice>,
     pub layer_names: BTreeMap<String, Vec<String>>,
 }
@@ -119,6 +126,23 @@ fn clamp_faded_opacity(value: Option<&Value>) -> f64 {
 fn clamp_tapping_term(value: Option<&Value>) -> i64 {
     // QMKのTAPPING_TERMの既定値(engine/layerState.tsのDEFAULT_TAPPING_TERMと同じ)
     number(value).map_or(200, |n| n.clamp(TAPPING_TERM_MIN, TAPPING_TERM_MAX).round() as i64)
+}
+
+/// ショートカットとして使えるなら、そのまま返す。使えなければ既定。
+///
+/// Ctrl・Alt・Winのどれかを含むものだけを受け付ける。Shiftと文字だけ、キー1つだけを登録すると、
+/// ふだんの入力(大文字など)をアプリが奪ってしまうため。
+fn sanitize_shortcut(value: Option<&Value>) -> String {
+    let usable = |text: &str| {
+        Shortcut::from_str(text).is_ok_and(|shortcut| {
+            shortcut.mods.intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SUPER)
+        })
+    };
+    value
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|text| usable(text))
+        .map_or_else(|| DEFAULT_TOGGLE_SHORTCUT.to_owned(), str::to_owned)
 }
 
 /// 4つとも数値ならBoundsにする(幅と高さは最小サイズまで広げる)。数値でなければNone。
@@ -210,6 +234,7 @@ pub fn sanitize(raw: &Value) -> Settings {
         overlay_blur: value.get("overlayBlur") == Some(&Value::Bool(true)),
         show_layer_triggers: value.get("showLayerTriggers") == Some(&Value::Bool(true)),
         tapping_term: clamp_tapping_term(value.get("tappingTerm")),
+        toggle_shortcut: sanitize_shortcut(value.get("toggleShortcut")),
         granted_devices: sanitize_devices(value.get("grantedDevices")),
         layer_names: sanitize_layer_names(value.get("layerNames")),
     }
@@ -444,6 +469,7 @@ mod tests {
             "overlayBlur": true,
             "showLayerTriggers": true,
             "tappingTerm": 250,
+            "toggleShortcut": "Ctrl+Shift+F9",
             "grantedDevices": [{ "vendorId": 0xE118, "productId": 1, "name": "Cornix" }],
             "layerNames": { UID: ["基本", "", "記号"] }
         });
@@ -562,6 +588,19 @@ mod tests {
         assert_eq!(settings.granted_devices.len(), 1);
         assert!(reread.forget_device(1, 2).is_empty());
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn ショートカットは_ctrl_alt_winのどれかを含むものだけ() {
+        let shortcut = |value: Value| sanitize(&json!({ "toggleShortcut": value })).toggle_shortcut;
+        assert_eq!(sanitize(&Value::Null).toggle_shortcut, "Ctrl+Alt+K");
+        assert_eq!(shortcut(json!("Ctrl+Shift+F1")), "Ctrl+Shift+F1");
+        assert_eq!(shortcut(json!(" Super+O ")), "Super+O");
+        // ふだんの入力を奪うもの・読めないものは既定に戻す
+        assert_eq!(shortcut(json!("Shift+K")), "Ctrl+Alt+K");
+        assert_eq!(shortcut(json!("K")), "Ctrl+Alt+K");
+        assert_eq!(shortcut(json!("Ctrl+Alt+NoSuchKey")), "Ctrl+Alt+K");
+        assert_eq!(shortcut(json!(3)), "Ctrl+Alt+K");
     }
 
     #[test]

@@ -7,6 +7,7 @@
 //!   logfile.rs  … log.txt(実機で何が起きたかを残す)
 //!   updater.rs  … インストーラーで入れたときの更新(Velopack)
 //!   channel.rs  … 開発版かリリース版か(置き場所・更新の元を分ける)
+//!   shortcut.rs … 通常ウィンドウとオーバーレイを切り替えるショートカット
 
 // 配布ビルドでコンソールの窓を出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -16,13 +17,13 @@ mod commands;
 mod hid;
 mod logfile;
 mod settings;
+mod shortcut;
 mod updater;
 mod windows;
 
 use std::sync::Arc;
 
 use tauri::{Manager, RunEvent};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use crate::hid::HidBridge;
 use crate::settings::SettingsStore;
@@ -33,10 +34,6 @@ use crate::windows::WindowManager;
 /// 開発版は別のフォルダにする(channel.rs)。
 const DATA_DIR_NAME: &str =
     if channel::DEV { "live-keymap-viewer-dev" } else { "live-keymap-viewer" };
-
-/// 通常ウィンドウとオーバーレイの切り替え。オーバーレイ中はクリックが下に抜けるので、
-/// キー操作で戻れるようにしておく。
-const TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 fn main() {
     // いちばん先に動かす。インストール・アンインストール・更新の途中でVelopackが
@@ -65,6 +62,7 @@ fn main() {
             commands::hid_close,
             commands::log_report,
             commands::log_open,
+            commands::shortcut_registered,
             commands::update_check,
             commands::update_apply,
         ])
@@ -89,21 +87,10 @@ fn main() {
             windows.open();
             windows.start_cursor_forwarding();
 
-            let toggle = windows.clone();
-            let registered = app.global_shortcut().on_shortcut(
-                TOGGLE_SHORTCUT,
-                move |_app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        toggle.toggle_mode();
-                    }
-                },
-            );
-            if let Err(error) = registered {
-                logfile::warn(
-                    &format!("グローバルショートカット{TOGGLE_SHORTCUT}を登録できなかった"),
-                    Some(&error.to_string()),
-                );
-            }
+            // 切り替えのショートカット(設定で変えられる)。登録できなくても起動は続ける
+            app.manage(shortcut::ToggleShortcut::default());
+            let toggle = app.state::<Arc<SettingsStore>>().load().toggle_shortcut;
+            shortcut::apply(app.handle(), &toggle);
             Ok(())
         })
         .build(tauri::generate_context!())

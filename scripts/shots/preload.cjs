@@ -13,6 +13,7 @@ const settings = {
   overlayBlur: false,
   showLayerTriggers: false,
   tappingTerm: 200,
+  toggleShortcut: 'Ctrl+Alt+K',
   grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
   layerNames: {}
 }
@@ -44,6 +45,7 @@ window.api = {
     )
     return settings.grantedDevices
   },
+  isShortcutRegistered: async () => true,
   getMode: async () => mode,
   toggleMode: async () => mode,
   setOverlayBlurActive: noop,

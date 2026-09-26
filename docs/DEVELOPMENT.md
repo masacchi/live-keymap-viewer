@@ -301,7 +301,8 @@ mainへのpushでCIが作る**開発版**は、リリース版とは別のアプ
   identifierは`tauri build --config`で差し替える)。パッケージは`pack-win.mjs --dev`で開発版のIDにする
 - 開発版の版に実行番号を使うのは、ビルドのたびに必ず増やすため(commitのハッシュでは新しい順に並ばない)。
   次のパッチ版にするのは、`0.1.0-dev.N`だと出したばかりの`0.1.0`より古い扱いになるため
-- 2つを同時に起動すると、`Ctrl+Alt+K`は先に起動した方だけが受け取る(後の方はログに警告を残す)
+- 2つを同時に起動すると、同じショートカット(既定は`Ctrl+Alt+K`)は先に起動した方だけが受け取る。
+  後の方は設定パネルに「登録できませんでした」と出るので、片方の組み合わせを変える
 - 手元で開発版を作るなら`npm run package:win -- --dev --version 0.1.1-dev.0`のあと
   `npm run container -- node scripts/pack-win.mjs --dev --version 0.1.1-dev.0`
 

@@ -12,9 +12,11 @@
  * 幅が足りなければ状態の文字やレイヤーの補足を隠す(状態は丸の色と、ボタンの説明で分かる)。
  */
 import type { JSX, ReactNode } from 'react'
+import { DEFAULT_TOGGLE_SHORTCUT } from '../../../shared/settings'
 import type { ConnectionStatus } from '../hooks/useVialKeyboard'
 import type { LabelMode } from '../keycodes/labels'
 import { cn } from '../lib/cn'
+import { formatShortcut } from '../lib/shortcut'
 import { messages } from '../messages'
 import { ModifierBadges } from './ModifierBadges'
 import { Button, buttonVariants } from './ui/Button'
@@ -42,6 +44,8 @@ export interface ToolbarProps {
    * 遅くなっていないかを、ログを開かずに確かめられるように(docs/BLUETOOTH.md P6)。
    */
   roundTripMs?: number | null
+  /** 切り替えのショートカット(設定)。ボタンに添える。 */
+  toggleShortcut?: string
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
@@ -70,6 +74,7 @@ export function Toolbar({
   mods,
   stalled,
   roundTripMs = null,
+  toggleShortcut = DEFAULT_TOGGLE_SHORTCUT,
   labelMode,
   windowMode,
   reloading,
@@ -174,9 +179,14 @@ export function Toolbar({
           </Popover>
         )}
 
-        <Button onClick={onToggleWindowMode} title={messages.toolbar.modeShortcutHint}>
+        <Button
+          onClick={onToggleWindowMode}
+          title={messages.toolbar.modeShortcutHint(formatShortcut(toggleShortcut))}
+        >
           {windowMode === 'overlay' ? messages.toolbar.toNormal : messages.toolbar.toOverlay}
-          <span className="text-2xs text-muted max-xl:hidden">{messages.toolbar.modeShortcut}</span>
+          <span className="text-2xs text-muted max-xl:hidden">
+            {formatShortcut(toggleShortcut)}
+          </span>
         </Button>
 
         <Popover
