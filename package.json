@@ -22,7 +22,9 @@
     "prepare": "husky",
     "diag:hid": "node scripts/diag/hid-probe.mjs",
     "shots": "node scripts/shots/run.mjs",
-    "gen:icon": "node scripts/gen-icon.mjs"
+    "gen:icon": "node scripts/gen-icon.mjs",
+    "version": "node scripts/sync-version.mjs && git add src-tauri/Cargo.toml src-tauri/Cargo.lock",
+    "postversion": "git tag -d v$npm_package_version"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

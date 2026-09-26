@@ -327,14 +327,18 @@ CIも読む(入れたcargo-xwinもキャッシュに残るので、ビルドし�
 リリースするとき:
 
 ```bash
-npm version 0.2.0 -m "chore: 版を%sに上げる"   # package.jsonの版を上げてコミットする(タグは作らない)
+npm version 0.2.0 -m "chore: 版を%sに上げる"   # 版を上げてコミットする(Cargo.tomlの版も合わせる)
 git push                                       # v0.2.0のタグがまだ無いので、CIがリリースしてタグを付ける
 ```
 
-- **版を上げてmainにpushするだけでリリースになる。** タグは手元で作らない(`.npmrc`の
-  `git-tag-version=false`で、`npm version`もタグを作らない)。手元で作ってpushすると、mainへのpushと
-  タグのpushで同じ版のビルドが2回走る。タグがあるかは`git ls-remote`で確かめ、確かめられなければ止まる
+- **版を上げてmainにpushするだけでリリースになる。** タグは手元に残さない。`npm version`はコミットと
+  タグを作るが、package.jsonの`postversion`でタグを消す。手元で作ってpushすると、mainへのpushと
+  タグのpushで同じ版のビルドが2回走るため(npmの`git-tag-version=false`では、タグだけでなくコミットも
+  作らなくなるので使わない)。タグがあるかは`git ls-remote`で確かめ、確かめられなければ止まる
   (既にある版を作り直さないように)
+- `npm version`は、コミットする前に`version`スクリプトで`src-tauri/Cargo.toml`と`Cargo.lock`の版を
+  package.jsonに合わせ、同じコミットに入れる(`scripts/sync-version.mjs`)。画面とexeに出る版は
+  package.jsonから来るので表示には効かないが、ビルドのログの版が食い違わないように
 - 版を上げずにpushしたものは開発版になる
 
 - **タグは`v` + package.jsonの版にする。** 合わないと最初の手順で止まる。手動実行で`0.1.0`のように
