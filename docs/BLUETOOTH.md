@@ -155,7 +155,7 @@ USBを抜き、BTだけで接続した状態で調べた。道具は§8。
 偽のHIDデバイス(ファームの模擬の裏に遅延を入れたもの)で、`getMatrixState`を4回続けて呼んだ。
 3回目の直前にキーを押し、4回目の直前に離している。正しければ3回目だけが「押」になる。
 下の表はタイムアウトを固定(matrixは200ms × 3回)にしたときの結果。いまはP3(a)で往復に合わせて
-延ばすので、250ms・500msのどちらでも正しく読める(`tests/webhidTransport.test.ts`の「BLE並みの遅さ」)。
+延ばすので、250ms・500msのどちらでも正しく読める(`tests/bluetoothLatency.test.ts`)。
 
 | 往復 | 1回目 | 2回目 | **3回目(押)** | 4回目(離) | 送った要求 |
 |---|---|---|---|---|---|
@@ -252,7 +252,7 @@ OSからは答えることを確認した(§2.6)。残りは**アプリで**ど�
 `KeyboardSession.runPolling`は「1往復 → 20msの残りを待つ」なので、往復が20msを超えれば
 自然に往復の速さで回る。変更は要らない。
 
-**テスト**: `tests/webhidTransport.test.ts`の「BLE並みの遅さ」。`FirmwareBackedDevice`の`latencyMs`で
+**テスト**: `tests/bluetoothLatency.test.ts`。`FirmwareBackedDevice`の`latencyMs`で
 §3の実験をそのまま再現し、往復250ms・500msで押したキーを正しい回に読むこと、USB並みならタイムアウトが
 変わらないこと、答えないデバイスでは延ばさないこと、詰まりのあとで戻ることを確かめる。
 読み込み全体を250msで回すと95往復 × 250ms ≈ 24秒かかるので、テストはmatrixだけにする。
@@ -343,7 +343,7 @@ P3で往復時間を記録するので、それを出すだけ。USBかBTかは�
 - Cornix LPのファーム: <https://github.com/jezailfunder/cornix-lp>の`cornix固件 V1.12/cornix-left.uf2`
 - §2.6の実測: `npm run diag:hid`(§8)と、ChromiumのWebHIDのデバイス選択
 - §3の実験: 偽のHIDデバイスの応答に遅延を入れ、`getMatrixState`を4回呼んだ
-  (`tests/webhidTransport.test.ts`の「BLE並みの遅さ」と同じ形)
+  (`tests/bluetoothLatency.test.ts`と同じ形)
 
 ## 8. 診断の道具
 

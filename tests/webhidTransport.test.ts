@@ -7,64 +7,10 @@
  */
 import { describe, expect, it } from 'vitest'
 import { pickResponsiveDevice } from '@/hid/deviceProbe'
-import { MockTransport } from '@/hid/mockTransport'
 import { WebHidTransport } from '@/hid/transport'
 import { getMatrixState, loadKeyboard } from '@/hid/vial'
 import { KeyboardSession, type SessionState } from '@/session/keyboardSession'
-
-/** sendReportを受けると、ファーム模擬の応答をinputreportとして返す偽デバイス。 */
-class FirmwareBackedDevice extends EventTarget {
-  opened = false
-  productName = 'Cornix (fake HID)'
-  collections = [{ usagePage: 0xff60, usage: 0x61 }]
-  readonly firmware: MockTransport
-  /** 応答を返すまでの遅れ(ms)。 */
-  latencyMs = 1
-  /** 次の1往復だけ、さらにこれだけ遅らせる(詰まりの再現)。 */
-  stallNextMs = 0
-  /** この数だけ、応答を握りつぶす(要求ごと失われた場合の再現)。 */
-  dropNext = 0
-  /** 応答は送った順に返す(実機と同じ)。詰まった応答を追い越さない。 */
-  private chain: Promise<void> = Promise.resolve()
-
-  constructor(unlocked: boolean) {
-    super()
-    this.firmware = new MockTransport({ unlocked })
-    void this.firmware.open()
-  }
-
-  async open(): Promise<void> {
-    this.opened = true
-  }
-  async close(): Promise<void> {
-    this.opened = false
-  }
-  async sendReport(reportId: number, data: BufferSource): Promise<void> {
-    if (!this.opened) throw new Error('device is not opened')
-    if (reportId !== 0) throw new Error(`unexpected report id ${reportId}`)
-    const request = new Uint8Array(data as ArrayBuffer)
-    if (request.length !== 32) throw new Error(`report must be 32 bytes, got ${request.length}`)
-    const response = await this.firmware.send(request)
-    if (this.dropNext > 0) {
-      this.dropNext--
-      return
-    }
-    const delay = this.latencyMs + this.stallNextMs
-    this.stallNextMs = 0
-    this.chain = this.chain.then(
-      () =>
-        new Promise<void>((resolve) => {
-          setTimeout(() => {
-            const event = new Event('inputreport')
-            Object.defineProperty(event, 'data', { value: new DataView(response.slice().buffer) })
-            Object.defineProperty(event, 'reportId', { value: 0 })
-            this.dispatchEvent(event)
-            resolve()
-          }, delay)
-        })
-    )
-  }
-}
+import { asHid, FirmwareBackedDevice, SilentDevice } from './fixtures/fakeHid'
 
 function waitFor(
   session: KeyboardSession,
@@ -89,7 +35,7 @@ function waitFor(
 describe('WebHidTransport越しの結合', () => {
   it('キーボードを最後まで読み込める', async () => {
     const device = new FirmwareBackedDevice(true)
-    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    const transport = new WebHidTransport(asHid(device))
     await transport.open()
     const snapshot = await loadKeyboard(transport)
     expect(snapshot.layers).toBe(10)
@@ -99,7 +45,7 @@ describe('WebHidTransport越しの結合', () => {
 
   it('ロックされた実機でも、アンロックしてポーリングまで進む', async () => {
     const device = new FirmwareBackedDevice(false)
-    const session = new KeyboardSession(new WebHidTransport(device as unknown as HIDDevice), {
+    const session = new KeyboardSession(new WebHidTransport(asHid(device)), {
       unlockPollMs: 5
     })
     await session.start()
@@ -118,12 +64,12 @@ describe('WebHidTransport越しの結合', () => {
 
   it('接続し直しても(同じHIDDeviceを新しいセッションで開き直しても)応答が返る', async () => {
     const device = new FirmwareBackedDevice(true)
-    const first = new KeyboardSession(new WebHidTransport(device as unknown as HIDDevice))
+    const first = new KeyboardSession(new WebHidTransport(asHid(device)))
     await first.start()
     await waitFor(first, (s) => s.status === 'ready')
 
     // フックのattachと同じ順: 新しいセッションを作る → 古いものを破棄 → 新しいものを開始
-    const second = new KeyboardSession(new WebHidTransport(device as unknown as HIDDevice))
+    const second = new KeyboardSession(new WebHidTransport(asHid(device)))
     await first.dispose()
     await second.start()
     const state = await waitFor(second, (s) => s.status === 'ready' || s.status === 'error')
@@ -133,23 +79,7 @@ describe('WebHidTransport越しの結合', () => {
   }, 15000)
 })
 
-/** 何を送っても答えない偽デバイス(出力先でない側のBluetoothインターフェースのような)。 */
-class SilentDevice extends EventTarget {
-  opened = false
-  productName = 'Cornix (silent)'
-  collections = [{ usagePage: 0xff60, usage: 0x61 }]
-  async open(): Promise<void> {
-    this.opened = true
-  }
-  async close(): Promise<void> {
-    this.opened = false
-  }
-  async sendReport(): Promise<void> {}
-}
-
 describe('答えるインターフェースを選ぶ(USBとBluetoothの両方で見えているとき)', () => {
-  const asHid = (d: EventTarget): HIDDevice => d as unknown as HIDDevice
-
   it('答えない方を先頭に並べても、答える方を選ぶ', async () => {
     const silent = new SilentDevice()
     const live = new FirmwareBackedDevice(true)
@@ -169,16 +99,6 @@ describe('答えるインターフェースを選ぶ(USBとBluetoothの両方で
     const { device } = await pickResponsiveDevice([asHid(bluetooth), asHid(usb)])
     expect(device).toBe(usb)
   })
-
-  it('Bluetoothの往復(1回の待ちより長い)でも、答えるものとして選ぶ', async () => {
-    // BTのCornixとVialでない機器(Keychron Linkなど)が並ぶ場面。往復470msは確認の待ち(300ms)より長いが、
-    // 遅れて届いた応答で往復時間を覚え、送り直した方の期限を延ばして間に合わせる
-    const silent = new SilentDevice()
-    const bluetooth = new FirmwareBackedDevice(true)
-    bluetooth.latencyMs = 470
-    const { device } = await pickResponsiveDevice([asHid(silent), asHid(bluetooth)])
-    expect(device).toBe(bluetooth)
-  }, 10000)
 
   it('どれも答えなければnull', async () => {
     const { device, results } = await pickResponsiveDevice([
@@ -233,7 +153,7 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
     // 同じコマンドなので照合も通ってしまい、以後ずっと1回ずつずれる
     const device = new FirmwareBackedDevice(true)
     device.latencyMs = 20
-    const transport = new WebHidTransport(device as unknown as HIDDevice)
+    const transport = new WebHidTransport(asHid(device))
     await transport.open()
 
     device.stallNextMs = 300 // 1往復目だけ、matrixのタイムアウト(200ms)を超えて詰まる
@@ -247,10 +167,12 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
 
   it('応答ごと失われても、しばらくすれば元に戻る', async () => {
     const device = new FirmwareBackedDevice(true)
-    const transport = new WebHidTransport(device as unknown as HIDDevice, { staleWindowMs: 20 })
+    const transport = new WebHidTransport(asHid(device), { staleWindowMs: 20 })
     await transport.open()
 
-    device.dropNext = 1 // 1往復ぶん、応答が返ってこない
+    // 1往復ぶん、応答が返ってこない。次の応答は「遅れて届いた前の応答」と取り違えて捨てるので、
+    // この呼び出しは失敗し、往復も長く見積もる(タイムアウトが延びるぶん、このテストは2秒ほどかかる)
+    device.dropNext = 1
     await getMatrixState(transport, 8, 7).catch(() => undefined)
 
     await pause(40) // 窓を過ぎれば、諦めた数は数え直す
@@ -258,71 +180,4 @@ describe('時間切れのあとの取り違え(docs/BLUETOOTH.md P3(b))', () => 
     expect(matrix[0][1]).toBe(false)
     await transport.close()
   }, 10000)
-})
-
-/**
- * 往復そのものがタイムアウトより長いとき(docs/BLUETOOTH.md §3)。WebHidTransportが往復時間を覚えて
- * タイムアウトを延ばす(P3(a))ので、送り直しが起きず、押したキーを正しい回に読める。
- * 実測の往復は444〜488ms(§2.6)。
- */
-describe('BLE並みの遅さ(docs/BLUETOOTH.md §3)', () => {
-  it.each([250, 500])(
-    '往復%imsでも、押したキーを正しい回に読む',
-    async (latencyMs) => {
-      const device = new FirmwareBackedDevice(true)
-      device.latencyMs = latencyMs
-      const transport = new WebHidTransport(device as unknown as HIDDevice)
-      await transport.open()
-
-      // 3回目の直前だけキーを押しておく。正しければ3回目だけがtrue
-      const seen: boolean[] = []
-      for (let i = 0; i < 4; i++) {
-        if (i === 2) device.firmware.press(0, 1)
-        else device.firmware.release(0, 1)
-        const matrix = await getMatrixState(transport, 8, 7)
-        seen.push(matrix[0][1])
-      }
-      expect(seen).toEqual([false, false, true, false])
-      // 覚えた往復時間でタイムアウトが延びている(matrixの200msのままではない)
-      expect(transport.timeoutFor(200)).toBeGreaterThanOrEqual(latencyMs * 2)
-      await transport.close()
-    },
-    20000
-  )
-
-  it('USB並みの往復では、タイムアウトは呼び出し側の値のまま', async () => {
-    const device = new FirmwareBackedDevice(true)
-    const transport = new WebHidTransport(device as unknown as HIDDevice)
-    await transport.open()
-    await getMatrixState(transport, 8, 7)
-    expect(transport.roundTripMs).not.toBeNull()
-    expect(transport.timeoutFor(200)).toBe(200)
-    await transport.close()
-  })
-
-  it('答えないデバイスでは、待つ時間を延ばさない', async () => {
-    const device = new FirmwareBackedDevice(true)
-    device.dropNext = 3
-    const transport = new WebHidTransport(device as unknown as HIDDevice)
-    await transport.open()
-    const started = performance.now()
-    await expect(getMatrixState(transport, 8, 7)).rejects.toThrow('応答しません')
-    // 200ms × 3回。往復時間が分からないので延ばさない
-    expect(performance.now() - started).toBeLessThan(900)
-    expect(transport.roundTripMs).toBeNull()
-    await transport.close()
-  })
-
-  it('往復が延びたあと速く戻れば、タイムアウトも少しずつ戻る', async () => {
-    const device = new FirmwareBackedDevice(true)
-    const transport = new WebHidTransport(device as unknown as HIDDevice)
-    await transport.open()
-    device.stallNextMs = 400 // 1回だけ詰まる
-    await getMatrixState(transport, 8, 7)
-    const stretched = transport.timeoutFor(200)
-    expect(stretched).toBeGreaterThan(200)
-    for (let i = 0; i < 60; i++) await getMatrixState(transport, 8, 7)
-    expect(transport.timeoutFor(200)).toBe(200)
-    await transport.close()
-  }, 20000)
 })
