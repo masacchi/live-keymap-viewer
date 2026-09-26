@@ -1,6 +1,6 @@
 {
   "name": "live-keymap-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vial キーボードの押下キーとアクティブレイヤーをリアルタイム表示するデスクトップアプリ",
   "private": true,
   "type": "module",
