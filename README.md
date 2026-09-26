@@ -142,8 +142,8 @@ WindowsがJISとして扱ったときに実際に入る文字を表示します�
 ## できないこと
 
 - **ノブを回したことの表示。** 押し込みは光りますが、回転はVial / VIAのプロトコルでは取れません
-- **Bluetoothでの利用は、まだ対応していません**(USBは確認済み)。Bluetoothの遅さへの対応が必要です
-  → [docs/BLUETOOTH.md](docs/BLUETOOTH.md)
+- **Bluetoothでの利用は、まだ実機で確かめていません**(USBは確認済み)。Bluetoothの遅さに合わせて待つ時間を
+  延ばすようにしてありますが、選択画面で名前が出ないなどの課題が残っています → [docs/BLUETOOTH.md](docs/BLUETOOTH.md)
 - Combo / Key Override / One Shot / TTの厳密な再現
 - 対応はVial protocol 6 / VIA protocol 9だけです
 
@@ -154,7 +154,7 @@ WindowsがJISとして扱ったときに実際に入る文字を表示します�
 | 接続 | 状態 |
 |---|---|
 | USB | ✅ WindowsとCornix LPで動作を確認 |
-| Bluetooth | 🔶 OSからはVialが応答する(往復は約450ms)が、アプリはまだ対応していない([docs/BLUETOOTH.md](docs/BLUETOOTH.md)) |
+| Bluetooth | 🔶 OSからはVialが応答する(往復は約450ms)。アプリは遅さに合わせて待つようにしたが、実機では未確認([docs/BLUETOOTH.md](docs/BLUETOOTH.md)) |
 
 USBとBluetoothの両方で接続していても大丈夫です。Windowsには同じキーボードが2つ見えますが、
 実際に応答する方(両方応答するなら速いUSB)を自動で選びます。

@@ -8,7 +8,10 @@
 import { MSG_LEN, VIAL_USAGE, VIAL_USAGE_PAGE } from './constants'
 
 export interface SendOptions {
-  /** 応答が来るまでの待ち時間。 */
+  /**
+   * 応答が来るまでの待ち時間の最低値。往復が遅い接続(Bluetooth)では、測った往復時間に合わせて
+   * これより長く待つ(WebHidTransportのtimeoutFor)。
+   */
   timeoutMs?: number
   /** タイムアウトしたときに投げ直す回数。 */
   retries?: number
@@ -63,41 +66,73 @@ export class RequestQueue {
  */
 export const STALE_RESPONSE_WINDOW_MS = 2000
 
+/**
+ * タイムアウトを往復時間の何倍にするか。往復は揺れる(Bluetoothは実測444〜488ms)ので余裕を持たせる。
+ */
+export const TIMEOUT_PER_ROUND_TRIP = 3
+
+/** 往復時間から決めるタイムアウトの上限(ms)。これ以上待っても答えないものは、答えないとみなす。 */
+export const MAX_ADAPTIVE_TIMEOUT_MS = 2000
+
+/** 往復時間が短くなったときに、覚えている値を寄せる割合。長くなったときはすぐにその値にする。 */
+const ROUND_TRIP_DECAY = 0.1
+
 export interface WebHidTransportOptions {
   /** 諦めた応答を待つ窓。テストで縮める。 */
   staleWindowMs?: number
 }
 
-/** WebHID上の実デバイス。 */
+/** 待っている要求。往復時間が分かったら、期限を延ばせるように持っておく。 */
+interface PendingRequest {
+  /** 受け取ったパケットを渡す。引き取ったらtrue、自分宛てでなければfalse。 */
+  deliver: (data: Uint8Array) => boolean
+  /** いまの往復時間に合わせて期限を延ばす。 */
+  extend: () => void
+}
+
+/**
+ * WebHID上の実デバイス。
+ *
+ * **タイムアウトは往復時間に合わせて延ばす。** Bluetoothの往復は450ms前後あり(docs/BLUETOOTH.md §2.4)、
+ * USB向けのタイムアウト(matrixは200ms)より長い。タイムアウトしてから送り直すと、遅れて届いた前の
+ * 応答は捨てる(abandoned)が、送り直した方もまた間に合わず、いつまでも読めない。そこで届いた応答から
+ * 往復時間を覚え、呼び出し側のタイムアウトと「往復時間 × 3」の長い方まで待つ。**タイムアウトして
+ * 捨てる応答からも往復時間を測る**ので、最初の1回が間に合わなくても、待っている要求の期限をその場で
+ * 延ばして追いつける。答えないデバイスは往復時間が測れないので、待つ時間は延びない。
+ */
 export class WebHidTransport implements Transport {
   private readonly queue = new RequestQueue()
-  /** 受け取ったパケットを渡す。引き取ったらtrue、自分宛てでなければfalse。 */
-  private pending: ((data: Uint8Array) => boolean) | null = null
+  private pending: PendingRequest | null = null
   /**
-   * タイムアウトで諦めた要求の数。この数だけ、届いた応答を捨てる。
+   * タイムアウトで諦めた要求の、送った時刻と諦めた時刻(送った順)。この数だけ、届いた応答を捨てる。
    *
    * ファームは応答に要求IDを持たない(docs/PROTOCOL.md §7)。諦めた要求への応答が遅れて
    * 届くと、**投げ直した要求の応答として受け取ってしまい、以後ずっと1回ずつずれる**
    * (docs/BLUETOOTH.md §3)。同じコマンドなので照合(validate)では弾けない。
    * 応答は送った順に返るので、諦めた数だけ捨てれば並びが戻る。
    */
-  private abandoned = 0
-  /** 諦めた時刻。窓を過ぎても届かなければ、要求ごと失われたとみなして数え直す。 */
-  private abandonedAt = 0
+  private abandoned: Array<{ sentAt: number; abandonedAt: number }> = []
+  /** 覚えている往復時間(ms)。まだ測っていなければnull。 */
+  private roundTrip: number | null = null
   private readonly onInputReport = (event: HIDInputReportEvent): void => {
-    if (this.abandoned > 0) {
-      if (Date.now() - this.abandonedAt <= this.staleWindowMs) {
-        this.abandoned-- // 諦めた要求への応答。捨てて並びを戻す
-        return
+    const now = performance.now()
+    const latest = this.abandoned.at(-1)
+    if (latest) {
+      // 最後に諦めてから窓を過ぎても届かなければ、応答ごと失われたとみなして数え直す
+      if (now - latest.abandonedAt <= this.staleWindowMs) {
+        const stale = this.abandoned.shift()
+        if (stale) this.recordRoundTrip(now - stale.sentAt)
+        this.pending?.extend()
+        return // 諦めた要求への応答。捨てて並びを戻す
       }
-      this.abandoned = 0 // 窓を過ぎた。応答ごと失われたとみなす
+      this.abandoned = []
     }
-    const deliver = this.pending
-    if (!deliver) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
+    const pending = this.pending
+    if (!pending) return // 取りこぼしたレスポンス(タイムアウト後など)は捨てる
     const data = new Uint8Array(
       event.data.buffer.slice(event.data.byteOffset, event.data.byteOffset + event.data.byteLength)
     )
-    if (deliver(data)) this.pending = null
+    if (pending.deliver(data)) this.pending = null
   }
 
   private readonly staleWindowMs: number
@@ -117,8 +152,35 @@ export class WebHidTransport implements Transport {
     return this.device.opened
   }
 
+  /** 覚えている往復時間(ms)。まだ応答を受け取っていなければnull。 */
+  get roundTripMs(): number | null {
+    return this.roundTrip
+  }
+
+  /**
+   * 実際に待つ時間。呼び出し側の値を最低にして、往復が遅ければ往復時間の3倍まで延ばす
+   * (上限MAX_ADAPTIVE_TIMEOUT_MS)。USBの往復は数msなので、ふだんは呼び出し側の値のまま。
+   */
+  timeoutFor(requestedMs: number): number {
+    if (this.roundTrip === null) return requestedMs
+    const adaptive = Math.min(MAX_ADAPTIVE_TIMEOUT_MS, this.roundTrip * TIMEOUT_PER_ROUND_TRIP)
+    return Math.max(requestedMs, adaptive)
+  }
+
+  /**
+   * 往復時間を覚える。長くなったらすぐその値に、短くなったらゆっくり寄せる。
+   * 一瞬の詰まりで延びたタイムアウトは、応答が速く戻るうちに少しずつ元に戻る。
+   */
+  private recordRoundTrip(sample: number): void {
+    const current = this.roundTrip
+    this.roundTrip =
+      current === null || sample >= current
+        ? sample
+        : current + (sample - current) * ROUND_TRIP_DECAY
+  }
+
   async open(): Promise<void> {
-    this.abandoned = 0
+    this.abandoned = []
     if (!this.device.opened) await this.device.open()
     // 二重に開かれてもリスナーが重ならないように、いったん外してから付ける
     this.device.removeEventListener('inputreport', this.onInputReport)
@@ -154,21 +216,36 @@ export class WebHidTransport implements Transport {
     validate?: (data: Uint8Array) => boolean
   ): Promise<Uint8Array> {
     return new Promise<Uint8Array>((resolve, reject) => {
+      const sentAt = performance.now()
+      let deadline = sentAt + this.timeoutFor(timeoutMs)
       let timer: ReturnType<typeof setTimeout> | undefined
-      this.pending = (data) => {
-        // 他アプリ宛ての応答は捨てて、こちらの応答が来るまで待つ
-        if (validate && !validate(data)) return false
-        if (timer !== undefined) clearTimeout(timer)
-        resolve(data)
-        return true
-      }
-      timer = setTimeout(() => {
+      const expire = (): void => {
         this.pending = null
         // 諦めるだけで、応答はあとから届くかもしれない。届いたら捨てて並びを戻す
-        this.abandoned++
-        this.abandonedAt = Date.now()
+        this.abandoned.push({ sentAt, abandonedAt: performance.now() })
         reject(new TransportError(`デバイスが応答しません(コマンド${describeCommand(payload)})`))
-      }, timeoutMs)
+      }
+      const arm = (): void => {
+        if (timer !== undefined) clearTimeout(timer)
+        timer = setTimeout(expire, Math.max(0, deadline - performance.now()))
+      }
+      this.pending = {
+        deliver: (data) => {
+          // 他アプリ宛ての応答は捨てて、こちらの応答が来るまで待つ
+          if (validate && !validate(data)) return false
+          if (timer !== undefined) clearTimeout(timer)
+          this.recordRoundTrip(performance.now() - sentAt)
+          resolve(data)
+          return true
+        },
+        extend: () => {
+          const extended = sentAt + this.timeoutFor(timeoutMs)
+          if (extended <= deadline) return
+          deadline = extended
+          arm()
+        }
+      }
+      arm()
       // report IDを持たないデバイスなので0で送る
       const report = new Uint8Array(MSG_LEN)
       report.set(payload)

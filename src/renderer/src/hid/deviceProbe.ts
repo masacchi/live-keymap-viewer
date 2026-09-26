@@ -13,7 +13,11 @@
 import { CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID } from './constants'
 import { WebHidTransport } from './transport'
 
-/** 1候補あたりの待ち時間。答えない候補にかかる時間は最大これ × PROBE_RETRIES。 */
+/**
+ * 1候補あたりの待ち時間。答えない候補にかかる時間は最大これ × PROBE_RETRIES。
+ * Bluetoothの往復(450ms前後)はこれより長いが、1回目の応答が遅れて届いた時点でWebHidTransportが
+ * 往復時間を覚え、送り直した方の期限を延ばすので、答えるものとして選べる。
+ */
 const PROBE_TIMEOUT_MS = 300
 const PROBE_RETRIES = 2
 
