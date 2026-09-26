@@ -441,6 +441,11 @@ Tap Dance無しのキーボードで、読み込み → 描画 → 押下 → �
 4. Rustから画面へ知らせるときはイベントを使う。**このウィンドウ宛て**(`emit_to`)のものは、画面で
    `getCurrentWebviewWindow().listen`で受ける(`platform/tauri.ts`の`subscribe(…, true)`)。
    全ウィンドウ宛ての`listen`で受けると、ほかのウィンドウ宛てのものまで届く
+5. 撮影用の`window.api`([scripts/shots/preload.cjs](../scripts/shots/preload.cjs))にも同じ関数を足す
+   (無いと、撮影で呼んだところで止まる)
+
+画面から外のもの(別のURLの画像・フォント・通信)を読むようにするときは、`tauri.conf.json`の
+`security.csp`も直す。配布ビルドでは、CSPに無いものは読み込めない(開発中は掛けていないので気づきにくい)。
 
 ### 設定の項目を足す
 
