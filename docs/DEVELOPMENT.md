@@ -274,7 +274,7 @@ LinuxからWindows向けのパッケージを作れる(`vpk [win] pack`)ので�
 - **vpkとアプリの`velopack` crateは同じ版にする**(`.devcontainer/Dockerfile`の`VPK_VERSION`と
   `src-tauri/Cargo.toml`)。CIはDockerfileから版を読む
 
-**更新の流れ。** インストーラーで入れたアプリは、起動して5秒後にGitHubのリリース
+**更新の流れ。** インストーラーで入れたアプリは、起動して5秒後(その後も6時間ごと)にGitHubのリリース
 (`https://github.com/masacchi/live-keymap-viewer/releases/latest/download/releases.win.json`)を見に行く。
 新しい版があれば設定ボタンに印が付き、設定パネルの「このアプリ」から「更新して再起動」で入れ替わる
 (`src-tauri/src/updater.rs`)。見に行くのは**最新の正式リリース**だけで、プレリリースは対象にならない。

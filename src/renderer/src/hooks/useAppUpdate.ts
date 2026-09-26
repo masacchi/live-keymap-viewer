@@ -6,14 +6,21 @@
  * それと重ねない。このときはforceを付けない。モードを切り替えるたびにウィンドウごと
  * 作り直すので、Rustが少し前の結果を使い回す。「更新を確認」を押したときは問い合わせ直す。
  *
+ * 起動したまま何日も使うことがある(オーバーレイは出しっぱなしにしがち)ので、そのあとも
+ * UPDATE_CHECK_INTERVAL_MSごとに裏で確認する。裏の確認では表示を「確認中」にせず、失敗しても
+ * 前の表示のままにする(設定パネルを開いているときに、表示がちらつかないように)。
+ *
  * ブラウザで開いたとき(window.apiが無い)は何もしない。
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { UpdateStatus } from '../../../shared/ipc'
 import { reportError, reportInfo } from '../lib/report'
 
 /** 起動してから、最初に確認するまでの待ち時間。 */
 export const STARTUP_CHECK_DELAY_MS = 5000
+
+/** 起動したあと、裏で確認し直す間隔。 */
+export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 export type AppUpdate =
   /** まだ確認していない。 */
@@ -43,6 +50,9 @@ export function toAppUpdate(status: UpdateStatus): AppUpdate {
 
 export function useAppUpdate() {
   const [update, setUpdate] = useState<AppUpdate>({ phase: 'idle' })
+  /** 裏の確認から、いまの表示を見るため(effectを張り直さずに済むように)。 */
+  const current = useRef(update)
+  current.current = update
 
   const check = useCallback(async (force: boolean) => {
     const api = window.api
@@ -54,6 +64,20 @@ export function useAppUpdate() {
       // ネットワークが無いだけのことが多い。エラーとしては残さない
       reportInfo(`更新を確認できなかった: ${String(error)}`)
       setUpdate({ phase: 'failed' })
+    }
+  }, [])
+
+  /** 裏の確認。新しい版が見つかったときだけ表示を変える。 */
+  const checkInBackground = useCallback(async () => {
+    const api = window.api
+    const phase = current.current.phase
+    // 見つけたあと・入れている最中・入れられなかったあとは、表示を変えない
+    if (!api || phase === 'available' || phase === 'applying' || phase === 'applyFailed') return
+    try {
+      const next = toAppUpdate(await api.checkForUpdate(false))
+      if (next.phase === 'available') setUpdate(next)
+    } catch (error) {
+      reportInfo(`更新を確認できなかった: ${String(error)}`)
     }
   }, [])
 
@@ -72,8 +96,12 @@ export function useAppUpdate() {
   useEffect(() => {
     if (!window.api) return
     const timer = setTimeout(() => void check(false), STARTUP_CHECK_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [check])
+    const interval = setInterval(() => void checkInBackground(), UPDATE_CHECK_INTERVAL_MS)
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+    }
+  }, [check, checkInBackground])
 
   return { update, check: () => void check(true), apply: (v: string) => void apply(v) }
 }
