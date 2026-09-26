@@ -35,6 +35,11 @@
   --color-sym-ink: #f1f4f5;
   --color-shift-ink: #cfd6da;
   --color-press: #f2c230;
+  /*
+   * 押し続けているあいだに落ち着く色。押した瞬間の黄色から少しだけ暗くする。
+   * 光ったままだと、打ち続けるあいだ明るい面がちらついて目が疲れる
+   */
+  --color-press-settled: #d4a927;
   --color-layer-0: #b9c0c4;
   --color-layer-1: #e6a13f;
   --color-layer-2: #3db5c1;
@@ -131,15 +136,25 @@ body.overlay {
 
 body.overlay .app-shell {
   border-radius: 14px;
-  /* 板(::before)を中身の後ろ、かつこの中に留める */
-  isolation: isolate;
 }
 
 /*
- * 背景の板。背景色ではなく別の層にしてあるのは、L0で薄くするときに図と同じだけ
- * opacityを掛けるため(左上のパネルは薄くしないので、.app-shellごとは薄くできない)
+ * 図と背景の板をまとめた層(App.tsxのmain)。L0で薄くするときは、この層1つに
+ * opacityを掛ける。板と図に別々に掛けると、途中で濃さがずれて、キーと背景が
+ * ばらばらに透けて見える。左上のパネルはこの外にあるので薄くならない。
+ * 板(::before)を中身の後ろ、かつこの中に留める
  */
-body.overlay .app-shell::before {
+body.overlay .overlay-body {
+  position: relative;
+  isolation: isolate;
+  border-radius: inherit;
+}
+
+/*
+ * 背景の板。背景色ではなく別の層にしてあるのは、後ろのぼかしに合わせて濃さを変えるため
+ * (中身の文字や図の色は変えない)
+ */
+body.overlay .overlay-body::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -147,9 +162,7 @@ body.overlay .app-shell::before {
   border-radius: inherit;
   background: color-mix(in srgb, var(--color-ground) 72%, transparent);
   pointer-events: none;
-  transition:
-    opacity 80ms ease,
-    background-color 80ms ease;
+  transition: background-color 80ms ease;
 }
 
 /*
@@ -157,7 +170,7 @@ body.overlay .app-shell::before {
  * 72%のままだと3割弱しか見えず、ぼかしが効いていないように見える。アクリル自体に
  * 暗い色味が乗るので、薄くしても字は読める
  */
-body.overlay .app-shell.blurred::before {
+body.overlay .app-shell.blurred .overlay-body::before {
   background: color-mix(in srgb, var(--color-ground) 35%, transparent);
 }
 
@@ -170,15 +183,11 @@ body.overlay .app-shell.blurred {
 }
 
 /*
- * ベースレイヤーのあいだは、板も図と同じだけ薄くする(濃さはApp.tsxが--faded-opacityで渡す)。
- * 板だけ消すと、薄い図が壁紙の上にじかに乗り、どこまでが図か分かりにくい。
- * 図と同じく、薄くするのは少し待ってからゆっくり
+ * 薄くするときは、ぼかしが外れて板の色が変わるのも、図が薄くなるのと同じ時に同じ速さで
+ * (薄くし始めるのはFADE_DELAY_MS後。useOverlayFade.ts)
  */
-body.overlay .app-shell.faded::before {
-  opacity: var(--faded-opacity, 1);
-  transition:
-    opacity 400ms ease 300ms,
-    background-color 400ms ease 300ms;
+body.overlay .app-shell.faded .overlay-body::before {
+  transition: background-color 150ms ease-out 300ms;
 }
 
 /* 角丸に戻すのは、ぼかしが外れるのと同時(薄くし始めて300ms後。useOverlayFade.ts) */
@@ -312,17 +321,18 @@ body.overlay .app-shell.faded {
 
 /*
  * 記号の出し方で選んだ記号を打つのに押すキー。「ここを押す」なので押下と同じ黄色の枠にし
- * (押下は塗り、こちらは枠だけ)、最初の数回だけ点滅させて目を引く。
+ * (押下は塗り、こちらは枠だけ)、最初の数回だけゆっくり明滅させて目を引く。
+ * 速く何度も点滅させると、目がちかちかする
  */
 .key-flash .cap {
   stroke: var(--color-press);
   stroke-width: 3.5;
-  animation: key-flash 0.45s ease-in-out 6 alternate;
+  animation: key-flash 0.7s ease-in-out 4 alternate;
 }
 
 @keyframes key-flash {
   to {
-    stroke-opacity: 0.2;
+    stroke-opacity: 0.35;
   }
 }
 
@@ -347,12 +357,12 @@ body.overlay .app-shell.faded {
 }
 
 .key-pressed .cap {
-  fill: var(--color-press);
-  stroke: var(--color-press);
+  fill: var(--color-press-settled);
+  stroke: var(--color-press-settled);
   /* 押しているあいだは淡く光らせる。色だけより、離れて見ても押下が拾いやすい */
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-press) 55%, transparent));
-  /* 押した瞬間の光(下のpress-flash) */
-  animation: press-flash 220ms ease-out;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-press) 45%, transparent));
+  /* 押した瞬間は黄色、押し続けると少しだけ暗く落ち着く(下のpress-settle) */
+  animation: press-settle 600ms ease-out;
 }
 
 /* 押したら2px沈める(縁の3pxが1pxだけ残る)。戻りより速く */
@@ -362,16 +372,16 @@ body.overlay .app-shell.faded {
 }
 
 /*
- * 押した瞬間だけ明るく強く光り、0.22秒で落ち着く。動きはキーの中で終わらせる
- * (キーの外まで動かすと、打つたびに周りまで動いて目が疲れる)。
+ * 押した瞬間は黄色で、0.6秒かけて少しだけ暗い色に落ち着く。白く光らせてから黄色にすると、
+ * 打つたびに明るさが大きく跳ねて目がちかちかするので、明るさの差は小さく、黄色から始める。
+ * 動きはキーの中で終わらせる(キーの外まで動かすと、打つたびに周りまで動いて目が疲れる)。
  * 終わりの色は書かない(fromだけ)。そのとき効いている色に向かうので、長押しで
- * レイヤーの色に変わる途中でも黄色を挟まずに落ち着く。クラスが付くたびに最初から再生される
+ * レイヤーの色に変わる途中でも黄色に戻らずに落ち着く。クラスが付くたびに最初から再生される
  */
-@keyframes press-flash {
+@keyframes press-settle {
   from {
-    fill: #fff4c9;
-    stroke: #fff4c9;
-    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-press) 95%, transparent));
+    fill: var(--color-press);
+    stroke: var(--color-press);
   }
 }
 
