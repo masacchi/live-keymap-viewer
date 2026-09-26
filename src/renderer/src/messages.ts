@@ -57,7 +57,8 @@ export const messages = {
     error: 'エラー',
     reloading: '読み直し中…',
     stalled: '応答待ち…',
-    stalledHint: '応答が途切れています。省電力で一瞬詰まることがあり、少し待つと戻ります'
+    stalledHint: '応答が途切れています。省電力で一瞬詰まることがあり、少し待つと戻ります',
+    roundTrip: (ms: number) => `(往復${ms}ms)`
   },
 
   deviceMenu: {

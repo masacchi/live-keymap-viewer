@@ -118,6 +118,11 @@ describe('Toolbarの接続の状態', () => {
     expect(stalled).toContain('bg-warn')
     expect(spinning(toolbar({ status: 'unlocking' }))).toBe(false)
   })
+
+  it('往復時間が分かれば、状態のツールチップにデバイス名と続けて添える', () => {
+    expect(toolbar({ roundTripMs: 470 })).toContain('title="接続済み Cornix(往復470ms)"')
+    expect(toolbar({})).toContain('title="接続済み Cornix"')
+  })
 })
 
 describe('LayerStrip', () => {

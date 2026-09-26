@@ -30,6 +30,11 @@ export interface Transport {
   /** 画面に出す名前。 */
   readonly label: string
   readonly opened: boolean
+  /**
+   * 覚えている往復時間(ms)。測っていなければnull、測らない実装(モック)はundefined。
+   * 画面に出して、USB(数ms)かBluetooth(450ms前後)か、詰まっていないかの手がかりにする。
+   */
+  readonly roundTripMs?: number | null
   open(): Promise<void>
   close(): Promise<void>
   /** 32バイト以内のリクエストを送り、32バイトのレスポンスを返す。 */

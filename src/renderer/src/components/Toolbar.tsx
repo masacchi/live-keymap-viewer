@@ -37,6 +37,11 @@ export interface ToolbarProps {
   mods: number | null
   /** 応答が途切れているが、まだ切れたとは見なしていない。 */
   stalled: boolean
+  /**
+   * 往復時間(ms)。状態のツールチップに添える。USB(数ms)かBluetooth(450ms前後)か、
+   * 遅くなっていないかを、ログを開かずに確かめられるように(docs/BLUETOOTH.md P6)。
+   */
+  roundTripMs?: number | null
   labelMode: LabelMode
   windowMode: 'normal' | 'overlay'
   reloading: boolean
@@ -64,6 +69,7 @@ export function Toolbar({
   symbols,
   mods,
   stalled,
+  roundTripMs = null,
   labelMode,
   windowMode,
   reloading,
@@ -77,7 +83,10 @@ export function Toolbar({
     : reloading
       ? messages.status.reloading
       : messages.status[status]
-  const title = [statusText, stalled ? messages.status.stalledHint : null, deviceLabel]
+  const link = [deviceLabel, roundTripMs !== null ? messages.status.roundTrip(roundTripMs) : null]
+    .filter(Boolean)
+    .join('')
+  const title = [statusText, stalled ? messages.status.stalledHint : null, link]
     .filter(Boolean)
     .join(' ')
   // 接続中・読み込み中・読み直し中は、丸の代わりに回る印にする。色は丸と同じで、

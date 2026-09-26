@@ -190,6 +190,22 @@ describe('KeyboardSession: アンロック', () => {
 })
 
 describe('KeyboardSession: ポーリング', () => {
+  it('往復時間を測るトランスポートなら、押下を読みながら往復時間を知らせる', async () => {
+    const mock = new MockTransport({ unlocked: true })
+    Object.defineProperty(mock, 'roundTripMs', { value: 3.4 })
+    const session = new KeyboardSession(mock, options())
+    await session.start()
+    const state = await waitFor(session, (s) => s.roundTripMs !== null)
+    expect(state.roundTripMs).toBe(3)
+    await session.dispose()
+  })
+
+  it('往復時間を測らないトランスポート(モック)では、nullのまま', async () => {
+    const { session } = await readySession()
+    expect(session.state.roundTripMs).toBeNull()
+    await session.dispose()
+  })
+
   it('押したキーがlayersに出る', async () => {
     const { session, mock } = await readySession()
     mock.press(0, 1) // Q

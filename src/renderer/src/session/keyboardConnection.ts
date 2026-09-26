@@ -66,6 +66,7 @@ export const IDLE: ConnectionState = {
   unlock: null,
   reloading: false,
   stalled: false,
+  roundTripMs: null,
   loading: null,
   reconnecting: false,
   mock: false

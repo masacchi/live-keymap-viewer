@@ -62,6 +62,8 @@ export const UNLOCK_POLL_MS = 200
 export const STALL_LIMIT_MS = 15_000
 /** 読み取りに失敗したあと、次を投げるまでの待ち。詰まっている相手に間を置く。 */
 export const POLL_RETRY_MS = 100
+/** 往復時間を画面に知らせる間隔(ms)。 */
+export const ROUND_TRIP_PUBLISH_MS = 2000
 
 /**
  * タイムアウト(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
@@ -104,6 +106,11 @@ export interface SessionState {
    * 画面は最後の状態のままにして、状態の丸だけで知らせる。
    */
   stalled: boolean
+  /**
+   * 往復時間(ms、整数)。押下を読んでいるあいだだけ、ROUND_TRIP_PUBLISH_MSに1回まで更新する
+   * (20msごとに変わるたびに画面を描き直さないため)。測らないトランスポートではnull。
+   */
+  roundTripMs: number | null
   /** 最初の読み込みの進み具合。読み込み中だけ入る。 */
   loading: LoadProgress | null
 }
@@ -194,6 +201,7 @@ export class KeyboardSession {
       unlock: null,
       reloading: false,
       stalled: false,
+      roundTripMs: null,
       loading: null
     }
   }
@@ -494,6 +502,8 @@ export class KeyboardSession {
     if (verify) void this.verifyCached(gen, verify)
     /** 応答が返らなくなった時刻。1回でも読めたらnullに戻る。 */
     let stalledSince: number | null = null
+    /** 往復時間を最後に知らせた時刻。 */
+    let roundTripPublishedAt = Number.NEGATIVE_INFINITY
     try {
       while (this.alive(gen)) {
         const started = this.now()
@@ -514,6 +524,12 @@ export class KeyboardSession {
         if (stalledSince !== null) {
           stalledSince = null
           this.update({ stalled: false })
+        }
+        const roundTrip = this.transport.roundTripMs
+        if (roundTrip != null && started - roundTripPublishedAt >= ROUND_TRIP_PUBLISH_MS) {
+          roundTripPublishedAt = started
+          const rounded = Math.round(roundTrip)
+          if (rounded !== this.current.roundTripMs) this.update({ roundTripMs: rounded })
         }
 
         const layers = engine.update(matrix, this.now())

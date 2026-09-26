@@ -212,6 +212,7 @@ export default function App(): JSX.Element {
           }
           mods={live ? layers.mods : null}
           stalled={keyboard.stalled}
+          roundTripMs={keyboard.roundTripMs}
           labelMode={settings.labelMode}
           windowMode={windowMode}
           reloading={keyboard.reloading}

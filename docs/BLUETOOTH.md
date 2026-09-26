@@ -183,7 +183,7 @@ VIA / Vialには要求と応答を対応づける番号が無いので、**照�
 
 ## 4. 実装計画
 
-優先度の順。P1はOSからの確認まで、P2・P3・P5は済んでいる(P2・P3は実機では未確認)。
+優先度の順。P1はOSからの確認まで、P2・P3・P5・P6は済んでいる(P2・P3は実機では未確認)。
 
 ### P1. 実機で「BTだけ」の状態を試す(コードを書く前に)— **OSからの確認は済み**
 
@@ -299,11 +299,12 @@ vial-qmk(50から減る)とRMK(キーの数から減る)の両方で正しく出
   アンロック済みと返るのは次のポーリング。アプリはこの回を「待つ」と扱うので、1回(200ms)遅れて終わる
 - テスト: `tests/vial.test.ts`と`tests/keyboardSession.test.ts`の「RMKでは」
 
-### P6. 接続の様子を画面に出す(診断用)
+### P6. 接続の様子を画面に出す(診断用)— **済み**
 
-BTでは遅さが問題になるので、ツールバーに「往復12ms」のような表示があると切り分けが早い。
-P3で往復時間を記録するので、それを出すだけ。USBかBTかは、hidapiのデバイスのパスで分かる
-(BTは`{00001812-…}`を含む)。往復時間でも見分けられる(USBは数ms、BTは十数ms以上)。
+BTでは遅さが問題になるので、ツールバーの状態の丸にポインタを乗せると「接続済み Cornix(往復3ms)」の
+ように往復時間が出る。P3で`WebHidTransport`が覚えた往復時間を、`KeyboardSession`が押下を読みながら
+2秒に1回まで知らせる(`roundTripMs`。毎回知らせると20msごとに画面を描き直すことになる)。
+USBかBTかは往復時間の桁で分かる(USBは数ms、BTは450ms前後)。
 
 ### P7. (P1の結果しだい)BTでmatrixが実用にならない場合
 
@@ -334,7 +335,7 @@ P3で往復時間を記録するので、それを出すだけ。USBかBTかは�
 | `src/renderer/src/session/keyboardConnection.ts`(抜き差し・切り替えへの追従。土台は済み) | P4 |
 | `src/renderer/src/session/keyboardSession.ts`(エラー時の通知、アンロックの最大値) | P4, P5 |
 | `src/renderer/src/hid/mockTransport.ts`(RMKと同じ動きのアンロック) | P5 |
-| `src/renderer/src/components/Toolbar.tsx`(往復時間の表示) | P6 |
+| `src/renderer/src/components/Toolbar.tsx`(往復時間の表示。済み) | P6 |
 | `docs/STATUS.md`、`README.md`(BTの確認結果) | P1 |
 
 ## 7. 出典
