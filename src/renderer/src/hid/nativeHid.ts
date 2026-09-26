@@ -16,10 +16,12 @@ export interface NativeHidInfo {
   path: string
   vendorId: number
   productId: number
-  /** 製品名。Bluetoothでは取れず空のことがある。 */
+  /** 製品名。Bluetoothでは取れず空のことがあり、そのときは許可したときに覚えた名前が入る。 */
   productName: string
   usagePage: number
   usage: number
+  /** Bluetoothで接続しているか(パスから判断する。src-tauri/src/hid.rs)。 */
+  bluetooth: boolean
 }
 
 export interface NativeHidBackend {
@@ -48,7 +50,11 @@ export class NativeHidDevice extends EventTarget {
   readonly collections: HIDCollectionInfo[]
 
   constructor(
-    readonly info: NativeHidInfo,
+    /**
+     * 最後に受け取った情報。一覧を取り直すたびに差し替える。抜き差しの知らせで先に作られたときは
+     * 名前が空のままなので(覚えた名前で補うのは一覧を返すとき)、取り直したものに合わせる
+     */
+    public info: NativeHidInfo,
     private readonly backend: NativeHidBackend
   ) {
     super()
@@ -158,9 +164,15 @@ export class NativeHid extends EventTarget {
     if (candidates.length === 0) return []
 
     let chosen: NativeHidInfo | undefined = candidates[0]
-    const keyboards = new Set(candidates.map((d) => `${d.vendorId}:${d.productId}`))
+    const keyboards = new Set(candidates.map(keyboardOf))
     if (keyboards.size > 1) {
-      const deviceId = await this.backend.choose(candidates.map(toCandidate))
+      // 前に接続したキーボードは、先頭に並べて印を付ける。自動では選ばない
+      // (別のキーボードに接続したいときに、先に「忘れる」を押さないと選べなくなるため)
+      const granted = new Set((await this.backend.devices(true)).map(keyboardOf))
+      const listed = candidates
+        .map((info) => toCandidate(info, granted.has(keyboardOf(info))))
+        .sort((a, b) => Number(b.remembered) - Number(a.remembered))
+      const deviceId = await this.backend.choose(listed)
       chosen = candidates.find((d) => d.path === deviceId)
     }
     if (!chosen) return []
@@ -170,7 +182,9 @@ export class NativeHid extends EventTarget {
 
   private device(info: NativeHidInfo): NativeHidDevice {
     let device = this.known.get(info.path)
-    if (!device) {
+    if (device) {
+      device.info = info
+    } else {
       device = new NativeHidDevice(info, this.backend)
       this.known.set(info.path, device)
     }
@@ -193,12 +207,19 @@ function matchesFilters(info: NativeHidInfo, filters: readonly HIDDeviceFilter[]
   )
 }
 
-function toCandidate(info: NativeHidInfo): HidCandidate {
+/** どのキーボードか(許可はVID/PID単位。USBとBTの同じキーボードは同じになる)。 */
+function keyboardOf(info: NativeHidInfo): string {
+  return `${info.vendorId}:${info.productId}`
+}
+
+function toCandidate(info: NativeHidInfo, remembered: boolean): HidCandidate {
   return {
     deviceId: info.path,
     name: info.productName,
     vendorId: info.vendorId,
-    productId: info.productId
+    productId: info.productId,
+    bluetooth: info.bluetooth,
+    remembered
   }
 }
 

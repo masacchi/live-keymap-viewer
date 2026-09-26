@@ -143,7 +143,7 @@ WindowsがJISとして扱ったときに実際に入る文字を表示します�
 
 - **ノブを回したことの表示。** 押し込みは光りますが、回転はVial / VIAのプロトコルでは取れません
 - **Bluetoothでの利用は、まだ実機で確かめていません**(USBは確認済み)。Bluetoothの遅さに合わせて待つ時間を
-  延ばすようにしてありますが、選択画面で名前が出ないなどの課題が残っています → [docs/BLUETOOTH.md](docs/BLUETOOTH.md)
+  延ばし、選ぶ画面にも「Bluetooth」と出るようにしてあります → [docs/BLUETOOTH.md](docs/BLUETOOTH.md)
 - Combo / Key Override / One Shot / TTの厳密な再現
 - 対応はVial protocol 6 / VIA protocol 9だけです
 

@@ -180,6 +180,8 @@ export const messages = {
   devicePicker: {
     title: '接続するキーボードを選ぶ',
     unnamed: '(名前なし)',
+    bluetooth: 'Bluetooth',
+    remembered: '前回のキーボード',
     cancel: 'やめる'
   },
 
@@ -270,6 +272,9 @@ export const messages = {
       'Vialなど別のアプリが使っているか、USB / Bluetoothの出力先が違う可能性があります',
     noMatrix:
       'このキーボードでは押しているキーを読み取れません(Vialのプロトコルか、行列の大きさの制限)',
-    deviceGone: 'キーボードが外れました'
+    deviceGone: 'キーボードが外れました',
+    notVial:
+      '選んだ機器はVialに対応していません(VIAだけのキーボードや無線レシーバーなど)。' +
+      'Vialのキーボードを選び直してください'
   }
 } as const

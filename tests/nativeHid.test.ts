@@ -18,13 +18,15 @@ const USB: NativeHidInfo = {
   productId: 0x0001,
   productName: 'Cornix',
   usagePage: 0xff60,
-  usage: 0x61
+  usage: 0x61,
+  bluetooth: false
 }
 /** 同じキーボードのBluetooth側。VID/PIDは同じで、名前は取れない。 */
 const BT: NativeHidInfo = {
   ...USB,
   path: '\\\\?\\HID#{00001812}_Dev_VID&02e118#bt',
-  productName: ''
+  productName: '',
+  bluetooth: true
 }
 /** 別のキーボード(VIA用のインターフェースを持つ無線レシーバー)。 */
 const OTHER: NativeHidInfo = {
@@ -115,14 +117,59 @@ describe('NativeHid: デバイスを選ぶ', () => {
     const picked = await hid.requestDevice({ filters: [] })
     expect(picked.map((d) => d.info)).toEqual([USB])
     expect(backend.chooseCalls[0]).toEqual([
-      { deviceId: OTHER.path, name: 'Keychron Link-KM', vendorId: 0x3434, productId: 0xd026 },
-      { deviceId: USB.path, name: 'Cornix', vendorId: 0xe118, productId: 0x0001 }
+      {
+        deviceId: OTHER.path,
+        name: 'Keychron Link-KM',
+        vendorId: 0x3434,
+        productId: 0xd026,
+        bluetooth: false,
+        remembered: false
+      },
+      {
+        deviceId: USB.path,
+        name: 'Cornix',
+        vendorId: 0xe118,
+        productId: 0x0001,
+        bluetooth: false,
+        remembered: false
+      }
     ])
 
     backend.remembered = []
     backend.chooseResult = null
     expect(await hid.requestDevice({ filters: [] })).toEqual([])
     expect(backend.remembered).toEqual([])
+  })
+
+  it('前に接続したキーボードを先頭に並べ、Bluetoothなら印を付ける。自動では選ばない', async () => {
+    // BTのCornix(名前はRustが覚えた名前で補う)と、VIA用のインターフェースを持つ別の機器が並ぶ場面
+    const { backend, hid } = setup()
+    const btCornix = { ...BT, productName: 'Cornix' }
+    backend.list = [OTHER, btCornix]
+    backend.granted = [USB]
+    backend.chooseResult = btCornix.path
+    const picked = await hid.requestDevice({ filters: [] })
+    expect(picked.map((d) => d.info)).toEqual([btCornix])
+    expect(
+      backend.chooseCalls[0].map(({ name, bluetooth, remembered }) => ({
+        name,
+        bluetooth,
+        remembered
+      }))
+    ).toEqual([
+      { name: 'Cornix', bluetooth: true, remembered: true },
+      { name: 'Keychron Link-KM', bluetooth: false, remembered: false }
+    ])
+  })
+
+  it('抜き差しの知らせで先に作ったデバイスも、一覧を取り直せば名前が入る', async () => {
+    // 知らせは名前を補う前のまま届く(Rustが名前を補うのは一覧を返すとき)
+    const { backend, hid } = setup()
+    backend.granted = [USB]
+    backend.plug(BT)
+    backend.list = [{ ...BT, productName: 'Cornix' }]
+    const [device] = await hid.getDevices()
+    expect(device.productName).toBe('Cornix')
   })
 
   it('条件に合うものが無ければ空', async () => {

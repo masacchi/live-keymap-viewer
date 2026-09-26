@@ -25,7 +25,16 @@ export interface ProbeResult {
   device: HIDDevice
   /** 往復にかかった時間(ms)。答えなければnull。 */
   latencyMs: number | null
+  /**
+   * Vialか。答えなければfalse。VIAだけの機器(無線レシーバーなど。usage pageが同じなので候補に並ぶ)は、
+   * 知らないコマンドに`0xFF`(id_unhandled)を返すので、`data[0]`で見分けられる(docs/BLUETOOTH.md §2.6)。
+   * Vialなら`data[0..3]`はvial_protocol(6など)。
+   */
+  vial: boolean
 }
+
+/** VIAのファームが、知らないコマンドに返す値(via.cのid_unhandled)。 */
+const VIA_UNHANDLED = 0xff
 
 /** 1台に問い合わせて、答えるかどうかと往復時間を返す。確認したら閉じる。 */
 export async function probeDevice(
@@ -36,20 +45,21 @@ export async function probeDevice(
   try {
     await transport.open()
     const started = now()
-    await transport.send(new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID]), {
-      timeoutMs: PROBE_TIMEOUT_MS,
-      retries: PROBE_RETRIES
-    })
-    return { device, latencyMs: now() - started }
+    const data = await transport.send(
+      new Uint8Array([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID]),
+      { timeoutMs: PROBE_TIMEOUT_MS, retries: PROBE_RETRIES }
+    )
+    return { device, latencyMs: now() - started, vial: data[0] !== VIA_UNHANDLED }
   } catch {
-    return { device, latencyMs: null }
+    return { device, latencyMs: null, vial: false }
   } finally {
     await transport.close().catch(() => undefined)
   }
 }
 
 /**
- * 候補の中から、答えるもののうち一番速いものを選ぶ。どれも答えなければnull。
+ * 候補の中から、答えるVialのうち一番速いものを選ぶ。どれも答えなければnull。
+ * 答えてもVialでないもの(VIAだけの機器)は選ばない。
  * 候補が1つなら確認せずにそれを返す(答えなければ接続時のエラーで分かる)。
  */
 export async function pickResponsiveDevice(
@@ -63,7 +73,7 @@ export async function pickResponsiveDevice(
   for (const candidate of candidates) results.push(await probe(candidate))
 
   const responsive = results
-    .filter((r): r is ProbeResult & { latencyMs: number } => r.latencyMs !== null)
+    .filter((r): r is ProbeResult & { latencyMs: number } => r.latencyMs !== null && r.vial)
     .sort((a, b) => a.latencyMs - b.latencyMs)
   return { device: responsive[0]?.device ?? null, results }
 }

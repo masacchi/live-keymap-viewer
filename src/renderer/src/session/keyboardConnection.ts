@@ -329,10 +329,14 @@ export class KeyboardConnection {
     const { device, results } = await pick(candidates)
     if (search !== this.search || this.disposed) return
     if (!device) {
+      // 答えたのにどれも選ばれなかったなら、答えたのはVialでない機器(VIAだけのもの)
+      const answered = results.some((result) => result.latencyMs !== null)
       this.publish({
         ...IDLE,
         status: 'error',
-        error: messages.connection.noResponse(results.length)
+        error: answered
+          ? messages.connection.notVial
+          : messages.connection.noResponse(results.length)
       })
       if (this.reconnecting) this.scheduleRetry()
       return

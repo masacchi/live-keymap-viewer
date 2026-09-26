@@ -73,3 +73,29 @@ export class SilentDevice extends EventTarget {
   }
   async sendReport(): Promise<void> {}
 }
+
+/**
+ * VIAだけの機器(Keychron Linkのような無線レシーバー)。usage pageがVialと同じなので候補に並ぶが、
+ * Vialのコマンドは知らないので、VIAのファームと同じく`data[0]`を`0xFF`(id_unhandled)にして返す。
+ */
+export class ViaOnlyDevice extends EventTarget {
+  opened = false
+  productName = 'Keychron Link (fake)'
+  collections = [{ usagePage: 0xff60, usage: 0x61 }]
+  async open(): Promise<void> {
+    this.opened = true
+  }
+  async close(): Promise<void> {
+    this.opened = false
+  }
+  async sendReport(_reportId: number, data: BufferSource): Promise<void> {
+    const response = new Uint8Array(data as ArrayBuffer).slice()
+    response[0] = 0xff
+    setTimeout(() => {
+      const event = new Event('inputreport')
+      Object.defineProperty(event, 'data', { value: new DataView(response.buffer) })
+      Object.defineProperty(event, 'reportId', { value: 0 })
+      this.dispatchEvent(event)
+    }, 1)
+  }
+}

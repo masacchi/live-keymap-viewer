@@ -41,9 +41,14 @@ export type UpdateStatus =
 /** 接続するキーボードの候補が複数あったときに、選択画面に並べるもの(hid/nativeHid.ts)。 */
 export interface HidCandidate {
   deviceId: string
+  /** 製品名。Bluetoothで取れないときは、許可したときに覚えた名前(src-tauri/src/commands.rs)。 */
   name: string
   vendorId: number
   productId: number
+  /** Bluetoothで接続しているもの。同じキーボードのUSB側と見分けるのに出す。 */
+  bluetooth: boolean
+  /** 前に接続した(許可した)キーボード。先頭に並べ、印を付ける。 */
+  remembered: boolean
 }
 
 /** 画面からRust側に頼めること。画面が使うものだけを置く。 */

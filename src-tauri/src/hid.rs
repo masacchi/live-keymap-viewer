@@ -43,15 +43,21 @@ pub struct HidDeviceInfo {
     pub vendor_id: u16,
     pub product_id: u16,
     /// 製品名。Bluetoothでは取れず空のことがある(docs/BLUETOOTH.md §2.6)。
+    /// 画面に渡す一覧(commands.rsのhid_devices)では、空なら覚えている名前で補う。
     pub product_name: String,
     pub usage_page: u16,
     pub usage: u16,
+    /// Bluetooth(BLE)で接続しているか。同じキーボードがUSBとBTの両方で見えるとき、
+    /// 選ぶ画面で見分けられるようにする。
+    pub bluetooth: bool,
 }
 
 impl HidDeviceInfo {
     fn from(device: &DeviceInfo) -> Self {
+        let path = device.path().to_string_lossy().into_owned();
         Self {
-            path: device.path().to_string_lossy().into_owned(),
+            bluetooth: is_bluetooth_path(&path),
+            path,
             vendor_id: device.vendor_id(),
             product_id: device.product_id(),
             product_name: device.product_string().unwrap_or_default().to_owned(),
@@ -59,6 +65,12 @@ impl HidDeviceInfo {
             usage: device.usage(),
         }
     }
+}
+
+/// デバイスのパスがBluetooth(BLE)のものか。WindowsのBLEのHIDは、パスにHID over GATTのサービス
+/// (UUID 0x1812)を含む(`\\?\HID#{00001812-0000-1000-8000-00805f9b34fb}_Dev_VID&02e118_…`)。
+fn is_bluetooth_path(path: &str) -> bool {
+    path.to_ascii_lowercase().contains("{00001812")
 }
 
 /// 開いているデバイス1つぶん。
@@ -272,6 +284,14 @@ fn strip_report_id(data: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bluetoothのパスを見分ける() {
+        assert!(is_bluetooth_path(
+            r"\\?\HID#{00001812-0000-1000-8000-00805F9B34FB}_Dev_VID&02e118_PID&0001&Col03#9&1"
+        ));
+        assert!(!is_bluetooth_path(r"\\?\HID#VID_E118&PID_0001&MI_01#8&2"));
+    }
 
     #[test]
     fn 先頭のレポート_id_は外す() {

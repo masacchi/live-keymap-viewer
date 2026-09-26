@@ -24,6 +24,17 @@ export function DevicePicker({ devices, onChoose }: DevicePickerProps): JSX.Elem
                 className="w-full rounded-md bg-surface-2 px-3 py-2 text-left text-xs hover:bg-line-soft"
               >
                 <span className="font-medium">{device.name || messages.devicePicker.unnamed}</span>
+                {/* 同じキーボードがUSBとBTの両方で見えるとき、名前だけでは見分けられない */}
+                {device.bluetooth && (
+                  <span className="ml-2 rounded border border-line px-1 text-2xs text-muted">
+                    {messages.devicePicker.bluetooth}
+                  </span>
+                )}
+                {device.remembered && (
+                  <span className="ml-2 rounded border border-line px-1 text-2xs text-muted">
+                    {messages.devicePicker.remembered}
+                  </span>
+                )}
                 <span className="ml-2 text-muted">
                   {messages.settings.deviceId(device.vendorId, device.productId)}
                 </span>

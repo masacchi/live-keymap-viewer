@@ -111,8 +111,8 @@ describe('KeyboardConnection: ログ', () => {
       pickDevice: async (candidates) => ({
         device: candidates[1] ?? null,
         results: [
-          { device: candidates[0], latencyMs: null },
-          { device: candidates[1], latencyMs: 3.4 }
+          { device: candidates[0], latencyMs: null, vial: false },
+          { device: candidates[1], latencyMs: 3.4, vial: true }
         ]
       })
     })
@@ -121,6 +121,39 @@ describe('KeyboardConnection: ログ', () => {
     await waitFor(connection, (s) => s.status === 'ready')
 
     expect(lines[0]).toBe('接続: Cornix(e118:0001) 往復3ms (候補2個中1個が応答)')
+    await connection.dispose()
+  })
+})
+
+describe('KeyboardConnection: 答えるものが無いとき', () => {
+  it('答えたのがVialでない機器だけなら、そう伝える(「応答しません」とは言わない)', async () => {
+    const { hid, connection } = setup({
+      pickDevice: async (candidates) => ({
+        device: null,
+        results: [
+          { device: candidates[0], latencyMs: 2, vial: false },
+          { device: candidates[1], latencyMs: null, vial: false }
+        ]
+      })
+    })
+    hid.devices = [fakeDevice(), fakeDevice()]
+    connection.start()
+    const state = await waitFor(connection, (s) => s.status === 'error')
+    expect(state.error).toContain('Vialに対応していません')
+    await connection.dispose()
+  })
+
+  it('どれも答えなければ、試した数を添えて「応答しません」', async () => {
+    const { hid, connection } = setup({
+      pickDevice: async (candidates) => ({
+        device: null,
+        results: candidates.map((device) => ({ device, latencyMs: null, vial: false }))
+      })
+    })
+    hid.devices = [fakeDevice(), fakeDevice()]
+    connection.start()
+    const state = await waitFor(connection, (s) => s.status === 'error')
+    expect(state.error).toContain('2個のインターフェースを試しました')
     await connection.dispose()
   })
 })

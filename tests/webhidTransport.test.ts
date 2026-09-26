@@ -10,7 +10,7 @@ import { pickResponsiveDevice } from '@/hid/deviceProbe'
 import { WebHidTransport } from '@/hid/transport'
 import { getMatrixState, loadKeyboard } from '@/hid/vial'
 import { KeyboardSession, type SessionState } from '@/session/keyboardSession'
-import { asHid, FirmwareBackedDevice, SilentDevice } from './fixtures/fakeHid'
+import { asHid, FirmwareBackedDevice, SilentDevice, ViaOnlyDevice } from './fixtures/fakeHid'
 
 function waitFor(
   session: KeyboardSession,
@@ -98,6 +98,24 @@ describe('答えるインターフェースを選ぶ(USBとBluetoothの両方で
     usb.latencyMs = 1
     const { device } = await pickResponsiveDevice([asHid(bluetooth), asHid(usb)])
     expect(device).toBe(usb)
+  })
+
+  it('答えてもVialでない機器(VIAだけのもの)は選ばない', async () => {
+    const viaOnly = new ViaOnlyDevice()
+    const live = new FirmwareBackedDevice(true)
+    const picked = await pickResponsiveDevice([asHid(viaOnly), asHid(live)])
+    expect(picked.device).toBe(live)
+
+    // Vialでない機器しか答えなければnull。答えたことは結果に残す(接続の側が文言を選ぶ)
+    const { device, results } = await pickResponsiveDevice([
+      asHid(new ViaOnlyDevice()),
+      asHid(new SilentDevice())
+    ])
+    expect(device).toBeNull()
+    expect(results.map(({ latencyMs, vial }) => [latencyMs !== null, vial])).toEqual([
+      [true, false],
+      [false, false]
+    ])
   })
 
   it('どれも答えなければnull', async () => {

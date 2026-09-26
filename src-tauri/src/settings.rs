@@ -363,13 +363,22 @@ impl SettingsStore {
         std::fs::rename(&temp, &self.path)
     }
 
+    /// 選ばれたキーボードを覚える。覚えているものなら、名前が無いときだけ名前を足す
+    /// (Bluetoothで先に許可すると名前が取れず空になるので、あとでUSBで選んだときに埋める)。
     pub fn remember_device(self: &Arc<Self>, vendor_id: i64, product_id: i64, name: &str) {
         let settings = self.load();
-        if is_granted(&settings, vendor_id, product_id) {
-            return;
-        }
         let mut devices = settings.granted_devices;
-        devices.push(GrantedDevice { vendor_id, product_id, name: Some(name.to_owned()) });
+        match devices.iter_mut().find(|d| d.vendor_id == vendor_id && d.product_id == product_id) {
+            Some(known) => {
+                if name.is_empty() || known.name.as_deref().is_some_and(|n| !n.is_empty()) {
+                    return;
+                }
+                known.name = Some(name.to_owned());
+            }
+            None => {
+                devices.push(GrantedDevice { vendor_id, product_id, name: Some(name.to_owned()) })
+            }
+        }
         self.save(patch("grantedDevices", json!(devices)));
     }
 
@@ -382,6 +391,16 @@ impl SettingsStore {
             .collect();
         self.save(patch("grantedDevices", json!(devices))).granted_devices
     }
+}
+
+/// 許可したときに覚えた名前。覚えていない・空ならNone。
+pub fn remembered_name(settings: &Settings, vendor_id: i64, product_id: i64) -> Option<&str> {
+    settings
+        .granted_devices
+        .iter()
+        .find(|d| d.vendor_id == vendor_id && d.product_id == product_id)
+        .and_then(|d| d.name.as_deref())
+        .filter(|name| !name.is_empty())
 }
 
 pub fn is_granted(settings: &Settings, vendor_id: i64, product_id: i64) -> bool {
@@ -542,6 +561,22 @@ mod tests {
         assert_eq!(settings.overlay_opacity, 0.5);
         assert_eq!(settings.granted_devices.len(), 1);
         assert!(reread.forget_device(1, 2).is_empty());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn 名前の無いまま覚えたキーボードは_あとで名前を埋める() {
+        let dir = std::env::temp_dir().join(format!("lkv-settings-name-{}", std::process::id()));
+        let store = SettingsStore::new(dir.join("settings.json"));
+        // Bluetoothで先に選ぶと名前が取れない
+        store.remember_device(1, 2, "");
+        assert_eq!(remembered_name(&store.load(), 1, 2), None);
+        // USBで選び直したら埋める。一度付いた名前は変えない
+        store.remember_device(1, 2, "Cornix");
+        store.remember_device(1, 2, "Other");
+        assert_eq!(remembered_name(&store.load(), 1, 2), Some("Cornix"));
+        assert_eq!(store.load().granted_devices.len(), 1);
+        store.flush();
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

@@ -20,7 +20,7 @@ use crate::hid::{HidBridge, HidDeviceInfo};
 use crate::logfile;
 use crate::settings::{
     GrantedDevice, MAX_LAYERS, Settings, SettingsStore, WindowMode, is_granted, is_keyboard_uid,
-    patch, pick_renderer_patch, with_layer_name,
+    patch, pick_renderer_patch, remembered_name, with_layer_name,
 };
 use crate::updater::{self, UpdateStatus};
 use crate::windows::WindowManager;
@@ -148,17 +148,26 @@ pub fn hid_released(windows: State<'_, Arc<WindowManager>>) {
 
 /// Vialのインターフェースの一覧を返す。`granted_only`なら、一度許可したもの(VID/PID)に絞る。
 /// 自動で接続するのは許可したものに限るため(WebHIDの`getDevices()`と同じ)。
+///
+/// 名前が取れないもの(Bluetoothでは空のことがある)は、許可したときに覚えた名前で補う。
+/// 選ぶ画面に「名前なし」と出ると、どれが自分のキーボードか分からないため(docs/BLUETOOTH.md P2)。
 #[tauri::command]
 pub async fn hid_devices(app: AppHandle, granted_only: bool) -> Result<Vec<HidDeviceInfo>, String> {
     let hid = Arc::clone(&app.state::<Arc<HidBridge>>());
     let devices = spawn_blocking(move || hid.devices()).await.map_err(|e| e.to_string())?;
-    if !granted_only {
-        return Ok(devices);
-    }
     let settings = app.state::<Arc<SettingsStore>>().load();
     Ok(devices
         .into_iter()
-        .filter(|d| is_granted(&settings, d.vendor_id.into(), d.product_id.into()))
+        .filter(|d| !granted_only || is_granted(&settings, d.vendor_id.into(), d.product_id.into()))
+        .map(|mut d| {
+            if d.product_name.is_empty()
+                && let Some(name) =
+                    remembered_name(&settings, d.vendor_id.into(), d.product_id.into())
+            {
+                d.product_name = name.to_owned();
+            }
+            d
+        })
         .collect())
 }
 

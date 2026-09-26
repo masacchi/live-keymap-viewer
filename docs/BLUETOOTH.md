@@ -183,7 +183,7 @@ VIA / Vialには要求と応答を対応づける番号が無いので、**照�
 
 ## 4. 実装計画
 
-優先度の順。P1はOSからの確認まで、P3(遅さへの対応)とP5は済んでいる。
+優先度の順。P1はOSからの確認まで、P2・P3・P5は済んでいる(P2・P3は実機では未確認)。
 
 ### P1. 実機で「BTだけ」の状態を試す(コードを書く前に)— **OSからの確認は済み**
 
@@ -207,19 +207,27 @@ OSからは答えることを確認した(§2.6)。残りは**アプリで**ど�
 
 **結果はSTATUS.md §1とREADMEの「接続の確認状況」に書く。**
 
-### P2. 選択画面でBTのCornixが分かるようにする
+### P2. 選択画面でBTのCornixが分かるようにする — **済み**(実機では未確認)
 
 §2.6のとおり、名前の無いデバイスとKeychron Linkが並び、どれがCornixか分からない。
 
 - **名前の無いデバイスに、覚えている名前を付けて出す。** `settings.json`の`grantedDevices`には、
-  USBで最初に接続したときの名前がVID/PIDごとに残っている(`src-tauri/src/settings.rs`の`remember_device`)。
-  同じVID/PIDで名前が空なら、その名前に「(Bluetoothの可能性)」を添えて出す
-- **以前許可したVID/PIDがあれば、選択画面を出さずにそれを選ぶ。** 許可済みが複数あるとき・
-  無いときだけ選んでもらう
-- **Vialでない機器を見分ける。** Keychron LinkのようなVIAだけの機器は、`[0xFE, 0x00]`に`0xFF`を
-  返す(§2.6)。`hid/deviceProbe.ts`の確認で、応答の`data[0] === 0xFF`なら「答えたがVialではない」
-  として候補から外す。選択画面は画面の側(`nativeHid.ts`)にあるので、確認した結果をそのまま使える
-- テスト: `tests/nativeHid.test.ts`と`tests/webhidTransport.test.ts`の、候補の選び方
+  許可したときの名前がVID/PIDごとに残っている。Rustが一覧を返すとき(`commands.rs`の`hid_devices`)、
+  名前が空なら覚えている名前で補う。選択画面にもツールバーのデバイス名にも効く。BTで先に許可して名前が
+  空のまま覚えたものは、あとでUSBで選んだときに名前を埋める(`settings.rs`の`remember_device`)
+- **Bluetoothかどうかはパスで分かる**ので、推測ではなく「Bluetooth」の印を付ける(`hid.rs`の
+  `is_bluetooth_path`。パスにHID over GATTのサービス`{00001812-…}`を含む)
+- **前に接続したキーボードは、先頭に並べて「前回のキーボード」の印を付ける。自動では選ばない。**
+  名前と印で見分けられれば選択画面でも迷わず、自動で選ぶと、別のキーボードに接続したいときに
+  先に「忘れる」を押さないと選べなくなるため。選択画面を出すのは、これまでどおり別々のキーボード
+  (VID/PIDが違うもの)が並ぶときだけ
+- **Vialでない機器を見分ける。** Keychron LinkのようなVIAだけの機器は、`[0xFE, 0x00]`に`0xFF`
+  (id_unhandled)を返す(§2.6)。接続前の確認(`hid/deviceProbe.ts`)で、答えても`data[0] === 0xFF`なら
+  選ばない。Vialでない機器しか答えなければ、「応答しません」ではなく「Vialに対応していません」と出す。
+  選択画面を出す前には問い合わせない(そのとき別のウィンドウや前のセッションがデバイスを使っている
+  ことがあり、確認のために開くと応答が混ざる)
+- テスト: `tests/nativeHid.test.ts`(並べ方・印・名前)、`tests/webhidTransport.test.ts`(Vialでない機器)、
+  `tests/keyboardConnection.test.ts`(文言)、`src-tauri/src/hid.rs` / `settings.rs`のテスト
 
 ### P3. 往復時間に合わせてタイムアウトを延ばし、ずれを防ぐ
 
@@ -319,9 +327,9 @@ P3で往復時間を記録するので、それを出すだけ。USBかBTかは�
 
 | ファイル | P |
 |---|---|
-| `src/renderer/src/hid/nativeHid.ts`(許可済みのVID/PIDを自動で選ぶ、名前の無いデバイスに名前を付ける) | P2 |
-| `src/renderer/src/components/DevicePicker.tsx`(名前の出し方) | P2 |
-| `src/renderer/src/hid/deviceProbe.ts`(`0xFF`を返す機器をVialでないとして外す) | P2 |
+| `src-tauri/src/hid.rs` / `commands.rs` / `settings.rs`(Bluetoothの判定、覚えた名前で補う。済み) | P2 |
+| `src/renderer/src/hid/nativeHid.ts` / `components/DevicePicker.tsx`(前回のキーボードを先頭に、印。済み) | P2 |
+| `src/renderer/src/hid/deviceProbe.ts`(`0xFF`を返す機器をVialでないとして外す。済み) | P2 |
 | `src/renderer/src/hid/transport.ts`(`WebHidTransport`: 往復時間の記録、タイムアウトの延長。済み) | P3 |
 | `src/renderer/src/session/keyboardConnection.ts`(抜き差し・切り替えへの追従。土台は済み) | P4 |
 | `src/renderer/src/session/keyboardSession.ts`(エラー時の通知、アンロックの最大値) | P4, P5 |
