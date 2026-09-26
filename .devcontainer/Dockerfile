@@ -57,3 +57,11 @@ RUN dotnet tool install --global vpk --version "${VPK_VERSION}"
 # devcontainerでClaude Codeの設定のボリュームを被せる場所(devcontainer.json)。
 # 上のcargoのRUNに混ぜると、そこから先を作り直すことになる(cargo-xwinのビルドで数分)ので分ける
 RUN mkdir -p /home/ubuntu/.claude
+
+# 開発用のElectron(npm run shots / gen:icon。アプリ本体ではない)が要るライブラリ。
+# 残りはwebkit2gtkが連れてくる。最初のapt-getに混ぜると、cargo-xwinのビルドから作り直すことになるので、
+# ここでrootに戻って足す
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends libnss3 libasound2t64 \
+  && rm -rf /var/lib/apt/lists/*
+USER ubuntu

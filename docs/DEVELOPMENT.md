@@ -115,6 +115,7 @@ fc-cache -f
 使う(アプリ本体ではなく、配布物にも入らない)。
 
 - `libnss3.so`などが無いと言われる → `sudo apt install -y libnss3 libnspr4 libasound2t64`
+  (Dev Containerのイメージには入れてある)
 - `app`がundefinedで落ちる → 環境変数`ELECTRON_RUN_AS_NODE`が立っている。
   一部のツール(Claude Codeなど)の中から実行すると付いていることがある。`env -u ELECTRON_RUN_AS_NODE npm run shots`
 
@@ -125,6 +126,10 @@ fc-cache -f
   コンテナで作ったファイル(`src-tauri/target/`など)がホストでは別人の持ち物になる
 - crateとMSVCのCRT / Windows SDKは、名前付きボリューム(`lkv-cargo-registry` / `lkv-xwin-cache`)に残る。
   `src-tauri/target/`は作業ツリーの中(gitには入れない)
+- **Dev Containerのビルド結果は`src-tauri/target/devcontainer/`に分けてある**(devcontainer.jsonの
+  `CARGO_TARGET_DIR`)。WSLから`npm run container`で動かすときは作業ツリーをホストと同じパスに置き、
+  Dev Containerは`/workspaces/…`に置くので、同じ場所を使うとビルドスクリプトが残した絶対パスが食い違い、
+  「failed to read plugin permissions」などで失敗する。`package-win.mjs`は`CARGO_TARGET_DIR`に従う
 - Dockerfileを直すと、次に`scripts/container.mjs`を通したときにイメージを作り直す(イメージの名前が中身のハッシュ)
 
 ### 実機の通信を切り分ける

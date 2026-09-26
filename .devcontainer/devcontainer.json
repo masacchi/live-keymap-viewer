@@ -21,7 +21,11 @@
   "containerEnv": {
     // Claude Codeは既定では.claude.json(初回の設定・プロジェクトの信頼など)をホームの直下に置き、
     // そこはボリュームの外なので作り直すと消える。設定のフォルダごとボリュームの中に置かせる
-    "CLAUDE_CONFIG_DIR": "/home/ubuntu/.claude"
+    "CLAUDE_CONFIG_DIR": "/home/ubuntu/.claude",
+    // Rustのビルド結果は、WSLから`npm run container`で動かすときと分ける。作業ツリーの置き場所が
+    // 違う(WSLはホストと同じパス、ここは/workspaces)ので、同じsrc-tauri/targetを使うと、
+    // ビルドスクリプトが残した絶対パスが食い違ってビルドが失敗する
+    "CARGO_TARGET_DIR": "${containerWorkspaceFolder}/src-tauri/target/devcontainer"
   },
   // npm run dev(Vite)。Windowsのブラウザでhttp://localhost:5173を開くと、モックで画面を触れる
   "forwardPorts": [5173],

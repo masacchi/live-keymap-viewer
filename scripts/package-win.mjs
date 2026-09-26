@@ -69,7 +69,9 @@ execFileSync(
   { cwd: ROOT, stdio: 'inherit', env }
 )
 
-const built = join(ROOT, 'src-tauri', 'target', TARGET, 'release', 'live-keymap-viewer.exe')
+// Dev Containerではビルド結果の置き場所を変えている(devcontainer.jsonのCARGO_TARGET_DIR)
+const targetDir = resolve(process.env.CARGO_TARGET_DIR ?? join(ROOT, 'src-tauri', 'target'))
+const built = join(targetDir, TARGET, 'release', 'live-keymap-viewer.exe')
 if (!existsSync(built)) throw new Error(`できているはずのexeが無い: ${built}`)
 
 rmSync(OUT_DIR, { recursive: true, force: true })
