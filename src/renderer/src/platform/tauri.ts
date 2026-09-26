@@ -114,6 +114,8 @@ function createApi(chooser: DeviceChooser): RendererApi {
     forgetDevice: (vendorId, productId) =>
       invoke<GrantedDevice[]>('settings_forget_device', { vendorId, productId }),
     isShortcutRegistered: (shortcut) => invoke<boolean>('shortcut_registered', { shortcut }),
+    getAutostart: () => invoke<boolean>('autostart_get'),
+    setAutostart: (enabled) => invoke<boolean>('autostart_set', { enabled }),
 
     getMode: () => invoke<WindowMode>('window_get_mode'),
     toggleMode: () => invoke<WindowMode>('window_toggle_mode'),

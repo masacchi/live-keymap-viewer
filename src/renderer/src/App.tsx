@@ -29,6 +29,7 @@ import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import { cn } from './lib/cn'
+import { reportError } from './lib/report'
 import { messages } from './messages'
 
 type WindowMode = 'normal' | 'overlay'
@@ -61,6 +62,20 @@ export default function App(): JSX.Element {
   // 切り替えのショートカットを登録できたか。変えるたびに確かめる。変更(updateSettings)と
   // 問い合わせはどちらもRustのメインスレッドで送った順に処理されるので、登録し直したあとの状態が返る
   const [shortcutRegistered, setShortcutRegistered] = useState(true)
+  // Windowsの起動時に自動で起動するか(OSへの登録)。取れなければnullで、設定パネルに欄を出さない
+  const [autostart, setAutostart] = useState<boolean | null>(null)
+  useEffect(() => {
+    void window.api
+      ?.getAutostart()
+      .then(setAutostart)
+      .catch(() => setAutostart(null))
+  }, [])
+  const onAutostart = useCallback((enabled: boolean) => {
+    void window.api
+      ?.setAutostart(enabled)
+      .then(setAutostart)
+      .catch((error: unknown) => reportError('自動で起動する設定を変えられなかった', String(error)))
+  }, [])
   useEffect(() => {
     void window.api?.isShortcutRegistered(settings.toggleShortcut).then(setShortcutRegistered)
   }, [settings.toggleShortcut])
@@ -196,6 +211,8 @@ export default function App(): JSX.Element {
               onRename={canSave && uid ? onRename : undefined}
               keyboardTappingTerm={snapshot?.tappingTerm}
               shortcutRegistered={shortcutRegistered}
+              autostart={autostart}
+              onAutostart={onAutostart}
               settings={settings}
               onChange={updateSettings}
               onForgetDevice={canSave ? forgetDevice : undefined}

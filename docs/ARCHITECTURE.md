@@ -229,6 +229,8 @@ stateDiagram-v2
 | **ノブは押し込みキーを円く描き、回したときの割り当てを上下に挟む** | Cornixの定義はエンコーダーを図の右端に並べて置いてあり、KLEの座標には意味が無い。押し込みキー(Cornixなら消音・中クリック)は上下が空いているので、そこに挟めば場所も取らず、どのノブの割り当てかも図の上で分かる。ただ、押し込みがどのキーかはVialの定義に無いので、分かっているキーボードだけ`layout/knobButtons.ts`に持ち、ほかは図の下に同じ上下の形で並べる。上を右回りにするのは、音量なら「音量+」が上に来るように |
 | **モードを変えるたびにウィンドウを作り直す** | 透明なウィンドウは、作った後から切り替えられない |
 | **オーバーレイの操作パネルの上だけクリック透過を切る**。**透過中はRustがカーソルの位置を送る** | 画面は、ポインタが`data-interactive`の上に来たときだけ透過を解く(`OverlayControls`)。ところが透過中はウィンドウにmousemoveが届かない。そこで透過中はRustが33msごとにカーソルの位置を読んで`overlay-cursor`で送り、画面は同じ形のmousemoveとして流す(`platform/tauri.ts`)。透過を切っているあいだは本物のmousemoveが届くので送らない |
+| **タスクトレイにアイコンを置く**(`tray.rs`) | オーバーレイはタスクバーに出さない(`skip_taskbar`)ので、オーバーレイで使っているあいだはアプリを見つける場所が無い。トレイから前に出す・切り替える・終了できるようにする。Tauri本体の`tray-icon`機能で足り、crateは増えない |
+| **Windowsの起動時の自動起動は、OSへの登録で持つ**(`tauri-plugin-autostart`、`autostart_get` / `autostart_set`) | settings.jsonに持つと、OSの登録(HKCUのRun)と食い違ったときにどちらが正しいか分からない。登録そのものを読み書きする。名前は開発版とリリース版で分け(`channel::TITLE`)、両方入れても互いの登録を上書きしない。登録するのは動いているexeのパスで、インストーラーで入れたものは更新しても変わらない(`current`フォルダ) |
 | **Tauriを使う** | Windowsに入っているWebView2を使うので、Chromium一式を同梱せずに済み、配布物がexe 1つ(8MBほど)になる。exeのアイコンとバージョン情報もビルドで入る。**メモリはあまり減らない**(WebView2も中身はChromiumで、画面のプロセスはほぼ同じだけ使う)。画面・プロトコル・接続の管理はTypeScriptで書き、Rustはウィンドウ・HID・設定・ログだけを受け持つ |
 | **Windows版はLinuxからクロスビルドする**(cargo-xwin) | 手元(WSL)とCI(Ubuntu)で同じ手順になり、wineもWindowsも要らない。cargo-xwinはMSVCのCRTとWindows SDKをダウンロードして、clang / lldでリンクする。hidapiはCを使わないWindows実装(`windows-native`)にして、Cのクロスコンパイルを避けた |
 | **Rustの道具はコンテナ(podman)に入れる** | WSL(ホスト)を汚さず、CIと同じ道具をそろえられる。`scripts/container.mjs`がWSLで打ったコマンドを中で動かすので、`npm run deploy:win`は1回で済む。Windowsに置く部分だけはpowershell.exeが要るのでWSLで動かす |

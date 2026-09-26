@@ -8,6 +8,7 @@
 //!   updater.rs  … インストーラーで入れたときの更新(Velopack)
 //!   channel.rs  … 開発版かリリース版か(置き場所・更新の元を分ける)
 //!   shortcut.rs … 通常ウィンドウとオーバーレイを切り替えるショートカット
+//!   tray.rs     … タスクトレイのアイコン(オーバーレイはタスクバーに出ないので)
 
 // 配布ビルドでコンソールの窓を出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -18,6 +19,7 @@ mod hid;
 mod logfile;
 mod settings;
 mod shortcut;
+mod tray;
 mod updater;
 mod windows;
 
@@ -42,6 +44,9 @@ fn main() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // Windowsの起動時に自動で起動する(HKCUのRunに登録する)。名前は開発版とリリース版で分け、
+        // 両方入れても互いの登録を上書きしない
+        .plugin(tauri_plugin_autostart::Builder::new().app_name(channel::TITLE).build())
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
             commands::settings_get,
@@ -63,6 +68,8 @@ fn main() {
             commands::log_report,
             commands::log_open,
             commands::shortcut_registered,
+            commands::autostart_get,
+            commands::autostart_set,
             commands::update_check,
             commands::update_apply,
         ])
@@ -91,6 +98,11 @@ fn main() {
             app.manage(shortcut::ToggleShortcut::default());
             let toggle = app.state::<Arc<SettingsStore>>().load().toggle_shortcut;
             shortcut::apply(app.handle(), &toggle);
+
+            // トレイが作れなくても(対応していない環境)、アプリは使える
+            if let Err(error) = tray::create(app.handle()) {
+                logfile::warn("タスクトレイのアイコンを作れなかった", Some(&error.to_string()));
+            }
             Ok(())
         })
         .build(tauri::generate_context!())

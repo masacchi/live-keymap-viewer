@@ -397,6 +397,22 @@ describe('SettingsPanel', () => {
     )
   })
 
+  it('Windowsの起動時に自動で起動するかを、取れたときだけ出す', () => {
+    const appInfo = {
+      version: '0.1.1',
+      runtime: 'WebView2',
+      buildTime: '2026-09-26T00:00:00.000Z',
+      logPath: 'log.txt'
+    }
+    expect(panel({ appInfo })).not.toContain('自動で起動する')
+    expect(panel({ appInfo, autostart: false })).toMatch(
+      /<input type="checkbox"(?![^>]*checked)[^>]*>[^<]*<span>Windowsの起動時に自動で起動する/
+    )
+    expect(panel({ appInfo, autostart: true })).toMatch(
+      /<input type="checkbox"[^>]*checked=""[^>]*>[^<]*<span>Windowsの起動時に自動で起動する/
+    )
+  })
+
   it('どのビルドが動いているかと、ログの置き場所を出す', () => {
     // WSLで作ってWindowsに置くので、「直した版が動いているのか」が分からなくなる
     const html = panel({

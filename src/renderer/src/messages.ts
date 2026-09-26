@@ -207,6 +207,9 @@ export const messages = {
       'すりガラスのようにぼかします(Windows 11)。強さはOSが決めます。薄くしているあいだは外れます',
     blurUnsupported: 'Windows 11でだけ使えます',
     overlayPanelToo: 'オーバーレイの左上のパネルからも変えられます',
+    autostart: 'Windowsの起動時に自動で起動する',
+    autostartHint:
+      '前回のモード(通常ウィンドウ / オーバーレイ)で開きます。タスクトレイのアイコンからも切り替え・終了できます',
     shortcut: 'ショートカット',
     toggleShortcut: '切り替え',
     shortcutRecording: 'キーを押してください…',

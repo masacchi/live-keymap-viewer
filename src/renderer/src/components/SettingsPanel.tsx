@@ -54,6 +54,11 @@ export interface SettingsPanelProps {
    * falseになるので、別の組み合わせを勧める。
    */
   shortcutRegistered?: boolean
+  /**
+   * Windowsの起動時に自動で起動するか。取れていなければnull(欄を出さない。ブラウザで開いたときなど)。
+   */
+  autostart?: boolean | null
+  onAutostart?: (enabled: boolean) => void
   onChange: (patch: SettingsPatch) => void
   /**
    * キーボードから読めた長押しの判定時間(ms)。読めていればそちらで判定するので、
@@ -202,6 +207,8 @@ export function SettingsPanel({
   onChange,
   keyboardTappingTerm = null,
   shortcutRegistered = true,
+  autostart = null,
+  onAutostart,
   onForgetDevice,
   blurSupported,
   appInfo,
@@ -395,6 +402,20 @@ export function SettingsPanel({
             {messages.settings.build(appInfo.version, formatBuildTime(appInfo.buildTime))}
           </p>
           <p className="text-2xs text-muted">{messages.settings.runtime(appInfo.runtime)}</p>
+          {autostart != null && (
+            <label className="flex items-start gap-2 text-xs text-ink">
+              <input
+                type="checkbox"
+                checked={autostart}
+                onChange={(event) => onAutostart?.(event.target.checked)}
+                className="mt-0.5 accent-ink"
+              />
+              <span>
+                {messages.settings.autostart}
+                <span className="block text-2xs text-muted">{messages.settings.autostartHint}</span>
+              </span>
+            </label>
+          )}
           {update && <UpdateRow update={update} onCheck={onCheckUpdate} onApply={onApplyUpdate} />}
           <p className="break-all font-mono text-2xs text-muted">{appInfo.logPath}</p>
           <div className="flex items-center gap-2">

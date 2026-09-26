@@ -77,6 +77,10 @@ export interface RendererApi {
    * 登録できないので、設定パネルで案内する。
    */
   isShortcutRegistered(shortcut: string): Promise<boolean>
+  /** Windowsの起動時に自動で起動するようになっているか(OSへの登録。settings.jsonではない)。 */
+  getAutostart(): Promise<boolean>
+  /** Windowsの起動時に自動で起動するかを変える。変えたあとの状態を返す。 */
+  setAutostart(enabled: boolean): Promise<boolean>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

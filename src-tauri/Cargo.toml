@@ -9,13 +9,16 @@ publish = false
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# tray-icon: タスクトレイのアイコン(src/tray.rs)
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # インストーラーと更新(src/updater.rs)。パッケージを作るvpk(.devcontainer/DockerfileのVPK_VERSION)と
 # 同じ版に固定する。パッケージの形式と、アプリ側の読み方が食い違わないように
 velopack = "=1.2.158"
+# Windowsの起動時に自動で起動する(HKCUのRunに登録する)。Rustからだけ使う(画面にはJSのパッケージを入れない)
+tauri-plugin-autostart = "2"
 
 # HIDはRustで扱う(docs/ARCHITECTURE.md §2)。Windowsでは、Cのビルドが要らないRustだけの実装を使う。
 # Linuxからcargo-xwinでクロスビルドするので、Cのツールチェーンを用意しなくて済む

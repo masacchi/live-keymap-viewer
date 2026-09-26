@@ -46,6 +46,8 @@ window.api = {
     return settings.grantedDevices
   },
   isShortcutRegistered: async () => true,
+  getAutostart: async () => false,
+  setAutostart: async (enabled) => enabled,
   getMode: async () => mode,
   toggleMode: async () => mode,
   setOverlayBlurActive: noop,

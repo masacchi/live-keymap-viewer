@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 use tauri::async_runtime::spawn_blocking;
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri_plugin_autostart::ManagerExt;
 
 use crate::hid::{HidBridge, HidDeviceInfo};
 use crate::logfile;
@@ -78,6 +79,22 @@ pub fn settings_update(
         shortcut::apply(&app, &saved.toggle_shortcut);
     }
     saved
+}
+
+/// Windowsの起動時に自動で起動するようになっているか。
+#[tauri::command]
+pub fn autostart_get(app: AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+/// Windowsの起動時に自動で起動するかを変える。変えたあとの状態を返す。
+/// 登録するのはいま動いているexeのパス(インストーラーで入れたものは更新しても変わらない)。
+#[tauri::command]
+pub fn autostart_set(app: AppHandle, enabled: bool) -> Result<bool, String> {
+    let autolaunch = app.autolaunch();
+    let result = if enabled { autolaunch.enable() } else { autolaunch.disable() };
+    result.map_err(|e| e.to_string())?;
+    autolaunch.is_enabled().map_err(|e| e.to_string())
 }
 
 /// 切り替えのショートカットとして`shortcut`を登録できているか。ほかのアプリが同じ組み合わせを

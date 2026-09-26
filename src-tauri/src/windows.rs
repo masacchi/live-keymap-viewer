@@ -123,6 +123,15 @@ impl WindowManager {
         self.lock().window = window;
     }
 
+    /// ウィンドウを前に出す(タスクトレイから)。最小化していれば戻す。
+    /// ロックを持ったままウィンドウを操作しない(current()は複製を返してロックを離す)。
+    pub fn show(&self) {
+        let Some(window) = self.current() else { return };
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+
     pub fn toggle_mode(self: &Arc<Self>) {
         let next = match self.mode() {
             WindowMode::Normal => WindowMode::Overlay,
