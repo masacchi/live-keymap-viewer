@@ -19,6 +19,10 @@
   --color-surface-2: #181c1f;
   --color-ink: #e4e7e8;
   --color-muted: #98a0a5;
+  /*
+   * 一番薄い色。地とのコントラスト比が3前後しかないので、読ませる文字には使わない(説明はmuted)。
+   * 飾りの矢印や、効いていない印(ModifierBadgesの消えているもの)のように、薄いこと自体が意味を持つものだけ
+   */
   --color-faint: #5d656a;
   --color-line: #3a4247;
   --color-line-soft: #2b3236;

@@ -68,7 +68,7 @@ function UpdateRow({
 }): JSX.Element {
   const text = messages.settings.update
   if (update.phase === 'unsupported') {
-    return <p className="text-2xs text-faint">{text.unsupported}</p>
+    return <p className="text-2xs text-muted">{text.unsupported}</p>
   }
   const status = {
     idle: '',
@@ -164,7 +164,7 @@ export function SettingsPanel({
                       const value = event.currentTarget.value
                       if (value !== (names[layer] ?? '')) onRename(layer, value)
                     }}
-                    className="h-7 min-w-0 flex-1 rounded-md border border-line bg-surface-2 px-2 text-xs text-ink outline-none placeholder:text-faint focus:border-ink/60"
+                    className="h-7 min-w-0 flex-1 rounded-md border border-line bg-surface-2 px-2 text-xs text-ink outline-none placeholder:text-muted focus:border-ink/60"
                   />
                 </li>
               ))}
@@ -303,7 +303,7 @@ export function SettingsPanel({
           </p>
           <p className="text-2xs text-muted">{messages.settings.runtime(appInfo.runtime)}</p>
           {update && <UpdateRow update={update} onCheck={onCheckUpdate} onApply={onApplyUpdate} />}
-          <p className="break-all font-mono text-2xs text-faint">{appInfo.logPath}</p>
+          <p className="break-all font-mono text-2xs text-muted">{appInfo.logPath}</p>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => window.api?.openLog()}>
               {messages.settings.openLog}

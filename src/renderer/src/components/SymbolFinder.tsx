@@ -52,7 +52,7 @@ export function RouteChips({
       {steps.map((step, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: 手順の並びは変わらない
         <Fragment key={i}>
-          {i > 0 && <span className="text-2xs text-faint">+</span>}
+          {i > 0 && <span className="text-2xs text-muted">+</span>}
           {step.kind === 'layer' ? (
             <span
               className={cn(chip, 'border-black/25 text-ink-inverse')}
@@ -149,7 +149,7 @@ function SymbolCard({
             )}
           </>
         ) : (
-          <span className="text-2xs text-faint">{messages.symbols.unavailable}</span>
+          <span className="text-2xs text-muted">{messages.symbols.unavailable}</span>
         )}
       </span>
     </button>
