@@ -142,16 +142,8 @@ export default function App(): JSX.Element {
         faded && 'faded'
       )}
       // オーバーレイの濃さは、ウィンドウではなく中身に掛ける。ウィンドウごと薄くすると
-      // 後ろのぼかしまで薄くなり、ぼけていない後ろの画面が透けてしまう(src-tauri/src/windows.rs)。
-      // --faded-opacityはL0で薄くしたときの背景の板の濃さ(図と同じだけ薄くする。styles.css)
-      style={
-        overlay
-          ? ({
-              opacity: settings.overlayOpacity,
-              '--faded-opacity': settings.overlayFadedOpacity
-            } as React.CSSProperties)
-          : undefined
-      }
+      // 後ろのぼかしまで薄くなり、ぼけていない後ろの画面が透けてしまう(src-tauri/src/windows.rs)
+      style={overlay ? { opacity: settings.overlayOpacity } : undefined}
     >
       {overlay && (
         <OverlayControls
@@ -232,15 +224,19 @@ export default function App(): JSX.Element {
       <main
         className={
           overlay
-            ? 'flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
+            ? 'overlay-body flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
             : 'flex min-h-0 flex-1 flex-col gap-2 p-2 md:gap-3 md:p-4'
         }
-        // 濃く戻すのはすぐ、薄くするのは少し待ってからゆっくり(レイヤーキーの短い押下でちらつかせない)
+        // 背景の板もこの中にあり(styles.cssの.overlay-body)、図と一緒に薄くなる。
+        // 薄くするのは少し待ってから(レイヤーキーの短い押下でちらつかせない)。出すのも消すのも
+        // 短く済ませ、すっと切り替える(ゆっくり変わると、そのあいだ図が読みにくい)
         style={
           overlay
             ? {
                 opacity: faded ? settings.overlayFadedOpacity : 1,
-                transition: faded ? `opacity 400ms ease ${FADE_DELAY_MS}ms` : 'opacity 80ms ease'
+                transition: faded
+                  ? `opacity 150ms ease-out ${FADE_DELAY_MS}ms`
+                  : 'opacity 60ms ease-out'
               }
             : undefined
         }

@@ -24,9 +24,11 @@ export function KeyboardFrame({
 }): JSX.Element {
   const color = layerColor(shownLayer)
   const base = shownLayer === 0
+  // 縁の色の切り替えは短くする。キーの色はその場で変わるので、縁だけ遅れると
+  // レイヤーが変わるたびに図と縁がずれて見える
   return (
     <div
-      className="relative min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors"
+      className="relative min-h-0 flex-1 rounded-xl border-4 p-1.5 transition-colors duration-75"
       style={{
         // ベースレイヤーは縁を出さない(プレビューでL0を出しているときだけ破線で出す)
         borderColor: base && !preview ? 'transparent' : color,
