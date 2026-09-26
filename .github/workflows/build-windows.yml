@@ -57,6 +57,10 @@ jobs:
         run: |
           version=$(node -p "require('./package.json').version")
           tag=${INPUT_TAG:-}
+          # 手で書くタグは「0.1.0」とvを付け忘れやすい。数字で始まっていればvを補う
+          if [[ "$tag" =~ ^[0-9] ]]; then
+            tag="v$tag"
+          fi
           if [ -z "$tag" ] && [ "$GITHUB_REF_TYPE" = tag ]; then
             tag=$GITHUB_REF_NAME
           fi
@@ -72,7 +76,7 @@ jobs:
           else
             # アプリの画面・ログ・「設定 → アプリ」に出る版はpackage.jsonから来る。タグと食い違わないように
             if [ "$tag" != "v$version" ]; then
-              echo "::error::タグ $tag と package.json の版($version)が合っていません。package.json の版を ${tag#v} にしてからリリースしてください(npm version ${tag#v} で版上げとタグ付けが一度にできます)"
+              echo "::error::タグ $tag が package.json の版($version)と合っていません。タグは v$version にしてください。別の版を出すなら、先に package.json の版を上げてください(npm version ${tag#v} で版上げとタグ付けが一度にできます)"
               exit 1
             fi
             # gh release createは既にあるタグをそのまま使う。別のcommitのビルドを載せないように止める
