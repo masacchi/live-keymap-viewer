@@ -345,10 +345,21 @@ export class KeyboardSession {
     return !this.disposed && gen === this.generation
   }
 
-  /** 長押しと見なすまでの時間を変える。動いているエンジンにもすぐ効かせる(これから押すキーから)。 */
+  /**
+   * 長押しと見なすまでの時間(アプリの設定)を変える。動いているエンジンにもすぐ効かせる
+   * (これから押すキーから)。キーボードから判定時間を読めているあいだは、そちらを使うので効かない。
+   */
   setTappingTerm(ms: number): void {
     this.tappingTerm = ms
-    this.current.engine?.setTappingTerm(ms)
+    if (this.current.snapshot?.tappingTerm == null) this.current.engine?.setTappingTerm(ms)
+  }
+
+  /**
+   * 判定に使う長押しの時間。キーボードに設定されている値を読めたらそれを、読めなければアプリの設定を使う。
+   * キーボードと合っていないと、表示だけ早く / 遅く切り替わるため(設定で合わせてもらうのは予備)。
+   */
+  private tappingTermFor(snapshot: KeyboardSnapshot): number | undefined {
+    return snapshot.tappingTerm ?? this.tappingTerm
   }
 
   private update(patch: Partial<SessionState>): void {
@@ -383,7 +394,7 @@ export class KeyboardSession {
       cols: snapshot.cols,
       keymap: snapshot.keymap,
       tapDance: snapshot.tapDance,
-      tappingTerm: this.tappingTerm
+      tappingTerm: this.tappingTermFor(snapshot)
     })
     if (previous) engine.inheritFrom(previous)
     const geometry =

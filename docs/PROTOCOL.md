@@ -83,7 +83,14 @@ Vialコマンド(`0xFE`)は`msg[0]`から上書きするため照合できない
 | アンロックのポーリング | `[0xFE, 0x07]` | `data[0]`=unlocked、`data[1]`=in_progress、`data[2]`=counter | `vial.c:166-189` |
 | ロック | `[0xFE, 0x08]` | — | `vial.c:190-196` |
 | dynamic entryの数 | `[0xFE, 0x0D, 0x00]` | `data[0]`=TDの数、`[1]`=Comboの数、`[2]`=KeyOverrideの数、`[3]`=AltRepeatの数、`data[31]`=機能のビット | `vial.c:228-245` |
+| QMK設定の取得 | `[0xFE, 0x0A, qsid_lo, qsid_hi]` | `data[0]`=status(0が成功、知らない番号は0xFF)、値は`data[1..]`(長さは設定ごと)。長押しの判定時間(tapping term)は**qsid 7、u16 LE** | `vial.c:210-214`(`#ifdef QMK_SETTINGS`)、`qmk_settings.c:53,257-267`、`keyboard_comm.py:308-311`、vial-guiの`qmk_settings.json`(qsid 7は`width: 2`) |
 | Tap Danceの取得 | `[0xFE, 0x0D, 0x01, idx]` | `data[0]`=status(0が成功)、`data[1..10]` = u16 **LE** ×5 = on_tap、on_hold、on_double_tap、on_tap_hold、tapping_term | `vial.c:247-254`、`vial.h:99-100`、`tap_dance.py:16-17` |
+
+### 長押しの判定時間
+
+アプリは読み込みと読み直しのたびに`[0xFE, 0x0A, 7, 0]`を1回送り、`data[0]`が0で値が0より大きければ、
+それをLT / MTの長押しの判定に使う(`hid/vial.ts`の`getTappingTerm`)。読めなければ(QMK設定の無い
+vial-qmk、RMKで設定していない)アプリの設定の「長押しまで」を使う。Tap Danceはエントリごとの値を使う。
 
 ### アンロックの動き
 
@@ -246,6 +253,7 @@ Cornix LP V1.12のファームに埋め込まれたソースパス(`.../rmk/src/
 | アンロック進行中の状態 | ファームにタイムアウトが無い | 最後のポーリングから100msで解ける |
 | アンロック中のVIAコマンド | 通さない | 止める処理は見当たらない |
 | USBとBLE | (BLEは無い) | **どちらか一方しか動かさない**。BLE側にも同じ形(レポートID無し・32バイト)のVialがある |
+| QMK設定(`0xFE 0x0A`) | `QMK_SETTINGS`を付けてビルドしたときだけ答える。無ければ要求をそのまま返す(`data[0]`が0xFE) | behavior settingとして答える(`host/via/vial.rs`の`GetBehaviorSetting`)。qsid 7は`MorseTimeout`(デフォルトのプロファイルの`hold_timeout_ms`)で、**設定していなければ0** |
 
 この文書の§1〜§9を読むときは、「vial-qmkではこうなっている」と読み替えること。
 アプリは両方で動くように作る(例: アンロックの進み具合は、見たカウンタの最大値を最大にする。BLUETOOTH.md P5)。

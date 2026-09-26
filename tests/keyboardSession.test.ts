@@ -189,6 +189,32 @@ describe('KeyboardSession: アンロック', () => {
   })
 })
 
+describe('KeyboardSession: 長押しの判定時間', () => {
+  it('キーボードから読めたら、その値で判定する。アプリの設定は効かない', async () => {
+    const mock = new MockTransport({ unlocked: true, tappingTerm: 250 })
+    const session = new KeyboardSession(mock, { ...options(), tappingTerm: 150 })
+    await session.start()
+    const state = await waitFor(session, (s) => s.status === 'ready')
+    expect(state.snapshot?.tappingTerm).toBe(250)
+    expect(state.engine?.tappingTerm).toBe(250)
+    session.setTappingTerm(400)
+    expect(session.state.engine?.tappingTerm).toBe(250)
+    await session.dispose()
+  })
+
+  it('読めなければ(0が返る)、アプリの設定で判定し、設定を変えればすぐ効く', async () => {
+    const mock = new MockTransport({ unlocked: true })
+    const session = new KeyboardSession(mock, { ...options(), tappingTerm: 150 })
+    await session.start()
+    const state = await waitFor(session, (s) => s.status === 'ready')
+    expect(state.snapshot?.tappingTerm).toBeNull()
+    expect(state.engine?.tappingTerm).toBe(150)
+    session.setTappingTerm(400)
+    expect(session.state.engine?.tappingTerm).toBe(400)
+    await session.dispose()
+  })
+})
+
 describe('KeyboardSession: ポーリング', () => {
   it('往復時間を測るトランスポートなら、押下を読みながら往復時間を知らせる', async () => {
     const mock = new MockTransport({ unlocked: true })

@@ -30,6 +30,10 @@ export const CMD_VIAL_GET_UNLOCK_STATUS = 0x05
 export const CMD_VIAL_UNLOCK_START = 0x06
 export const CMD_VIAL_UNLOCK_POLL = 0x07
 export const CMD_VIAL_LOCK = 0x08
+/** QMK設定(RMKではbehavior setting)を1つ読む。`[0xFE, 0x0A, qsid_lo, qsid_hi]`。 */
+export const CMD_VIAL_QMK_SETTINGS_GET = 0x0a
+/** QMK設定の番号(qsid)のうち、長押しの判定時間(tapping term。RMKではMorseTimeout)。u16。 */
+export const QSID_TAPPING_TERM = 7
 export const CMD_VIAL_DYNAMIC_ENTRY_OP = 0x0d
 
 // dynamic entry opのサブコマンド

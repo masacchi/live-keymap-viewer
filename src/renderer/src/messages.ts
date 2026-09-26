@@ -212,7 +212,9 @@ export const messages = {
     tappingTerm: '長押しまで',
     tappingTermValue: (ms: number) => `${ms}ms`,
     tappingTermHint:
-      'この時間押し続けると長押し(LTのレイヤー)と判定します。キーボード側の設定(tapping term / hold timeout)と同じ値にすると、表示がずれません。Tap Danceはキーボードに設定された時間を使います',
+      'この時間押し続けると長押し(LTのレイヤー)と判定します。キーボード側の設定(tapping term / hold timeout)と同じ値にすると、表示がずれません。キーボードから読めたときは、そちらを使います。Tap Danceはキーボードに設定された時間を使います',
+    tappingTermFromKeyboard: (ms: number) =>
+      `キーボードに設定された${ms}msで判定しています(Vialで変えたら、キーマップを読み直すと反映されます)。この値は、キーボードから読めないときに使います`,
     devices: '許可したキーボード',
     devicesHint:
       '起動したときに自動で接続します。「忘れる」を押すと、次からは「キーボードに接続」で選び直しになります',

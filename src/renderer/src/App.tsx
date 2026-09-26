@@ -188,6 +188,7 @@ export default function App(): JSX.Element {
                 .map(({ layer }) => ({ layer, how: guide.howTo(layer) }))}
               names={names}
               onRename={canSave && uid ? onRename : undefined}
+              keyboardTappingTerm={snapshot?.tappingTerm}
               settings={settings}
               onChange={updateSettings}
               onForgetDevice={canSave ? forgetDevice : undefined}

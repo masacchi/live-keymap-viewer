@@ -23,11 +23,13 @@ import {
   CMD_VIAL_GET_SIZE,
   CMD_VIAL_GET_UNLOCK_STATUS,
   CMD_VIAL_LOCK,
+  CMD_VIAL_QMK_SETTINGS_GET,
   CMD_VIAL_UNLOCK_POLL,
   CMD_VIAL_UNLOCK_START,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
+  QSID_TAPPING_TERM,
   SUPPORTED_VIA_PROTOCOL,
   SUPPORTED_VIAL_PROTOCOL,
   VIA_LAYOUT_OPTIONS,
@@ -84,6 +86,11 @@ export interface KeyboardSnapshot {
   /** [layer][encoder][direction]の生キーコード。 */
   encoders: number[][][]
   layoutOptions: number
+  /**
+   * キーボードに設定されている長押しの判定時間(ms)。読めなければnull(QMK設定が無いファーム、
+   * RMKで設定していない)。nullなら、アプリの設定の値で判定する。
+   */
+  tappingTerm: number | null
   /** matrix stateを読めるか(vial protocolとパケットサイズの条件)。 */
   matrixTestSupported: boolean
 }
@@ -295,6 +302,30 @@ export async function getEncoders(
   return out
 }
 
+/**
+ * キーボードに設定されている長押しの判定時間(ms)を読む。読めなければnull。
+ *
+ * vial-qmkはQMK設定(qmk_settings_get)、RMKはbehavior setting(GetBehaviorSetting)として、どちらも
+ * 同じ`[0xFE, 0x0A, 7, 0]`に答え、`data[0]`が0なら`data[1..2]`がu16 LE(docs/PROTOCOL.md §3)。
+ * QMK設定を持たないvial-qmkは要求をそのまま返す(`data[0]`が0xFE)ので、成功と取り違えない。
+ * RMKは設定していないと0を返すので、0も「読めなかった」とする。
+ */
+export async function getTappingTerm(transport: Transport): Promise<number | null> {
+  const data = await send(
+    transport,
+    [
+      CMD_VIA_VIAL_PREFIX,
+      CMD_VIAL_QMK_SETTINGS_GET,
+      QSID_TAPPING_TERM & 0xff,
+      QSID_TAPPING_TERM >> 8
+    ],
+    LONG
+  )
+  if (data[0] !== 0) return null
+  const value = u16le(data, 1)
+  return value > 0 ? value : null
+}
+
 export async function getLayoutOptions(transport: Transport): Promise<number> {
   const data = await send(transport, [CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS], LONG)
   return u32be(data, 2)
@@ -490,6 +521,8 @@ export interface CachedKeymap {
   tapDance: Array<TapDanceEntry | undefined>
   encoders: number[][][]
   layoutOptions: number
+  /** 長押しの判定時間。これを持たない前の版のキャッシュでは無い(読めなかったのと同じに扱う)。 */
+  tappingTerm?: number | null
 }
 
 export interface KeymapCache {
@@ -507,7 +540,8 @@ export function toCachedKeymap(snapshot: KeyboardSnapshot): CachedKeymap {
     keymap: snapshot.keymap,
     tapDance: snapshot.tapDance,
     encoders: snapshot.encoders,
-    layoutOptions: snapshot.layoutOptions
+    layoutOptions: snapshot.layoutOptions,
+    tappingTerm: snapshot.tappingTerm
   }
 }
 
@@ -558,6 +592,7 @@ export async function loadCachedKeyboard(
     tapDance: cached.tapDance,
     encoders: cached.encoders,
     layoutOptions: cached.layoutOptions,
+    tappingTerm: cached.tappingTerm ?? null,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, cached.rows, cached.cols)
   }
 }
@@ -636,6 +671,7 @@ export async function loadKeyboard(
   )
 
   const layoutOptions = definition.layouts.labels ? await getLayoutOptions(transport) : 0
+  const tappingTerm = await getTappingTerm(transport)
 
   return {
     viaProtocol,
@@ -650,6 +686,7 @@ export async function loadKeyboard(
     tapDance,
     encoders,
     layoutOptions,
+    tappingTerm,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, rows, cols)
   }
 }
@@ -659,7 +696,7 @@ export async function loadKeyboard(
  *
  * 物理配置・customKeycodesが入っている定義JSONは、ファームを焼き直さないと
  * 変わらない(焼き直せばUSBごと再接続になる)。そこで定義は使い回し、Vialで編集され得るところ
- * (キーマップ、Tap Dance、エンコーダー、レイアウトオプション)だけを読み直す。
+ * (キーマップ、Tap Dance、エンコーダー、レイアウトオプション、長押しの判定時間)だけを読み直す。
  * 図を組み直さないので描画も跳ねない。
  */
 export async function reloadKeymap(
@@ -680,8 +717,9 @@ export async function reloadKeymap(
   const tapDance = await readTapDance(transport, dynamic.tapDance, keymap, encoders)
 
   const layoutOptions = previous.definition.layouts.labels ? await getLayoutOptions(transport) : 0
+  const tappingTerm = await getTappingTerm(transport)
 
-  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions }
+  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions, tappingTerm }
 }
 
 /**
@@ -690,7 +728,7 @@ export async function reloadKeymap(
  */
 export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
   const editable = (s: KeyboardSnapshot) =>
-    JSON.stringify([s.layers, s.keymap, s.tapDance, s.encoders, s.layoutOptions])
+    JSON.stringify([s.layers, s.keymap, s.tapDance, s.encoders, s.layoutOptions, s.tappingTerm])
   return editable(before) === editable(after)
 }
 

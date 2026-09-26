@@ -100,6 +100,11 @@ export class LayerEngine {
     this.config.tappingTerm = ms
   }
 
+  /** いまの長押しの判定時間(LTの既定)。 */
+  get tappingTerm(): number {
+    return this.config.tappingTerm
+  }
+
   /** すべて離した状態に戻す。再接続や切り替えのとき。 */
   reset(): void {
     this.defaultLayer = 0

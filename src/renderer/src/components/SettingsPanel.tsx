@@ -44,6 +44,11 @@ export interface SettingsPanelProps {
   /** いまの設定(このパネルで変える項目)。 */
   settings: Pick<Settings, 'tappingTerm' | 'grantedDevices' | 'showLayerTriggers'> & OverlaySettings
   onChange: (patch: SettingsPatch) => void
+  /**
+   * キーボードから読めた長押しの判定時間(ms)。読めていればそちらで判定するので、
+   * 「長押しまで」は動かせないようにして、その旨を出す。
+   */
+  keyboardTappingTerm?: number | null
   /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
   onForgetDevice?: (vendorId: number, productId: number) => void
   /** 後ろのぼかしが使えるか(Windowsのときだけ)。 */
@@ -122,6 +127,7 @@ export function SettingsPanel({
   onRename,
   settings,
   onChange,
+  keyboardTappingTerm = null,
   onForgetDevice,
   blurSupported,
   appInfo,
@@ -202,12 +208,17 @@ export function SettingsPanel({
           step={10}
           format={messages.settings.tappingTermValue}
           onChange={(tappingTerm) => onChange({ tappingTerm })}
+          disabled={keyboardTappingTerm != null}
           className="gap-2 text-xs text-ink"
           labelClassName="w-20"
           trackClassName="flex-1"
           valueClassName="w-14"
         />
-        <p className="text-2xs text-muted">{messages.settings.tappingTermHint}</p>
+        <p className="text-2xs text-muted">
+          {keyboardTappingTerm != null
+            ? messages.settings.tappingTermFromKeyboard(keyboardTappingTerm)
+            : messages.settings.tappingTermHint}
+        </p>
       </Section>
 
       <Section title={messages.settings.overlay}>

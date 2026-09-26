@@ -6,13 +6,14 @@ import {
 } from '@/hid/constants'
 import { LocalStorageDefinitionCache } from '@/hid/definitionCache'
 import { MockTransport } from '@/hid/mockTransport'
-import { RequestQueue, WebHidTransport } from '@/hid/transport'
+import { RequestQueue, type Transport, WebHidTransport } from '@/hid/transport'
 import {
   countEncoders,
   decodeMatrixState,
   getKeymap,
   getMatrixState,
   getTapDance,
+  getTappingTerm,
   getUnlockStatus,
   getViaProtocol,
   isMatrixTestSupported,
@@ -262,6 +263,42 @@ describe('matrix state', () => {
     expect(isMatrixTestSupported(2, 8, 7)).toBe(false)
     // (cols/8 + 1) * rowsが28を超えると不可
     expect(isMatrixTestSupported(6, 20, 20)).toBe(false)
+  })
+})
+
+describe('長押しの判定時間(QMK設定のtapping term)', () => {
+  it('キーボードに設定された値を読む', async () => {
+    const transport = new MockTransport({ unlocked: true, tappingTerm: 280 })
+    await transport.open()
+    expect(await getTappingTerm(transport)).toBe(280)
+    // [0xFE, 0x0A, 7, 0]で聞いている
+    expect([...(transport.requests.at(-1) ?? []).slice(0, 4)]).toEqual([0xfe, 0x0a, 7, 0])
+  })
+
+  it('0(RMKで設定していない)なら読めなかったものとする', async () => {
+    const transport = await openMock()
+    expect(await getTappingTerm(transport)).toBeNull()
+  })
+
+  it('QMK設定を持たないファーム(要求をそのまま返す)でも、成功と取り違えない', async () => {
+    const echo: Transport = {
+      label: 'echo',
+      opened: true,
+      open: async () => undefined,
+      close: async () => undefined,
+      send: async (request) => {
+        const out = new Uint8Array(32)
+        out.set(request)
+        return out
+      }
+    }
+    expect(await getTappingTerm(echo)).toBeNull()
+  })
+
+  it('読み込むと、スナップショットに入る', async () => {
+    const transport = new MockTransport({ unlocked: true, tappingTerm: 220 })
+    await transport.open()
+    expect((await loadKeyboard(transport)).tappingTerm).toBe(220)
   })
 })
 

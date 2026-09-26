@@ -40,11 +40,13 @@ import {
   CMD_VIAL_GET_SIZE,
   CMD_VIAL_GET_UNLOCK_STATUS,
   CMD_VIAL_LOCK,
+  CMD_VIAL_QMK_SETTINGS_GET,
   CMD_VIAL_UNLOCK_POLL,
   CMD_VIAL_UNLOCK_START,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
+  QSID_TAPPING_TERM,
   VIA_LAYOUT_OPTIONS,
   VIA_SWITCH_MATRIX_STATE,
   VIAL_UNLOCK_COUNTER_MAX
@@ -108,6 +110,11 @@ export interface MockOptions {
   /** 1往復あたりの遅延(ms)。0なら同期的に返す。 */
   latencyMs?: number
   /**
+   * 長押しの判定時間(QMK設定のtapping term)として答える値(ms)。既定は0で、RMKで設定されて
+   * いないときと同じ(アプリは読めなかったものとして、設定の値を使う)。
+   */
+  tappingTerm?: number
+  /**
    * アンロックをどちらのファームと同じに答えるか。既定は`'vial-qmk'`。
    *
    * - `'vial-qmk'`: カウンタは50から始まり、アンロックキーを全部押しているあいだポーリングごとに
@@ -139,6 +146,7 @@ export class MockTransport implements Transport {
   private readonly unlockKeys: Array<{ row: number; col: number }>
   private readonly latencyMs: number
   private readonly firmware: MockFirmware
+  private readonly tappingTerm: number
   private readonly pressed = new Set<string>()
   private readonly definitionBytes: Uint8Array
 
@@ -160,6 +168,7 @@ export class MockTransport implements Transport {
     ]
     this.latencyMs = options.latencyMs ?? 0
     this.firmware = options.firmware ?? 'vial-qmk'
+    this.tappingTerm = options.tappingTerm ?? 0
   }
 
   get opened(): boolean {
@@ -430,6 +439,17 @@ export class MockTransport implements Transport {
       case CMD_VIAL_LOCK:
         this.unlocked = false
         return out
+
+      // qmk_settings_get(vial.c)/ GetBehaviorSetting(RMKのvial.rs)。data[0]は成功なら0、
+      // 値はdata[1]から(u16 LE)。知らない番号は0xFF
+      case CMD_VIAL_QMK_SETTINGS_GET: {
+        out.fill(0xff)
+        if ((msg[2] | (msg[3] << 8)) !== QSID_TAPPING_TERM) return out
+        out[0] = 0
+        out[1] = this.tappingTerm & 0xff
+        out[2] = (this.tappingTerm >> 8) & 0xff
+        return out
+      }
 
       case CMD_VIAL_DYNAMIC_ENTRY_OP: {
         if (msg[2] === DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES) {
