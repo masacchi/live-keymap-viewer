@@ -197,6 +197,23 @@ jobs:
           LABEL: ${{ steps.meta.outputs.label }}
         run: |
           if [ -n "$TAG" ]; then
+            # リリースの本文に、前の正式リリースからのcommitの一覧を載せる(vpkが作るリリースは本文が
+            # ほぼ空で、何が変わったか分からない)。前のリリースは、載せる前の「最新」で決める。
+            # 同じタグで流し直したときは「最新」が自分なので、本文はそのままにする
+            prev=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+            notes=
+            if [ -z "$prev" ]; then
+              notes=dist/notes.md
+              printf '最初のリリースです。\n' > "$notes"
+            elif [ "$prev" != "$TAG" ]; then
+              notes=dist/notes.md
+              {
+                printf '## %sからの変更\n\n' "$prev"
+                gh api "repos/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_SHA" \
+                  --jq '.commits[].commit.message | split("\n")[0] | "- " + .'
+              } > "$notes"
+            fi
+
             flags=()
             # v0.2.0-beta.1のように「-」の付くものはプレリリースにする(アプリの更新の対象にならない)
             if [[ "$TAG" == *-* ]]; then
@@ -210,6 +227,9 @@ jobs:
               "${flags[@]}"
             gh release upload "$TAG" "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe" \
               --repo "$GITHUB_REPOSITORY" --clobber
+            if [ -n "$notes" ]; then
+              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
+            fi
             exit 0
           fi
 
