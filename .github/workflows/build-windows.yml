@@ -1,7 +1,10 @@
 # Windows版をビルドする。
 #
-#   - mainへのpush(マージを含む): 開発版をビルドして、GitHubのリリース「dev-build」(プレリリース)に置く。
-#     開発版は別のアプリ(Live Keymap Viewer Dev)として入り、dev-buildから更新する
+#   - mainへのpush(マージを含む):
+#       - package.jsonの版のタグ(v0.1.1など)がまだ無ければ、リリースする。タグもここで付ける
+#         (版を上げてpushするだけでリリースになる。タグを別にpushしてもう一度ビルドしなくて済む)
+#       - あれば開発版をビルドして、GitHubのリリース「dev-build」(プレリリース)に置く。
+#         開発版は別のアプリ(Live Keymap Viewer Dev)として入り、dev-buildから更新する
 #   - v*のタグのpush: ビルドして正式リリースに載せる。インストール済みのアプリはここから更新する
 #   - 手動(Run workflow): 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
 #     (書かなければdev-buildを更新する)
@@ -64,6 +67,19 @@ jobs:
           if [ -z "$tag" ] && [ "$GITHUB_REF_TYPE" = tag ]; then
             tag=$GITHUB_REF_NAME
           fi
+          # mainへのpushで、版のタグがまだ無ければ(版を上げたpush)リリースにする。
+          # 問い合わせの失敗を「タグが無い」と取り違えると、既にある版を作り直してしまうので、
+          # 失敗したら止める(ls-remoteは、無ければ何も出さずに成功する)
+          if [ -z "$tag" ] && [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; then
+            if ! remote_tag=$(git ls-remote --tags origin "refs/tags/v$version"); then
+              echo "::error::タグ v$version があるか確かめられませんでした。もう一度実行してください"
+              exit 1
+            fi
+            if [ -z "$remote_tag" ]; then
+              echo "タグ v$version がまだ無いので、リリースします"
+              tag=v$version
+            fi
+          fi
 
           if [ -z "$tag" ]; then
             # 開発版。入っている開発版はdev-buildの版と比べて更新するので、ビルドのたびに版が増えるよう
@@ -76,7 +92,7 @@ jobs:
           else
             # アプリの画面・ログ・「設定 → アプリ」に出る版はpackage.jsonから来る。タグと食い違わないように
             if [ "$tag" != "v$version" ]; then
-              echo "::error::タグ $tag が package.json の版($version)と合っていません。タグは v$version にしてください。別の版を出すなら、先に package.json の版を上げてください(npm version ${tag#v} で版上げとタグ付けが一度にできます)"
+              echo "::error::タグ $tag が package.json の版($version)と合っていません。タグは v$version にしてください。別の版を出すなら、先に package.json の版を上げてください(npm version ${tag#v} で版を上げて main に push すれば、そのままリリースになります)"
               exit 1
             fi
             # gh release createは既にあるタグをそのまま使う。別のcommitのビルドを載せないように止める

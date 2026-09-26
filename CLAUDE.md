@@ -20,7 +20,9 @@ Vialキーボード(Cornix LP)の押しているキーとレイヤーをリア�
 - `npm test` / `npm run lint` / `npm run format`
 - `npm run deploy:win` … Windows版を作ってデスクトップに置く
 - `npm run installer:win` … インストーラー(VelopackのSetup.exe)と更新用のパッケージを作る(vpkはコンテナにある)。
-  GitHub Actions(`.github/workflows/build-windows.yml`)も同じ手順で作り、タグならリリースに載せる
+  GitHub Actions(`.github/workflows/build-windows.yml`)も同じ手順で作り、タグならリリースに載せる。
+  **リリースは、版を上げたcommitをmainにpushするだけ**(`npm version 0.2.0 -m "chore: 版を%sに上げる"`。
+  タグはCIが付ける。手元でタグを作らない)
 - `npm run diag:hid` … 実機の通信をOSの段で切り分ける(アプリには触らない。アプリも同じWindowsのHID APIを使う)。
   「接続できない」「候補に出ない」ときはまずこれ(docs/BLUETOOTH.md §8)
 
