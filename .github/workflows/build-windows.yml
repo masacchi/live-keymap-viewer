@@ -1,6 +1,7 @@
 # Windows版をビルドする。
 #
-#   - mainへのpush(マージを含む): ビルドして、GitHubのリリース「dev-build」(プレリリース)に置く
+#   - mainへのpush(マージを含む): 開発版をビルドして、GitHubのリリース「dev-build」(プレリリース)に置く。
+#     開発版は別のアプリ(Live Keymap Viewer Dev)として入り、dev-buildから更新する
 #   - v*のタグのpush: ビルドして正式リリースに載せる。インストール済みのアプリはここから更新する
 #   - 手動(Run workflow): 選んだブランチでビルドする。「タグ」を書けば、そのタグでリリースも作る
 #     (書かなければdev-buildを更新する)
@@ -61,11 +62,13 @@ jobs:
           fi
 
           if [ -z "$tag" ]; then
-            # リリースしないビルドは、どのcommitのものか分かるように名前に入れる
-            label="$version-${GITHUB_SHA::7}"
-            # パッケージの版はSemVerでないといけない。commitが数字だけで0から始まるとSemVerとして
-            # 正しくないので、git describeと同じくgを前に付ける
-            pack_version="$version-g${GITHUB_SHA::7}"
+            # 開発版。入っている開発版はdev-buildの版と比べて更新するので、ビルドのたびに版が増えるよう
+            # 実行番号を入れる(commitのハッシュでは新しい順に並ばない)。元にするのは次のパッチ版。
+            # 0.1.0-dev.Nは、出したばかりの0.1.0より古いものとして扱われるため
+            IFS=. read -r major minor patch <<< "${version%%-*}"
+            pack_version="$major.$minor.$((patch + 1))-dev.$GITHUB_RUN_NUMBER"
+            label=$pack_version
+            dev=true
           else
             # アプリの画面・ログ・「設定 → アプリ」に出る版はpackage.jsonから来る。タグと食い違わないように
             if [ "$tag" != "v$version" ]; then
@@ -80,12 +83,15 @@ jobs:
             fi
             label=$version
             pack_version=$version
+            dev=false
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
           echo "pack_version=$pack_version" >> "$GITHUB_OUTPUT"
-          echo "版: $label / リリース: ${tag:-しない(dev-buildを更新)}"
+          # 開発版はpackage-win.mjs / pack-win.mjsに--devを渡す
+          echo "dev_args=$([ "$dev" = true ] && echo --dev)" >> "$GITHUB_OUTPUT"
+          echo "版: $label / リリース: ${tag:-しない(開発版としてdev-buildを更新)}"
 
       - name: ビルドの道具を入れる(.devcontainer/Dockerfileと同じもの)
         run: |
@@ -132,26 +138,38 @@ jobs:
         run: npm run check:rust
 
       - name: Windows版を作る(dist/win32-x64/LiveKeymapViewer.exe)
-        run: npm run package:win
+        env:
+          PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
+          DEV_ARGS: ${{ steps.meta.outputs.dev_args }}
+        # DEV_ARGSは空か--dev。空のときに空の引数を渡さないよう、引用符で囲まない
+        run: npm run package:win -- --version "$PACK_VERSION" $DEV_ARGS
 
       - name: インストーラーと更新用のパッケージ、ポータブル版を作る
         env:
           LABEL: ${{ steps.meta.outputs.label }}
           PACK_VERSION: ${{ steps.meta.outputs.pack_version }}
+          DEV_ARGS: ${{ steps.meta.outputs.dev_args }}
         run: |
-          node scripts/pack-win.mjs --version "$PACK_VERSION"
+          node scripts/pack-win.mjs --version "$PACK_VERSION" $DEV_ARGS
           # dev-buildや正式リリースの添付には、どのビルドか分かる名前で置く
           mkdir -p dist/artifacts
-          cp dist/releases/live-keymap-viewer-win-Setup.exe \
-            "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-setup.exe"
+          name=LiveKeymapViewer
+          if [ -n "$DEV_ARGS" ]; then
+            name=LiveKeymapViewer-Dev
+            # 開発版はvpk upload githubを使わずにdev-buildへ載せる(下)ので、アプリが更新に読む
+            # リリースの一覧とパッケージも、ここで添付に加えておく
+            cp dist/releases/releases.win.json dist/releases/*-full.nupkg dist/artifacts/
+          fi
+          # Setupの名前はパッケージIDから決まる(開発版はlive-keymap-viewer-dev-win-Setup.exe)
+          cp dist/releases/*-win-Setup.exe "dist/artifacts/$name-$LABEL-win-x64-setup.exe"
           # ポータブル版はexeをそのまま置く(Tauriのexeは1つで完結する。自分では更新しない)
-          cp dist/win32-x64/LiveKeymapViewer.exe \
-            "dist/artifacts/LiveKeymapViewer-$LABEL-win-x64-portable.exe"
+          cp dist/win32-x64/LiveKeymapViewer.exe "dist/artifacts/$name-$LABEL-win-x64-portable.exe"
           ls -l dist/releases dist/artifacts
 
       # 入っているアプリは、最新の正式リリースのreleases.win.jsonを見て更新する
       # (src-tauri/src/updater.rs)。正式リリースに載せるのはvpk upload github。リリースの一覧と
-      # パッケージを、アプリが読む名前のまま載せる。dev-buildはプレリリースなので、更新の対象にならない
+      # パッケージを、アプリが読む名前のまま載せる。dev-buildはプレリリースなので、リリース版の
+      # 更新の対象にならない(開発版はdev-buildのreleases.win.jsonを直に読む)
       - name: リリース・成果物に載せる
         env:
           GH_TOKEN: ${{ github.token }}
@@ -175,7 +193,10 @@ jobs:
             exit 0
           fi
 
-          # 正式なタグがない場合(mainへのpushや手動実行)は、固定の「dev-build」に置く
+          # 正式なタグがない場合(mainへのpushや手動実行)は、固定の「dev-build」に置く。
+          # vpk upload githubを使わないのは、前の版のパッケージが一覧(releases.win.json)ごと
+          # 積み重なっていくため。開発版の更新に要るのは最新のパッケージと一覧だけなので、
+          # 載せ替えて前のものを消す
           RELEASE_TAG=dev-build
           FILES=(dist/artifacts/*)
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -190,9 +211,9 @@ jobs:
                   gh release delete-asset "$RELEASE_TAG" "$name" --repo "$GITHUB_REPOSITORY" --yes
                 fi
               done
-            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "Development Build ($LABEL)"
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "Development Build ($LABEL, ${GITHUB_SHA::7})"
           else
             echo "新しいリリース($RELEASE_TAG)を作成します。"
             gh release create "$RELEASE_TAG" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "Development Build ($LABEL)" --generate-notes --prerelease
+              --target "$GITHUB_SHA" --title "Development Build ($LABEL, ${GITHUB_SHA::7})" --generate-notes --prerelease
           fi
