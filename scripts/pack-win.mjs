@@ -2,7 +2,7 @@
  * Windowsのインストーラーと、更新用のパッケージを作る(Velopackのvpk)。
  *
  *   npm run installer:win                        # package:winしてから作る(コンテナの中で動く)
- *   node scripts/pack-win.mjs --version 0.1.0-abc1234   # 版を変える(CIのリリースでないビルド)
+ *   node scripts/pack-win.mjs --dev --version 0.1.1-dev.5   # 開発版(CIがmainへのpushで作る)
  *
  * 先に`npm run package:win`でdist/win32-x64を作っておくこと(installer:winは両方やる)。
  * dist/releases/ にできるもの:
@@ -10,6 +10,10 @@
  *   live-keymap-viewer-win-Setup.exe       インストーラー。ワンクリックで入れて起動する
  *   live-keymap-viewer-<版>-full.nupkg     更新用のパッケージ
  *   releases.win.jsonなど                  リリースの一覧。アプリはこれを読んで新しい版を知る
+ *
+ * `--dev`は開発版のパッケージにする。IDが`live-keymap-viewer-dev`、表示名が「Live Keymap Viewer Dev」の
+ * 別のアプリになり、リリース版と1台に並べて入れられる(入る場所もショートカットも別)。
+ * 中身のexeも`package:win -- --dev`で作った開発版にすること(設定の置き場所と更新の元が分かれる)。
  *
  * Velopackのポータブル版(zip)は作らない。展開したところの起動用exeに表示名がそのまま付き
  * (`Live Keymap Viewer.exe`)、パスに半角スペースが入るため。ポータブル版はdist/win32-x64の
@@ -34,9 +38,13 @@ const EXE_NAME = 'LiveKeymapViewer.exe'
  * パッケージのID。入れる場所(%LOCALAPPDATA%\live-keymap-viewer)にもなるので、スペースを入れない。
  * **変えない。**変えると別のアプリとして扱われ、入っているものが更新されなくなる。
  */
-const PACK_ID = 'live-keymap-viewer'
+const RELEASE_PACK_ID = 'live-keymap-viewer'
 /** スタートメニュー・デスクトップのショートカットと「アプリと機能」に出る名前。 */
-const PACK_TITLE = 'Live Keymap Viewer'
+const RELEASE_PACK_TITLE = 'Live Keymap Viewer'
+
+const dev = process.argv.includes('--dev')
+const PACK_ID = dev ? `${RELEASE_PACK_ID}-dev` : RELEASE_PACK_ID
+const PACK_TITLE = dev ? `${RELEASE_PACK_TITLE} Dev` : RELEASE_PACK_TITLE
 
 function fail(message) {
   console.error(`\n✗ ${message}\n`)
@@ -57,7 +65,7 @@ if (!existsSync(join(SOURCE, EXE_NAME))) {
 // 手元では毎回作り直す。前のパッケージが残っていると、同じ版を作ろうとしてvpkが止まる
 rmSync(OUT_DIR, { recursive: true, force: true })
 
-console.log(`インストーラーと更新用のパッケージを作成中(${version})…`)
+console.log(`インストーラーと更新用のパッケージを作成中(${PACK_ID} ${version})…`)
 execFileSync(
   'vpk',
   [

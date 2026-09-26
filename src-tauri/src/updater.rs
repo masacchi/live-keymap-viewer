@@ -8,6 +8,10 @@
 //! (.github/workflows/build-windows.yml)。`releases/latest/download`は最新の正式リリースの
 //! 添付ファイルに転送されるので、そこに置いた`releases.win.json`とパッケージ(.nupkg)を読めば足りる。
 //! 公開リポジトリなので認証は要らず、exeにトークンを埋め込まずに済む。
+//!
+//! 開発版(channel.rs)は、mainへのpushのたびにCIが載せ替えるプレリリース`dev-build`から取る。
+//! `releases/latest`はプレリリースを指さないので、リリース版が開発版を拾うことは無く、
+//! 開発版もリリース版には移らない(パッケージIDが違う別のアプリなので、移れもしない)。
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -17,7 +21,11 @@ use velopack::sources::HttpSource;
 use velopack::{UpdateCheck, UpdateInfo, UpdateManager};
 
 /// 更新を探す場所。
-const UPDATE_URL: &str = "https://github.com/masacchi/live-keymap-viewer/releases/latest/download";
+const UPDATE_URL: &str = if crate::channel::DEV {
+    "https://github.com/masacchi/live-keymap-viewer/releases/download/dev-build"
+} else {
+    "https://github.com/masacchi/live-keymap-viewer/releases/latest/download"
+};
 
 /// 自動の確認(forceでないとき)で、前回の結果を使い回す時間。
 /// モードを切り替えるたびにウィンドウごと作り直し、そのたびに画面が確認しに来るので、

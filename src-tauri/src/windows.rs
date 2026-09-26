@@ -338,7 +338,7 @@ impl WindowManager {
         let replacing = Mutex::new(replacing);
         let mut builder =
             WebviewWindowBuilder::new(&self.app, &label, WebviewUrl::App("index.html".into()))
-                .title("Live Keymap Viewer")
+                .title(crate::channel::TITLE)
                 .visible(false)
                 .position(f64::from(bounds.x), f64::from(bounds.y))
                 .inner_size(f64::from(bounds.width), f64::from(bounds.height))

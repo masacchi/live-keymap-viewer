@@ -6,10 +6,12 @@
 //!   settings.rs … settings.jsonの検証と読み書き
 //!   logfile.rs  … log.txt(実機で何が起きたかを残す)
 //!   updater.rs  … インストーラーで入れたときの更新(Velopack)
+//!   channel.rs  … 開発版かリリース版か(置き場所・更新の元を分ける)
 
 // 配布ビルドでコンソールの窓を出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod channel;
 mod commands;
 mod hid;
 mod logfile;
@@ -28,7 +30,9 @@ use crate::windows::WindowManager;
 
 /// 設定とログを置くフォルダの名前(OSの設定の置き場所 = Windowsなら%APPDATA%の下)。
 /// パスに半角スペースを入れない(コマンドラインやスクリプトで扱うときに引用符が要らないように)。
-const DATA_DIR_NAME: &str = "live-keymap-viewer";
+/// 開発版は別のフォルダにする(channel.rs)。
+const DATA_DIR_NAME: &str =
+    if channel::DEV { "live-keymap-viewer-dev" } else { "live-keymap-viewer" };
 
 /// 通常ウィンドウとオーバーレイの切り替え。オーバーレイ中はクリックが下に抜けるので、
 /// キー操作で戻れるようにしておく。
