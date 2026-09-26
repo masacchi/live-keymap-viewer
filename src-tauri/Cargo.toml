@@ -1,6 +1,6 @@
 [package]
 name = "live-keymap-viewer"
-version = "0.1.1"
+version = "0.2.0"
 description = "Vialキーボードの押しているキーといまのレイヤーをリアルタイムに表示するデスクトップアプリ"
 edition = "2024"
 publish = false
