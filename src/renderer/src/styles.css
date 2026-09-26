@@ -379,8 +379,8 @@ body.overlay .app-shell.faded {
  * 押した瞬間は黄色で、0.6秒かけて少しだけ暗い色に落ち着く。白く光らせてから黄色にすると、
  * 打つたびに明るさが大きく跳ねて目がちかちかするので、明るさの差は小さく、黄色から始める。
  * 動きはキーの中で終わらせる(キーの外まで動かすと、打つたびに周りまで動いて目が疲れる)。
- * 終わりの色は書かない(fromだけ)。そのとき効いている色に向かうので、長押しで
- * レイヤーの色に変わる途中でも黄色に戻らずに落ち着く。クラスが付くたびに最初から再生される
+ * 終わりの色は書かない(fromだけ)。そのとき効いている色に向かう。長押しが確定したキーは
+ * 止める(.key-holding)。クラスが付くたびに最初から再生される
  */
 @keyframes press-settle {
   from {
@@ -407,6 +407,11 @@ body.overlay .app-shell.faded {
   stroke-width: 3;
   paint-order: stroke;
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--hold) 55%, transparent));
+  /*
+   * 長押しが確定したら、すぐレイヤーの色にする。押したときのpress-settle(0.6秒)が続いていると、
+   * 黄色からゆっくり移って、図のほかの部分より遅れてレイヤーが切り替わったように見える
+   */
+  animation: none;
 }
 
 .key-holding .main,
