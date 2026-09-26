@@ -2,6 +2,9 @@
  * 実機なしで動かすためのモックデバイス。
  *
  * ファーム(vial-qmkのvia.c / vial.c)と同じバイト並びで応答を組み立てる。
+ * 実機のCornix LPのファームはRMKで、アンロックの動きだけが違う(docs/BLUETOOTH.md §2.5)。
+ * `MockOptions.firmware`で`'rmk'`にすると、アンロックはRMK(タグrmk-v0.8.3の
+ * `host/via/vial.rs` / `vial_lock.rs`)と同じに答える。
  * 既定で名乗るのはCornix LP。キーマップとTap Danceはreference/Cornix_設定_LT.vil、
  * 定義JSONはCornix LP V1.12のファームから取り出した実物(XZ圧縮のまま)。
  *
@@ -104,7 +107,21 @@ export interface MockOptions {
   unlockKeys?: Array<{ row: number; col: number }>
   /** 1往復あたりの遅延(ms)。0なら同期的に返す。 */
   latencyMs?: number
+  /**
+   * アンロックをどちらのファームと同じに答えるか。既定は`'vial-qmk'`。
+   *
+   * - `'vial-qmk'`: カウンタは50から始まり、アンロックキーを全部押しているあいだポーリングごとに
+   *   1減る(実機は100msごと)。離すと50に戻る。進行中はVIAコマンドを通さない
+   * - `'rmk'`: カウンタは**まだ押していないアンロックキーの数**で、全部押した回に解除する。
+   *   進行中の状態は最後のポーリングから100msで切れる。進行中もVIAコマンドを通す
+   */
+  firmware?: MockFirmware
 }
+
+export type MockFirmware = 'vial-qmk' | 'rmk'
+
+/** RMKで、アンロックの進行中の状態が続く時間(vial_lock.rsのupdate_unlocking_state)。 */
+const RMK_UNLOCKING_TIMEOUT_MS = 100
 
 /**
  * Transportと同じ口を持つ偽デバイス。押下状態はテスト側から動かす。
@@ -117,8 +134,11 @@ export class MockTransport implements Transport {
   private unlocked: boolean
   private unlockInProgress = false
   private unlockCounter = VIAL_UNLOCK_COUNTER_MAX
+  /** RMKで、最後にアンロックを始めた / ポーリングした時刻。 */
+  private unlockPolledAt = 0
   private readonly unlockKeys: Array<{ row: number; col: number }>
   private readonly latencyMs: number
+  private readonly firmware: MockFirmware
   private readonly pressed = new Set<string>()
   private readonly definitionBytes: Uint8Array
 
@@ -139,6 +159,7 @@ export class MockTransport implements Transport {
       { row: 0, col: 1 }
     ]
     this.latencyMs = options.latencyMs ?? 0
+    this.firmware = options.firmware ?? 'vial-qmk'
   }
 
   get opened(): boolean {
@@ -214,8 +235,8 @@ export class MockTransport implements Transport {
   }
 
   private handle(msg: Uint8Array): Uint8Array {
-    // アンロック進行中は0xFEの一部しか通らない(via.c:215-224)
-    if (this.unlockInProgress) {
+    // アンロック進行中は0xFEの一部しか通らない(via.c:215-224)。RMKには止める処理が無い
+    if (this.firmware === 'vial-qmk' && this.unlockInProgress) {
       const allowed =
         msg[0] === CMD_VIA_VIAL_PREFIX &&
         [
@@ -230,6 +251,37 @@ export class MockTransport implements Transport {
     }
 
     return msg[0] === CMD_VIA_VIAL_PREFIX ? this.handleVial(msg) : this.handleVia(msg)
+  }
+
+  /** アンロックの進行中か。RMKは最後のポーリングから100msで切れる。 */
+  private isUnlocking(): boolean {
+    if (this.firmware === 'rmk' && Date.now() - this.unlockPolledAt > RMK_UNLOCKING_TIMEOUT_MS) {
+      this.unlockInProgress = false
+    }
+    return this.unlockInProgress
+  }
+
+  /**
+   * RMKのunlock_poll(vial.rs 95–105行)。ポーリングのたびに進行中にし直し、状態を詰めてから
+   * カウンタを数える。そのため全部押した回の応答は「カウンタ0・まだロック中」で、
+   * アンロック済みと返るのは次のポーリングから。
+   */
+  private rmkUnlockPoll(out: Uint8Array): Uint8Array {
+    this.unlockInProgress = true
+    this.unlockPolledAt = Date.now()
+    out[0] = this.unlocked ? 1 : 0
+    out[1] = 1
+    // アンロックキーが無ければ1を返し続ける(vial_lock.rsのcheck_unlock)
+    const counter =
+      this.unlockKeys.length === 0
+        ? 1
+        : this.unlockKeys.filter((key) => !this.isPressed(key.row, key.col)).length
+    if (counter === 0) {
+      this.unlocked = true
+      this.unlockInProgress = false
+    }
+    out[2] = counter
+    return out
   }
 
   private handleVia(msg: Uint8Array): Uint8Array {
@@ -340,7 +392,7 @@ export class MockTransport implements Transport {
       case CMD_VIAL_GET_UNLOCK_STATUS: {
         out.fill(0xff)
         out[0] = this.unlocked ? 1 : 0
-        out[1] = this.unlockInProgress ? 1 : 0
+        out[1] = this.isUnlocking() ? 1 : 0
         this.unlockKeys.forEach((key, i) => {
           out[2 + i * 2] = key.row
           out[2 + i * 2 + 1] = key.col
@@ -351,9 +403,11 @@ export class MockTransport implements Transport {
       case CMD_VIAL_UNLOCK_START:
         this.unlockInProgress = true
         this.unlockCounter = VIAL_UNLOCK_COUNTER_MAX
+        this.unlockPolledAt = Date.now()
         return out
 
       case CMD_VIAL_UNLOCK_POLL: {
+        if (this.firmware === 'rmk') return this.rmkUnlockPoll(out)
         if (this.unlockInProgress) {
           const holding = this.unlockKeys.every((key) => this.isPressed(key.row, key.col))
           if (holding) {

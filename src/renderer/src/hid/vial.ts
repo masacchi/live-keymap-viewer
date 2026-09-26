@@ -59,7 +59,10 @@ export interface UnlockStatus {
 export interface UnlockProgress {
   unlocked: boolean
   inProgress: boolean
-  /** 0に向かって減る。VIAL_UNLOCK_COUNTER_MAXから始まる。 */
+  /**
+   * 0に向かって減る。始まりはファームで違う(vial-qmkはVIAL_UNLOCK_COUNTER_MAX、
+   * RMKはまだ押していないアンロックキーの数。docs/BLUETOOTH.md §2.5)。
+   */
   counter: number
 }
 

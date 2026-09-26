@@ -21,7 +21,6 @@
  */
 
 import { emptyMatrix, LayerEngine, type LayerSnapshot } from '../engine/layerState'
-import { VIAL_UNLOCK_COUNTER_MAX } from '../hid/constants'
 import { type Transport, TransportError } from '../hid/transport'
 import {
   type DefinitionCache,
@@ -81,6 +80,11 @@ export interface UnlockState {
   keys: Array<{ row: number; col: number }>
   /** 0に向かって減る。 */
   counter: number
+  /**
+   * 進み具合のバーの最大値。これまでに見たカウンタの最大値で、0ならまだポーリングしていない。
+   * 始まりの値はファームで違う(vial-qmkは50、RMKはアンロックキーの数。docs/BLUETOOTH.md §2.5)ので、
+   * 決め打ちせずに見た値から取る(vial-guiのunlocker.pyと同じ)
+   */
   max: number
 }
 
@@ -256,11 +260,7 @@ export class KeyboardSession {
         void this.runPolling(gen, snapshot, engine)
       } else {
         this.update({
-          unlock: {
-            keys: lock.keys,
-            counter: VIAL_UNLOCK_COUNTER_MAX,
-            max: VIAL_UNLOCK_COUNTER_MAX
-          }
+          unlock: { keys: lock.keys, counter: 0, max: 0 }
         })
         void this.runUnlock(gen, snapshot, engine)
       }
@@ -424,7 +424,7 @@ export class KeyboardSession {
         this.update({
           unlock: {
             keys: unlock?.keys ?? [],
-            max: unlock?.max ?? VIAL_UNLOCK_COUNTER_MAX,
+            max: Math.max(unlock?.max ?? 0, progress.counter),
             counter: progress.counter
           }
         })

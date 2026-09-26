@@ -329,6 +329,23 @@ describe('アンロック', () => {
     expect(nextUnlockAction(progress)).toBe('done')
   })
 
+  it('RMKでは、カウンタはまだ押していないキーの数で、全部押した回の次にアンロック済みと返る', async () => {
+    const transport = new MockTransport({ unlocked: false, firmware: 'rmk' })
+    await transport.open()
+    await unlockStart(transport)
+
+    expect(await unlockPoll(transport)).toMatchObject({ counter: 2, inProgress: true })
+    transport.press(0, 0)
+    expect(await unlockPoll(transport)).toMatchObject({ counter: 1, inProgress: true })
+
+    // 全部押した回は、状態を詰めてからカウンタを数えるので、まだロック中と返る(vial.rs 95–105行)
+    transport.press(0, 1)
+    const last = await unlockPoll(transport)
+    expect(last).toMatchObject({ unlocked: false, inProgress: true, counter: 0 })
+    expect(nextUnlockAction(last)).toBe('wait')
+    expect(nextUnlockAction(await unlockPoll(transport))).toBe('done')
+  })
+
   it('アンロック進行中はVIAコマンドが通らない', async () => {
     const transport = await openMock(false)
     await unlockStart(transport)

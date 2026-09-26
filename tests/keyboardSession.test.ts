@@ -129,15 +129,33 @@ describe('KeyboardSession: アンロック', () => {
     await session.dispose()
   })
 
-  it('進み具合をカウンタで通知する', async () => {
+  it('進み具合をカウンタで通知する。最大値は見たカウンタの最大値(vial-qmkは50)', async () => {
     const mock = new MockTransport({ unlocked: false })
     const session = new KeyboardSession(mock, options())
     await session.start()
-    await waitFor(session, (s) => s.status === 'unlocking')
+    // 押す前の1回目のポーリングで、始まりの値が最大値になる
+    const first = await waitFor(session, (s) => (s.unlock?.max ?? 0) > 0)
+    expect(first.unlock).toMatchObject({ counter: 50, max: 50 })
     mock.press(0, 0)
     mock.press(0, 1)
     const state = await waitFor(session, (s) => (s.unlock?.counter ?? 50) < 40)
     expect(state.unlock?.max).toBe(50)
+    await session.dispose()
+  })
+
+  it('RMKでは、アンロックキーの数を最大値にして、押した数だけ進める', async () => {
+    const mock = new MockTransport({ unlocked: false, firmware: 'rmk' })
+    const session = new KeyboardSession(mock, options())
+    await session.start()
+    const first = await waitFor(session, (s) => (s.unlock?.max ?? 0) > 0)
+    expect(first.unlock).toMatchObject({ counter: 2, max: 2 })
+
+    mock.press(0, 0)
+    const half = await waitFor(session, (s) => s.unlock?.counter === 1)
+    expect(half.unlock?.max).toBe(2)
+
+    mock.press(0, 1)
+    await waitFor(session, (s) => s.status === 'ready')
     await session.dispose()
   })
 

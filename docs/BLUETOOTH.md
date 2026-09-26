@@ -115,7 +115,7 @@ BLE側のVialは、`run_ble_keyboard`(849行目)の中の`BleHostServer::new(ser
 | 項目 | vial-qmk | RMK v0.8.3 | 影響 |
 |---|---|---|---|
 | matrix state | `data[2..]`、行ごとにMSBのバイトが先 | 同じ位置(`host/via/mod.rs` 130–142行)。アンロック済みのときだけ返す | 無し(USBで動作を確認済み) |
-| アンロックのカウンタ | 50から始まり、押し続けると100msごとに1減る | **まだ押されていないアンロックキーの数**(`host/via/vial_lock.rs` 42–57行)。全部押した瞬間に解除 | 進み具合のバーが最初から96%近くになる(アプリは最大値を50に決め打ちしている)。§4 P5 |
+| アンロックのカウンタ | 50から始まり、押し続けると100msごとに1減る | **まだ押されていないアンロックキーの数**(`host/via/vial_lock.rs` 42–57行)。全部押した瞬間に解除 | バーの最大値を決め打ちできない。アプリは見たカウンタの最大値を最大にする(§4 P5、対応済み) |
 | アンロック進行中の状態 | ファームにタイムアウトが無く、途中で閉じると残る | **最後のポーリングから100msで自動的に解ける**(`vial_lock.rs` 62–65行) | RMKでは「進行中のまま固まる」問題は起きない |
 | アンロック進行中のVIAコマンド | 通さない(`via.c` 215–224行) | `host/via/mod.rs`に止める処理は見当たらない | 無し |
 
@@ -273,16 +273,18 @@ OSからは答えることを確認した(§2.6)。残りは**アプリで**ど�
 - アンロックは、接続し直すたびに要るかもしれない(RMKの`VialLock`は再起動で消える。
   USB ⇄ BLEの切り替えで消えるかは未確認)
 
-### P5. アンロックの進み具合をRMKに合わせる
+### P5. アンロックの進み具合をRMKに合わせる — **済み**
 
-RMKのカウンタは「まだ押されていないキーの数」(§2.5)なので、アプリが最大値を50に決め打ちしていると、
+RMKのカウンタは「まだ押されていないキーの数」(§2.5)なので、最大値を50に決め打ちすると、
 進み具合のバーが最初から96%付近になる。vial-guiと同じく、**最大値を「これまでに見たカウンタの最大値」**
-にする(`unlocker.py`の`self.progress.setMaximum(max(self.progress.maximum(), unlock_counter))`)。
+にしている(`unlocker.py`の`self.progress.setMaximum(max(self.progress.maximum(), unlock_counter))`)。
 vial-qmk(50から減る)とRMK(キーの数から減る)の両方で正しく出る。
 
-- `session/keyboardSession.ts`の`UnlockState.max`を、最初は`VIAL_UNLOCK_COUNTER_MAX`ではなく
-  最初に見た`counter`にし、以後は大きい方を取る
-- モック(`MockTransport`)はvial-qmkと同じ動きなので、RMKと同じ動きのモードを足すとテストしやすい
+- `session/keyboardSession.ts`の`UnlockState.max`は、ポーリングする前は0(バーは空)、以後は見た`counter`の大きい方
+- `MockTransport`の`firmware: 'rmk'`で、RMKと同じバイト並びで答える。RMKはポーリングの応答に状態を
+  詰めてからカウンタを数える(`vial.rs` 95–105行)ので、全部押した回は「カウンタ0・まだロック中」で、
+  アンロック済みと返るのは次のポーリング。アプリはこの回を「待つ」と扱うので、1回(200ms)遅れて終わる
+- テスト: `tests/vial.test.ts`と`tests/keyboardSession.test.ts`の「RMKでは」
 
 ### P6. 接続の様子を画面に出す(診断用)
 
