@@ -427,6 +427,51 @@ describe('KeyboardSession: キャッシュから始める', () => {
     await session.dispose()
   })
 
+  it('遅い接続では、裏の確かめの要求1つにつき、先に押下を3回読む', async () => {
+    // 交互に並ぶと、BTでは1分ほど押下を約1秒に1回しか読めない
+    const caches = memoryCaches()
+    await warmUp(caches)
+
+    const mock = new MockTransport({ unlocked: true })
+    Object.defineProperty(mock, 'roundTripMs', { value: 470 }) // Bluetoothくらいの往復
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    await waitFor(session, (s) => !s.reloading)
+
+    // 読み直しの要求(0x12)のあいだに挟まった、押下の読み取り(0x02 0x03)の数
+    const kinds = mock.requests.map((r) =>
+      r[0] === 0x12 ? 'keymap' : r[0] === 0x02 && r[1] === 0x03 ? 'matrix' : 'other'
+    )
+    const gaps: number[] = []
+    let matrixSince: number | null = null
+    for (const kind of kinds) {
+      if (kind === 'matrix' && matrixSince !== null) matrixSince++
+      if (kind === 'keymap') {
+        if (matrixSince !== null) gaps.push(matrixSince)
+        matrixSince = 0
+      }
+    }
+    expect(gaps.length).toBeGreaterThan(10)
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(3)
+    await session.dispose()
+  })
+
+  it('速い接続(USB)では、裏の確かめを間引かない', async () => {
+    const caches = memoryCaches()
+    await warmUp(caches)
+    const mock = new MockTransport({ unlocked: true })
+    Object.defineProperty(mock, 'roundTripMs', { value: 3 })
+    const session = new KeyboardSession(mock, { ...options(), ...caches })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    const started = Date.now()
+    await waitFor(session, (s) => !s.reloading)
+    // 間引くと、押下を読むのを待つぶん何秒もかかる
+    expect(Date.now() - started).toBeLessThan(1500)
+    await session.dispose()
+  })
+
   it('キャッシュが古ければ、裏の確かめで差し替える', async () => {
     const caches = memoryCaches()
     await warmUp(caches)

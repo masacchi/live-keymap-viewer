@@ -41,7 +41,7 @@ import {
 } from '../hid/vial'
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
 import { messages } from '../messages'
-import { matrixKey, RoundTripStats } from './roundTripStats'
+import { matrixKey, RoundTripStats, SLOW_LINK_MS } from './roundTripStats'
 
 /** matrixのポーリング間隔。vial-guiも20ms(docs/PROTOCOL.md §8)。 */
 export const MATRIX_POLL_MS = 20
@@ -68,6 +68,14 @@ export const POLL_RETRY_MS = 100
 export const ROUND_TRIP_PUBLISH_MS = 2000
 /** 押下を読む往復の時間をログに残す間隔(ms)。遅い接続のときだけ残す。 */
 export const ROUND_TRIP_LOG_MS = 60_000
+/**
+ * 遅い接続で、接続直後の裏の確認(キーマップの読み直し)の要求1つにつき、先に押下を何回読むか。
+ * 要求は1本の列に並ぶので、間引かないと押下の読み取りと交互になり、BTでは1分ほど押下を約1秒に
+ * 1回しか読めない。3回にすると、押下は0.6秒ほどに1回読め、確認は2分ほどで終わる。
+ */
+export const BACKGROUND_PACE_READS = 3
+/** 押下を読むのを待つ上限(ms)。ポーリングが止まっていても、裏の確認が止まったままにならないように。 */
+const BACKGROUND_PACE_TIMEOUT_MS = 2000
 
 /**
  * タイムアウト(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
@@ -183,6 +191,10 @@ export class KeyboardSession {
   private readonly log: SessionOptions['log']
   /** 次に長押しが確定する時刻に掛けたタイマー(scheduleDecision)。 */
   private decisionTimer: ReturnType<typeof setTimeout> | null = null
+  /** 押下を読んだ回数。裏の確認を間引くのに使う(pacedTransport)。 */
+  private matrixReads = 0
+  /** 押下を読んだら起こす、待っている裏の確認。 */
+  private readWaiters: Array<() => void> = []
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
@@ -355,6 +367,43 @@ export class KeyboardSession {
 
   // --- 内部 ---
 
+  /**
+   * 裏の確認に使う送り口。遅い接続(Bluetooth)では、要求の前に押下をBACKGROUND_PACE_READS回読むのを待つ。
+   * 押下の読み取りが優先され、確認は時間をかけて進む(速い接続ではそのまま送る)。閉じても
+   * セッションのトランスポートは閉じない。
+   */
+  private pacedTransport(gen: number): Transport {
+    const base = this.transport
+    let readsAtLastSend = this.matrixReads
+    return {
+      get label() {
+        return base.label
+      },
+      get opened() {
+        return base.opened
+      },
+      open: () => base.open(),
+      close: async () => undefined,
+      send: async (request, options) => {
+        const slow = (base.roundTripMs ?? 0) >= SLOW_LINK_MS
+        if (slow) await this.waitForReads(readsAtLastSend + BACKGROUND_PACE_READS, gen)
+        readsAtLastSend = this.matrixReads
+        return base.send(request, options)
+      }
+    }
+  }
+
+  /** 押下の読んだ回数がtargetになるまで待つ。セッションが終わるか、上限の時間を過ぎたら待たない。 */
+  private async waitForReads(target: number, gen: number): Promise<void> {
+    const deadline = this.now() + BACKGROUND_PACE_TIMEOUT_MS
+    while (this.matrixReads < target && this.alive(gen) && this.now() < deadline) {
+      await new Promise<void>((resolve) => {
+        this.readWaiters.push(resolve)
+        setTimeout(resolve, 200)
+      })
+    }
+  }
+
   /** 見た目が変わったときだけ知らせる(20msごとに同じ図を描き直さないように)。 */
   private publishLayers(layers: LayerSnapshot): void {
     const signature = signatureOf(layers)
@@ -519,7 +568,7 @@ export class KeyboardSession {
   private async verifyCached(gen: number, cached: KeyboardSnapshot): Promise<void> {
     this.update({ reloading: true })
     try {
-      const next = await reloadKeymap(this.transport, cached)
+      const next = await reloadKeymap(this.pacedTransport(gen), cached)
       if (!this.alive(gen)) return
       if (keymapUnchanged(cached, next)) {
         this.update({ reloading: false })
@@ -583,6 +632,8 @@ export class KeyboardSession {
           continue
         }
         if (!this.alive(gen)) return
+        this.matrixReads++
+        for (const wake of this.readWaiters.splice(0)) wake()
         const answered = this.now()
         const key = matrixKey(matrix)
         if (previousMatrix !== null) stats.add(answered - started, key !== previousMatrix)
