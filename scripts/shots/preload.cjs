@@ -48,6 +48,7 @@ window.api = {
   isShortcutRegistered: async () => true,
   getAutostart: async () => false,
   setAutostart: async (enabled) => enabled,
+  exportPdf: async () => null,
   getMode: async () => mode,
   toggleMode: async () => mode,
   setOverlayBlurActive: noop,

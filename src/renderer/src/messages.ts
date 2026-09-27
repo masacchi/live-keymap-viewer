@@ -63,7 +63,20 @@ export const messages = {
 
   deviceMenu: {
     reload: 'キーマップを読み直す',
+    exportPdf: 'キーマップをPDFに書き出す',
     disconnect: '切断'
+  },
+
+  /** PDFに書き出す(印刷用の1枚。components/PrintSheet.tsx)。 */
+  print: {
+    title: (keyboard: string) => `${keyboard} キーマップ`,
+    jis: 'JIS表記',
+    us: 'US表記',
+    footer: (date: Date, version: string, page: number, total: number) =>
+      `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} · Live Keymap Viewer v${version} · ${page}/${total}`,
+    symbols: '記号の出し方',
+    saved: (path: string) => `PDFに書き出しました(${path})`,
+    failed: 'PDFに書き出せませんでした。詳しくはログ(設定の「このアプリ」)を見てください'
   },
 
   toolbar: {

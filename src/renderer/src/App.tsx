@@ -16,6 +16,7 @@ import { LayerStrip } from './components/LayerStrip'
 import { LoadingPanel } from './components/LoadingPanel'
 import { OverlayControls } from './components/OverlayControls'
 import { PreviewNotice } from './components/PreviewNotice'
+import { PrintSheet } from './components/PrintSheet'
 import { SettingsPanel } from './components/SettingsPanel'
 import { EmptyState, ErrorBanner } from './components/StatusViews'
 import { RouteChips, SymbolFinder } from './components/SymbolFinder'
@@ -29,6 +30,7 @@ import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import { cn } from './lib/cn'
+import { buildPdfExport } from './lib/keymapExport'
 import { reportError } from './lib/report'
 import { messages } from './messages'
 
@@ -39,6 +41,16 @@ type WindowMode = 'normal' | 'overlay'
  * ほかでは欄を出さない / 押せなくする。Windows 10でも欄は出るが、効かないだけ。
  */
 const BLUR_SUPPORTED = navigator.userAgent.includes('Windows')
+
+/** 書き出した・書き出せなかったの知らせを出しておく時間(ms)。 */
+const NOTICE_MS = 8000
+
+/** 次の描画が済むまで待つ(React が描いた内容が、印刷に間に合うように)。 */
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  )
+}
 
 export default function App(): JSX.Element {
   const { settings, update: updateSettings, setLayerName, forgetDevice, canSave } = useSettings()
@@ -135,6 +147,48 @@ export default function App(): JSX.Element {
     [uid, setLayerName]
   )
 
+  // --- PDFの書き出し ---
+  // 書き出しているあいだだけ印刷用の1枚(PrintSheet)を描く。atは表紙に出す日時
+  const [printing, setPrinting] = useState<{ at: Date } | null>(null)
+  // 書き出した・書き出せなかったの知らせ。しばらくしたら消す
+  const [exportNotice, setExportNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!exportNotice) return
+    const timer = setTimeout(() => setExportNotice(null), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [exportNotice])
+
+  const exportPdf = async (): Promise<void> => {
+    if (!snapshot) return
+    const at = new Date()
+    setPrinting({ at })
+    // 印刷用の1枚を描き終えてから印刷する(描く前に印刷すると白紙になる)
+    await nextPaint()
+    try {
+      const api = window.api
+      if (!api) {
+        window.print() // ブラウザで開いたとき(npm run dev)は、印刷ダイアログから保存する
+        return
+      }
+      const saved = await api.exportPdf(
+        buildPdfExport({
+          snapshot,
+          deviceLabel: keyboard.deviceLabel,
+          layerNames: names,
+          labelMode: settings.labelMode,
+          appVersion: appInfo?.version ?? '',
+          exportedAt: at
+        })
+      )
+      if (saved) setExportNotice(messages.print.saved(saved))
+    } catch (error) {
+      reportError('PDFに書き出せなかった', String(error))
+      setExportNotice(messages.print.failed)
+    } finally {
+      setPrinting(null)
+    }
+  }
+
   const noticeLayer = lookup?.route.layer ?? previewLayer
   const notice = noticeLayer !== null && (
     <PreviewNotice
@@ -155,162 +209,185 @@ export default function App(): JSX.Element {
   )
 
   return (
-    <div
-      className={cn(
-        'app-shell relative flex h-full flex-col overflow-hidden',
-        // 板の濃さは、いま後ろをぼかしているかで変える。薄くしているあいだはぼかしを外す
-        overlay && settings.overlayBlur && BLUR_SUPPORTED && !faded && 'blurred',
-        faded && 'faded'
-      )}
-      // オーバーレイの濃さは、ウィンドウではなく中身に掛ける。ウィンドウごと薄くすると
-      // 後ろのぼかしまで薄くなり、ぼけていない後ろの画面が透けてしまう(src-tauri/src/windows.rs)
-      style={overlay ? { opacity: settings.overlayOpacity } : undefined}
-    >
-      {overlay && (
-        <OverlayControls
-          displayLayer={layers?.displayLayer ?? 0}
-          displayLayerName={names[layers?.displayLayer ?? 0]}
-          settings={settings}
-          onChange={updateSettings}
-          blurSupported={BLUR_SUPPORTED}
-          stalled={keyboard.stalled}
-          onReload={() => void keyboard.reload()}
-          canReload={keyboard.status === 'ready'}
-          reloading={keyboard.reloading}
-          onExit={onToggleWindowMode}
-        />
-      )}
+    <>
+      <div
+        className={cn(
+          'app-shell relative flex h-full flex-col overflow-hidden',
+          // 板の濃さは、いま後ろをぼかしているかで変える。薄くしているあいだはぼかしを外す
+          overlay && settings.overlayBlur && BLUR_SUPPORTED && !faded && 'blurred',
+          faded && 'faded'
+        )}
+        // オーバーレイの濃さは、ウィンドウではなく中身に掛ける。ウィンドウごと薄くすると
+        // 後ろのぼかしまで薄くなり、ぼけていない後ろの画面が透けてしまう(src-tauri/src/windows.rs)
+        style={overlay ? { opacity: settings.overlayOpacity } : undefined}
+      >
+        {overlay && (
+          <OverlayControls
+            displayLayer={layers?.displayLayer ?? 0}
+            displayLayerName={names[layers?.displayLayer ?? 0]}
+            settings={settings}
+            onChange={updateSettings}
+            blurSupported={BLUR_SUPPORTED}
+            stalled={keyboard.stalled}
+            onReload={() => void keyboard.reload()}
+            canReload={keyboard.status === 'ready'}
+            reloading={keyboard.reloading}
+            onExit={onToggleWindowMode}
+          />
+        )}
 
-      {!overlay && (
-        <Toolbar
-          status={keyboard.status}
-          deviceLabel={keyboard.deviceLabel}
-          layers={
-            live && (
-              <LayerStrip
-                summaries={guide.summaries}
-                activeLayers={layers.activeLayers}
-                shownLayer={shownLayer}
-                preview={preview.state.pinned}
+        {!overlay && (
+          <Toolbar
+            status={keyboard.status}
+            deviceLabel={keyboard.deviceLabel}
+            layers={
+              live && (
+                <LayerStrip
+                  summaries={guide.summaries}
+                  activeLayers={layers.activeLayers}
+                  shownLayer={shownLayer}
+                  preview={preview.state.pinned}
+                  names={names}
+                  labelMode={settings.labelMode}
+                  labelContext={guide.labelContext}
+                  onPreview={preview.pin}
+                  onHover={preview.hover}
+                  onRename={canSave ? onRename : undefined}
+                  showTriggers={settings.showLayerTriggers}
+                />
+              )
+            }
+            settings={
+              <SettingsPanel
+                layers={guide.summaries
+                  .filter((summary) => !summary.blank)
+                  .map(({ layer }) => ({ layer, how: guide.howTo(layer) }))}
                 names={names}
-                labelMode={settings.labelMode}
-                labelContext={guide.labelContext}
-                onPreview={preview.pin}
-                onHover={preview.hover}
-                onRename={canSave ? onRename : undefined}
-                showTriggers={settings.showLayerTriggers}
+                onRename={canSave && uid ? onRename : undefined}
+                keyboardTappingTerm={snapshot?.tappingTerm}
+                shortcutRegistered={shortcutRegistered}
+                autostart={autostart}
+                onAutostart={onAutostart}
+                settings={settings}
+                onChange={updateSettings}
+                onForgetDevice={canSave ? forgetDevice : undefined}
+                blurSupported={BLUR_SUPPORTED}
+                appInfo={appInfo}
+                update={appInfo ? appUpdate.update : undefined}
+                onCheckUpdate={appUpdate.check}
+                onApplyUpdate={appUpdate.apply}
               />
-            )
+            }
+            settingsBadge={appUpdate.update.phase === 'available'}
+            symbols={
+              live
+                ? (close) => (
+                    <SymbolFinder
+                      routes={guide.symbolRoutes}
+                      stepsOf={guide.stepsOf}
+                      onPick={(symbol, route) => {
+                        close()
+                        preview.pickSymbol(symbol, route)
+                      }}
+                    />
+                  )
+                : undefined
+            }
+            mods={live ? layers.mods : null}
+            stalled={keyboard.stalled}
+            roundTripMs={keyboard.roundTripMs}
+            toggleShortcut={settings.toggleShortcut}
+            labelMode={settings.labelMode}
+            windowMode={windowMode}
+            reloading={keyboard.reloading}
+            onReload={() => void keyboard.reload()}
+            onExportPdf={live && !printing ? () => void exportPdf() : undefined}
+            onDisconnect={() => void keyboard.disconnect()}
+            onLabelMode={(labelMode) => updateSettings({ labelMode })}
+            onToggleWindowMode={onToggleWindowMode}
+          />
+        )}
+
+        <main
+          className={
+            overlay
+              ? 'overlay-body flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
+              : 'flex min-h-0 flex-1 flex-col gap-2 p-2 md:gap-3 md:p-4'
           }
-          settings={
-            <SettingsPanel
-              layers={guide.summaries
-                .filter((summary) => !summary.blank)
-                .map(({ layer }) => ({ layer, how: guide.howTo(layer) }))}
-              names={names}
-              onRename={canSave && uid ? onRename : undefined}
-              keyboardTappingTerm={snapshot?.tappingTerm}
-              shortcutRegistered={shortcutRegistered}
-              autostart={autostart}
-              onAutostart={onAutostart}
-              settings={settings}
-              onChange={updateSettings}
-              onForgetDevice={canSave ? forgetDevice : undefined}
-              blurSupported={BLUR_SUPPORTED}
-              appInfo={appInfo}
-              update={appInfo ? appUpdate.update : undefined}
-              onCheckUpdate={appUpdate.check}
-              onApplyUpdate={appUpdate.apply}
-            />
-          }
-          settingsBadge={appUpdate.update.phase === 'available'}
-          symbols={
-            live
-              ? (close) => (
-                  <SymbolFinder
-                    routes={guide.symbolRoutes}
-                    stepsOf={guide.stepsOf}
-                    onPick={(symbol, route) => {
-                      close()
-                      preview.pickSymbol(symbol, route)
-                    }}
-                  />
-                )
+          // 背景の板もこの中にあり(styles.cssの.overlay-body)、図と一緒に薄くなる。
+          // 薄くするのは少し待ってから(レイヤーキーの短い押下でちらつかせない)。出すのも消すのも
+          // 短く済ませ、すっと切り替える(ゆっくり変わると、そのあいだ図が読みにくい)
+          style={
+            overlay
+              ? {
+                  opacity: faded ? settings.overlayFadedOpacity : 1,
+                  transition: faded
+                    ? `opacity 150ms ease-out ${FADE_DELAY_MS}ms`
+                    : 'opacity 60ms ease-out'
+                }
               : undefined
           }
-          mods={live ? layers.mods : null}
-          stalled={keyboard.stalled}
-          roundTripMs={keyboard.roundTripMs}
-          toggleShortcut={settings.toggleShortcut}
+        >
+          {exportNotice && (
+            <p className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink">
+              {exportNotice}
+            </p>
+          )}
+
+          {keyboard.error && (
+            <ErrorBanner
+              message={keyboard.error}
+              reconnecting={keyboard.reconnecting}
+              onRetry={() => void keyboard.connect()}
+            />
+          )}
+
+          {keyboard.unlock && keyboard.status === 'unlocking' && (
+            <UnlockPanel unlock={keyboard.unlock} keyNames={unlockKeyNames} mock={keyboard.mock} />
+          )}
+
+          {ready ? (
+            <KeyboardFrame shownLayer={shownLayer} preview={previewLayer !== null} notice={notice}>
+              <KeyboardView
+                geometry={geometry}
+                snapshot={snapshot}
+                engine={engine}
+                layers={layers}
+                labelMode={settings.labelMode}
+                unlockKeys={keyboard.unlock?.keys ?? []}
+                onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
+                previewLayer={previewLayer}
+                layerNames={names}
+                highlightKeys={triggerKeys}
+                flashKeys={flashKeys}
+              />
+            </KeyboardFrame>
+          ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (
+            <LoadingPanel deviceLabel={keyboard.deviceLabel} progress={keyboard.loading} />
+          ) : (
+            <EmptyState
+              onConnect={() => void keyboard.connect()}
+              onMock={() => void keyboard.connectMock()}
+            />
+          )}
+        </main>
+
+        {candidates && <DevicePicker devices={candidates} onChoose={onChooseDevice} />}
+      </div>
+
+      {/* PDFに書き出すときだけ描く(画面では見えず、印刷のときにアプリの画面と入れ替わる) */}
+      {printing && ready && (
+        <PrintSheet
+          snapshot={snapshot}
+          geometry={geometry}
+          guide={guide}
           labelMode={settings.labelMode}
-          windowMode={windowMode}
-          reloading={keyboard.reloading}
-          onReload={() => void keyboard.reload()}
-          onDisconnect={() => void keyboard.disconnect()}
-          onLabelMode={(labelMode) => updateSettings({ labelMode })}
-          onToggleWindowMode={onToggleWindowMode}
+          names={names}
+          keyboardName={keyboard.deviceLabel ?? snapshot.definition.name ?? 'Keyboard'}
+          appVersion={appInfo?.version ?? ''}
+          printedAt={printing.at}
         />
       )}
-
-      <main
-        className={
-          overlay
-            ? 'overlay-body flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 pt-11'
-            : 'flex min-h-0 flex-1 flex-col gap-2 p-2 md:gap-3 md:p-4'
-        }
-        // 背景の板もこの中にあり(styles.cssの.overlay-body)、図と一緒に薄くなる。
-        // 薄くするのは少し待ってから(レイヤーキーの短い押下でちらつかせない)。出すのも消すのも
-        // 短く済ませ、すっと切り替える(ゆっくり変わると、そのあいだ図が読みにくい)
-        style={
-          overlay
-            ? {
-                opacity: faded ? settings.overlayFadedOpacity : 1,
-                transition: faded
-                  ? `opacity 150ms ease-out ${FADE_DELAY_MS}ms`
-                  : 'opacity 60ms ease-out'
-              }
-            : undefined
-        }
-      >
-        {keyboard.error && (
-          <ErrorBanner
-            message={keyboard.error}
-            reconnecting={keyboard.reconnecting}
-            onRetry={() => void keyboard.connect()}
-          />
-        )}
-
-        {keyboard.unlock && keyboard.status === 'unlocking' && (
-          <UnlockPanel unlock={keyboard.unlock} keyNames={unlockKeyNames} mock={keyboard.mock} />
-        )}
-
-        {ready ? (
-          <KeyboardFrame shownLayer={shownLayer} preview={previewLayer !== null} notice={notice}>
-            <KeyboardView
-              geometry={geometry}
-              snapshot={snapshot}
-              engine={engine}
-              layers={layers}
-              labelMode={settings.labelMode}
-              unlockKeys={keyboard.unlock?.keys ?? []}
-              onKeyClick={keyboard.mock ? keyboard.toggleMockKey : undefined}
-              previewLayer={previewLayer}
-              layerNames={names}
-              highlightKeys={triggerKeys}
-              flashKeys={flashKeys}
-            />
-          </KeyboardFrame>
-        ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (
-          <LoadingPanel deviceLabel={keyboard.deviceLabel} progress={keyboard.loading} />
-        ) : (
-          <EmptyState
-            onConnect={() => void keyboard.connect()}
-            onMock={() => void keyboard.connectMock()}
-          />
-        )}
-      </main>
-
-      {candidates && <DevicePicker devices={candidates} onChoose={onChooseDevice} />}
-    </div>
+    </>
   )
 }

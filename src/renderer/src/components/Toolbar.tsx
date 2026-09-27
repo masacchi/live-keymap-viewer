@@ -50,6 +50,8 @@ export interface ToolbarProps {
   windowMode: 'normal' | 'overlay'
   reloading: boolean
   onReload: () => void
+  /** キーマップをPDFに書き出す。書き出せないとき(読み込み前など)は渡さない。 */
+  onExportPdf?: () => void
   onDisconnect: () => void
   onLabelMode: (mode: LabelMode) => void
   onToggleWindowMode: () => void
@@ -79,6 +81,7 @@ export function Toolbar({
   windowMode,
   reloading,
   onReload,
+  onExportPdf,
   onDisconnect,
   onLabelMode,
   onToggleWindowMode
@@ -136,6 +139,9 @@ export function Toolbar({
             {messages.deviceMenu.reload}
           </MenuItem>
           {/* エラーでも出す。再接続を待っているときに、それを止める手段になる */}
+          <MenuItem onSelect={() => onExportPdf?.()} disabled={!onExportPdf}>
+            {messages.deviceMenu.exportPdf}
+          </MenuItem>
           <MenuItem onSelect={onDisconnect}>{messages.deviceMenu.disconnect}</MenuItem>
         </Menu>
       )}

@@ -51,6 +51,22 @@ export interface HidCandidate {
   remembered: boolean
 }
 
+/**
+ * キーマップのPDF書き出しで、Rustに渡すもの(src-tauri/src/pdf.rsのPdfExport)。
+ * 図は画面の印刷用のレイアウトから印刷し、これはメタデータと添付に使う。
+ */
+export interface PdfExport {
+  /** 保存するときに勧めるファイル名(拡張子なし)。 */
+  fileName: string
+  title: string
+  subject: string
+  keywords: string
+  /** PDFのメタデータに足す独自の項目。名前は英数字だけ(KeyboardUIDなど)。 */
+  custom: Array<[string, string]>
+  /** 添付するキーマップ(keymap.json)。 */
+  keymapJson: string
+}
+
 /** 画面からRust側に頼めること。画面が使うものだけを置く。 */
 export interface RendererApi {
   /** 版・ビルド時刻・ログの置き場所。設定パネルに出す。 */
@@ -81,6 +97,11 @@ export interface RendererApi {
   getAutostart(): Promise<boolean>
   /** Windowsの起動時に自動で起動するかを変える。変えたあとの状態を返す。 */
   setAutostart(enabled: boolean): Promise<boolean>
+  /**
+   * 印刷用のレイアウトをPDFに書き出す。保存先を選んでもらい、書き出した場所を返す(やめたらnull)。
+   * 呼ぶ前に、印刷用のレイアウト(PrintSheet)を描いておくこと。
+   */
+  exportPdf(pdf: PdfExport): Promise<string | null>
 
   getMode(): Promise<WindowMode>
   toggleMode(): Promise<WindowMode>

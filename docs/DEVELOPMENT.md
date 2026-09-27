@@ -160,6 +160,7 @@ tests/
   nativeHid                                   デスクトップ版のHID(RustのhidapiをWebHIDの形に)
   otherKeyboard                               Cornix以外のキーボード(別の機種を名乗るモック)
   keyboardView / panels                       SVGの描画と部品(react-dom/serverで静的に)
+  pdfExport                                   PDFに添付するkeymap.json・メタデータ・印刷用の1枚
 
 src-tauri/src/*.rsの#[cfg(test)]              設定の検証・画面外からの復帰・ログの時刻など
                                               (npm run check:rustで動く)

@@ -19,6 +19,7 @@ use tauri_plugin_autostart::ManagerExt;
 
 use crate::hid::{HidBridge, HidDeviceInfo};
 use crate::logfile;
+use crate::pdf;
 use crate::settings::{
     GrantedDevice, MAX_LAYERS, Settings, SettingsStore, WindowMode, is_granted, is_keyboard_uid,
     patch, pick_renderer_patch, remembered_name, with_layer_name,
@@ -79,6 +80,17 @@ pub fn settings_update(
         shortcut::apply(&app, &saved.toggle_shortcut);
     }
     saved
+}
+
+/// キーマップをPDFに書き出す。保存先を選んでもらい、書き出した場所を返す(やめたらNone)。
+/// 画面は印刷用のレイアウトを出してから呼ぶ(pdf.rs)。ダイアログと印刷を待つのでasyncにする。
+#[tauri::command]
+pub async fn pdf_export(
+    app: AppHandle,
+    window: WebviewWindow,
+    export: pdf::PdfExport,
+) -> Result<Option<String>, String> {
+    pdf::export(app, window, export).await
 }
 
 /// Windowsの起動時に自動で起動するようになっているか。

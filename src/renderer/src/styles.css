@@ -473,3 +473,89 @@ body.overlay .app-shell.faded {
   dominant-baseline: middle;
   pointer-events: none;
 }
+
+/*
+ * ===== 印刷(PDFの書き出し。components/PrintSheet.tsx)=====
+ *
+ * 画面ではずっと隠しておき、印刷のときだけアプリの画面と入れ替える。WebView2の「PDFに印刷」は
+ * 印刷のときの見た目で書き出す(src-tauri/src/pdf.rs)。
+ */
+.print-sheet {
+  display: none;
+  /* 背景の色も刷る(既定では、ブラウザは印刷で背景を省く) */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  background: #ffffff;
+  color: var(--color-ink);
+  /*
+   * 紙に刷っても読みやすいよう、地を白にした配色にする。キーの部品(.capなど)も文字もこの変数で
+   * 色を決めているので、ここで上書きすれば中身は同じ部品のまま描ける。レイヤーの色はそのまま
+   */
+  --color-ground: #ffffff;
+  --color-surface: #f3f5f6;
+  --color-surface-2: #fafbfb;
+  --color-raised: #e4e8ea;
+  --color-ink: #16191b;
+  --color-muted: #5a646a;
+  --color-faint: #8a949a;
+  --color-line: #aab3b8;
+  --color-line-soft: #d3d9dc;
+  --color-sym-fill: #e2e8eb;
+  --color-sym-line: #7d8a91;
+  --color-sym-ink: #0e1113;
+  --color-shift-ink: #3c464d;
+}
+
+/* A4横の1ページ。余白はここで持つ(PDFに印刷するときの余白は0にしてある) */
+.print-page {
+  box-sizing: border-box;
+  width: 297mm;
+  height: 210mm;
+  padding: 9mm 11mm;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  overflow: hidden;
+  break-after: page;
+}
+
+.print-page:last-child {
+  break-after: auto;
+}
+
+/* 1レイヤーぶん(見出しと図)。ページの高さを分け合う */
+.print-layer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+
+.print-keyboard {
+  flex: 1;
+  min-height: 0;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto;
+    background: #ffffff;
+  }
+
+  /* Tailwindのクラス(flexなど)はレイヤーの中にあるので、レイヤーの外のこちらが勝つ */
+  .app-shell {
+    display: none;
+  }
+
+  .print-sheet {
+    display: block;
+  }
+}

@@ -9,6 +9,7 @@
 //!   channel.rs  … 開発版かリリース版か(置き場所・更新の元を分ける)
 //!   shortcut.rs … 通常ウィンドウとオーバーレイを切り替えるショートカット
 //!   tray.rs     … タスクトレイのアイコン(オーバーレイはタスクバーに出ないので)
+//!   pdf.rs      … キーマップのPDF書き出し(WebView2の印刷 + メタデータと添付)
 
 // 配布ビルドでコンソールの窓を出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -17,6 +18,7 @@ mod channel;
 mod commands;
 mod hid;
 mod logfile;
+mod pdf;
 mod settings;
 mod shortcut;
 mod tray;
@@ -44,6 +46,8 @@ fn main() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // PDFの保存先を選ぶダイアログ(pdf.rs)
+        .plugin(tauri_plugin_dialog::init())
         // Windowsの起動時に自動で起動する(HKCUのRunに登録する)。名前は開発版とリリース版で分け、
         // 両方入れても互いの登録を上書きしない
         .plugin(tauri_plugin_autostart::Builder::new().app_name(channel::TITLE).build())
@@ -70,6 +74,7 @@ fn main() {
             commands::shortcut_registered,
             commands::autostart_get,
             commands::autostart_set,
+            commands::pdf_export,
             commands::update_check,
             commands::update_apply,
         ])
