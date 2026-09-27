@@ -89,7 +89,8 @@ Linux版をコンテナの仮想画面で動かし、起動・モック・モー
   確認し、答えるもののうち一番速いもの(両方答えるならUSB)を使う([hid/deviceProbe.ts](../src/renderer/src/hid/deviceProbe.ts))。
 - **ノブの回転は表示できない。** QMKのエンコーダーはmatrixとは別の系統で、Vial / VIAにも
   回転を返すコマンドが無い。押し込みはmatrixのキーなので光る。
-- **Combo / Key Override / One Shot / TTは再現していない。**
+- **Combo / Key Override / One Shot / TTは再現していない。** コンボとマクロは中身を読んで、キーの説明
+  (ツールチップ)とPDFに出すが、押したキーからコンボが成立したかは判定しない。
 - **レイヤーの判定は近似。** 長押しの判定のしかた(Permissive Hold / Hold On Other Key Press)は
   キーボードから読んで合わせるが、Chordal Hold / Flow Tapは再現していない。同じ20msのあいだに2つ押された
   キーは、行の若い順に押したものとして扱う(ARCHITECTURE.md §4)。
@@ -124,5 +125,5 @@ Linux版をコンテナの仮想画面で動かし、起動・モック・モー
 | 出力先の切り替え(`SWITCH`)への追従を実機で確認する | Bluetooth対応と一緒に | 抜き差し・スリープからの復帰での再接続は入っている(`KeyboardConnection`)。BLUETOOTH.md P4 |
 | 署名 | 広く配布するとき | 署名には証明書が要る。無いあいだはSmartScreenの警告が出る。Velopackは`--signTemplate`で任意の署名コマンドを使えるので、Linuxからならjsignなどで署名できる |
 | ノブの回転を光らせる | ファームを触れるなら | ファームに独自のraw HIDコマンドを足して、エンコーダーのイベントを返させる |
-| Combo / Key Overrideの表示 | 要望があれば | Vialのdynamic entryで読める(`[0xFE, 0x0D, 0x03, idx]` / `[0xFE, 0x0D, 0x05, idx]`) |
+| Key Overrideの表示 | 要望があれば | Vialのdynamic entryで読める(`[0xFE, 0x0D, 0x05, idx]`)。コンボとマクロは済み |
 | ほかのキーボード | 持っている人がいれば | **モックでは確認済み**(tests/otherKeyboard.test.tsx)。行列・レイヤー数が違う / ノブ無し / レイアウトオプション無し / カスタムキーコード無し / Tap Dance無しでも、読み込みから押下まで通る。残るのは実機での確認。DEVELOPMENT.md §6 |

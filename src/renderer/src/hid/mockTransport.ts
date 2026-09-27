@@ -33,6 +33,9 @@ import {
   CMD_VIA_GET_LAYER_COUNT,
   CMD_VIA_GET_PROTOCOL_VERSION,
   CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_MACRO_GET_BUFFER,
+  CMD_VIA_MACRO_GET_BUFFER_SIZE,
+  CMD_VIA_MACRO_GET_COUNT,
   CMD_VIA_VIAL_PREFIX,
   CMD_VIAL_DYNAMIC_ENTRY_OP,
   CMD_VIAL_GET_DEFINITION,
@@ -44,6 +47,7 @@ import {
   CMD_VIAL_QMK_SETTINGS_GET,
   CMD_VIAL_UNLOCK_POLL,
   CMD_VIAL_UNLOCK_START,
+  DYNAMIC_VIAL_COMBO_GET,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
@@ -122,6 +126,13 @@ export interface MockOptions {
    * 既定は答えない(知らない番号として0xFF。アプリは既定の判定を使う)。
    */
   holdMode?: HoldMode
+  /** コンボの枠(押すキー4つと出るキー。0は使わない)。既定は枠が無い。 */
+  combos?: ReadonlyArray<readonly [number, number, number, number, number]>
+  /**
+   * マクロ。数と、マクロ領域(Vialの形式のバイト列。NULで区切る)。既定はマクロが無い。
+   * 領域はbufferSizeまで0で埋めて答える。
+   */
+  macros?: { count: number; buffer: Uint8Array; bufferSize: number }
   /**
    * アンロックをどちらのファームと同じに答えるか。既定は`'vial-qmk'`。
    *
@@ -156,6 +167,8 @@ export class MockTransport implements Transport {
   private readonly firmware: MockFirmware
   private readonly tappingTerm: number
   private readonly holdMode: HoldMode | undefined
+  private readonly combos: MockOptions['combos']
+  private readonly macros: MockOptions['macros']
   private readonly pressed = new Set<string>()
   private readonly definitionBytes: Uint8Array
 
@@ -179,6 +192,8 @@ export class MockTransport implements Transport {
     this.firmware = options.firmware ?? 'vial-qmk'
     this.tappingTerm = options.tappingTerm ?? 0
     this.holdMode = options.holdMode
+    this.combos = options.combos ?? []
+    this.macros = options.macros
   }
 
   get opened(): boolean {
@@ -352,6 +367,26 @@ export class MockTransport implements Transport {
         }
         return out
 
+      // マクロ(via.cのid_dynamic_keymap_macro_*)。領域の外は0で答える
+      case CMD_VIA_MACRO_GET_COUNT:
+        out[1] = this.macros?.count ?? 0
+        return out
+
+      case CMD_VIA_MACRO_GET_BUFFER_SIZE: {
+        const size = this.macros?.bufferSize ?? 0
+        out[1] = (size >> 8) & 0xff
+        out[2] = size & 0xff
+        return out
+      }
+
+      case CMD_VIA_MACRO_GET_BUFFER: {
+        const offset = (msg[1] << 8) | msg[2]
+        const size = msg[3]
+        if (size > 28) return out
+        for (let i = 0; i < size; i++) out[4 + i] = this.macros?.buffer[offset + i] ?? 0
+        return out
+      }
+
       default:
         return out
     }
@@ -474,9 +509,22 @@ export class MockTransport implements Transport {
         if (msg[2] === DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES) {
           out.fill(0)
           out[0] = this.keyboard.tapDance.length
-          out[1] = 0
+          out[1] = this.combos?.length ?? 0
           out[2] = 0
           out[3] = 0
+          return out
+        }
+        if (msg[2] === DYNAMIC_VIAL_COMBO_GET) {
+          const combo = this.combos?.[msg[3]]
+          out.fill(0)
+          if (!combo) {
+            out[0] = 0xff
+            return out
+          }
+          combo.forEach((raw, i) => {
+            out[1 + i * 2] = raw & 0xff
+            out[2 + i * 2] = (raw >> 8) & 0xff
+          })
           return out
         }
         if (msg[2] === DYNAMIC_VIAL_TAP_DANCE_GET) {

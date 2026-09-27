@@ -14,7 +14,8 @@ import { type JSX, useMemo } from 'react'
 import { LayerEngine } from '../engine/layerState'
 import type { KeyboardSnapshot } from '../hid/vial'
 import type { KeymapGuide } from '../hooks/useKeymapGuide'
-import type { LabelMode } from '../keycodes/labels'
+import { formatCombo, formatMacro } from '../keycodes/dynamicEntries'
+import { keyNameFor, type LabelMode } from '../keycodes/labels'
 import type { KeyboardGeometry } from '../layout/geometry'
 import { layerColor } from '../lib/theme'
 import { messages } from '../messages'
@@ -67,7 +68,14 @@ export function PrintSheet({
     pages.push(layers.slice(i, i + LAYERS_PER_PAGE))
   }
   const symbols = [...guide.symbolRoutes].filter(([, routes]) => routes.length > 0)
-  const total = pages.length + (symbols.length > 0 ? 1 : 0)
+  // コンボとマクロ(使っているものだけ)。最後のページに記号の表と一緒に置く
+  const keyName = keyNameFor(labelMode, guide.labelContext)
+  const combos = snapshot.combos.map((combo) => formatCombo(combo, keyName))
+  const macros = snapshot.macros.flatMap((actions, index) =>
+    actions.length > 0 ? [`M${index}: ${formatMacro(actions, keyName)}`] : []
+  )
+  const lastPage = symbols.length > 0 || combos.length > 0 || macros.length > 0
+  const total = pages.length + (lastPage ? 1 : 0)
 
   const header = (page: number) => (
     <header className="flex items-baseline justify-between text-2xs text-muted">
@@ -118,10 +126,12 @@ export function PrintSheet({
         </section>
       ))}
 
-      {symbols.length > 0 && (
+      {lastPage && (
         <section className="print-page">
           {header(total)}
-          <h2 className="text-sm font-bold text-ink">{messages.print.symbols}</h2>
+          {symbols.length > 0 && (
+            <h2 className="text-sm font-bold text-ink">{messages.print.symbols}</h2>
+          )}
           <ul className="grid grid-cols-4 gap-x-4 gap-y-1.5">
             {symbols.map(([symbol, routes]) => (
               <li key={symbol} className="flex items-center gap-2 break-inside-avoid">
@@ -132,6 +142,27 @@ export function PrintSheet({
               </li>
             ))}
           </ul>
+          {(combos.length > 0 || macros.length > 0) && (
+            <div className="grid grid-cols-2 gap-x-6">
+              {[
+                [messages.print.combos, combos],
+                [messages.print.macros, macros]
+              ].map(([title, lines]) =>
+                lines.length > 0 ? (
+                  <div key={title as string}>
+                    <h2 className="text-sm font-bold text-ink">{title}</h2>
+                    <ul className="mt-1 space-y-0.5 text-xs text-ink">
+                      {(lines as string[]).map((line) => (
+                        <li key={line} className="break-inside-avoid">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null
+              )}
+            </div>
+          )}
         </section>
       )}
     </div>

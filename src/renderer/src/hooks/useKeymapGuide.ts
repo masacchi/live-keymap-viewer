@@ -43,7 +43,12 @@ export function useKeymapGuide(
 ): KeymapGuide {
   const summaries = useMemo(() => (snapshot ? summarizeLayers(snapshot) : []), [snapshot])
   const labelContext = useMemo<LabelContext>(
-    () => ({ customKeycodes: snapshot?.definition.customKeycodes, tapDance: snapshot?.tapDance }),
+    () => ({
+      customKeycodes: snapshot?.definition.customKeycodes,
+      tapDance: snapshot?.tapDance,
+      macros: snapshot?.macros,
+      combos: snapshot?.combos
+    }),
     [snapshot]
   )
 

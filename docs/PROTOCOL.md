@@ -33,6 +33,9 @@
 | キーマップのバッファ | `[0x12, off_hi, off_lo, size]`(`>BHB`、size ≤ 28) | `data[4 : 4+size]` | `via.c:420-426`、`keyboard_comm.py:205-206` |
 | レイアウトオプション | `[0x02, 0x02]` | `data[2..5]` = big-endian u32 | `keyboard_comm.py:228-230` |
 | matrix state | `[0x02, 0x03]` | `data[2..]` | `via.c:250-273`、`matrix_test.py:107-125` |
+| マクロの数 | `[0x0C]` | `data[1]` | `macro.py`の`reload_macros_early`。RMKは32に決め打ち |
+| マクロ領域のバイト数 | `[0x0D]` | `data[1..2]` = big-endian u16 | 同上 |
+| マクロ領域 | `[0x0E, off_hi, off_lo, size]`(size ≤ 28) | `data[4 : 4+size]` | `macro.py`の`reload_macros_late`。**RMKは範囲を確かめずに読むので、領域の大きさを超えて読まない** |
 
 - キーマップ全体の大きさは`layers * rows * cols * 2`バイト。1つのキーコードは**big-endian u16**(`keyboard_comm.py:216`の`>H`)。
 - 1リクエストあたりの転送量は`BUFFER_FETCH_CHUNK = 28`(`protocol/constants.py`)。
@@ -85,6 +88,18 @@ Vialコマンド(`0xFE`)は`msg[0]`から上書きするため照合できない
 | dynamic entryの数 | `[0xFE, 0x0D, 0x00]` | `data[0]`=TDの数、`[1]`=Comboの数、`[2]`=KeyOverrideの数、`[3]`=AltRepeatの数、`data[31]`=機能のビット | `vial.c:228-245` |
 | QMK設定の取得 | `[0xFE, 0x0A, qsid_lo, qsid_hi]` | `data[0]`=status(0が成功、知らない番号は0xFF)、値は`data[1..]`(長さは設定ごと)。長押しの判定時間(tapping term)は**qsid 7、u16 LE**。Permissive Holdは**qsid 22**、Hold On Other Key Pressは**qsid 23**(どちらも1バイトの真偽) | `vial.c:210-214`(`#ifdef QMK_SETTINGS`)、`qmk_settings.c:53,257-267`、`keyboard_comm.py:308-311`、vial-guiの`qmk_settings.json`(qsid 7は`width: 2`) |
 | Tap Danceの取得 | `[0xFE, 0x0D, 0x01, idx]` | `data[0]`=status(0が成功)、`data[1..10]` = u16 **LE** ×5 = on_tap、on_hold、on_double_tap、on_tap_hold、tapping_term | `vial.c:247-254`、`vial.h:99-100`、`tap_dance.py:16-17` |
+| コンボの取得 | `[0xFE, 0x0D, 0x03, idx]` | `data[0]`=status、`data[1..10]` = u16 **LE** ×5 = 押すキー4つ(0は使わない)と出るキー。数は`[0xFE, 0x0D, 0x00]`の`data[1]` | `vial.c:269-275`、`combo.py`、RMKの`vial.rs` 392–414行(同じ並び) |
+
+### マクロとコンボ
+
+マクロ領域は、マクロをNULで区切って並べたもので、Vialの形式(vial protocol 2以降)で入っている
+(`macro.py`の`macro_deserialize_v2`)。ふつうのバイトは打つ文字、`0x01`で始まるものはキー操作:
+`0x01 0x01..0x03 kc`(タップ / 押す / 離す、1バイト)、`0x01 0x05..0x07 lo hi`(同じで2バイト、u16 LE)、
+`0x01 0x04 d1 d2`((d1 − 1) + (d2 − 1) × 255 ms待つ)。アプリはキーマップ・ノブ・Tap Danceのどこかに
+`M(n)`があるときだけ読み、数だけのNULが揃ったら読むのをやめる(`hid/vial.ts`の`getMacros`)。
+コンボは枠の数だけ1往復ずつ読み、押すキーと出るキーが入っている枠だけを持つ(`getCombos`)。
+どちらも、キーの説明(ツールチップ)・PDF・添付の`keymap.json`に出す。コンボやマクロの**動き**は
+再現しない(押したキーから、コンボが成立したかは判定しない)。
 
 ### 長押しの判定時間と判定のしかた
 

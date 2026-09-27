@@ -7,6 +7,12 @@
  */
 
 import { decodeKeycode } from '../keycodes/decode'
+import {
+  type ComboEntry,
+  decodeMacroBuffer,
+  type MacroAction,
+  macroBufferComplete
+} from '../keycodes/dynamicEntries'
 import type { HoldMode, TapDanceEntry } from '../keycodes/tapDance'
 import { buildGeometry } from '../layout/geometry'
 import {
@@ -15,6 +21,9 @@ import {
   CMD_VIA_GET_LAYER_COUNT,
   CMD_VIA_GET_PROTOCOL_VERSION,
   CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_MACRO_GET_BUFFER,
+  CMD_VIA_MACRO_GET_BUFFER_SIZE,
+  CMD_VIA_MACRO_GET_COUNT,
   CMD_VIA_VIAL_PREFIX,
   CMD_VIAL_DYNAMIC_ENTRY_OP,
   CMD_VIAL_GET_DEFINITION,
@@ -26,9 +35,12 @@ import {
   CMD_VIAL_QMK_SETTINGS_GET,
   CMD_VIAL_UNLOCK_POLL,
   CMD_VIAL_UNLOCK_START,
+  DYNAMIC_VIAL_COMBO_GET,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
+  QK_MACRO_FIRST,
+  QK_MACRO_LAST,
   QSID_HOLD_ON_OTHER_KEY_PRESS,
   QSID_PERMISSIVE_HOLD,
   QSID_TAPPING_TERM,
@@ -95,6 +107,10 @@ export interface KeyboardSnapshot {
   tappingTerm: number | null
   /** キーボードに設定されている長押しの判定のしかた。読めなければnull(既定の判定を使う)。 */
   holdMode: HoldMode | null
+  /** マクロの中身(番号順)。キーマップにM(n)のキーが無ければ読まないので空。 */
+  macros: MacroAction[][]
+  /** 使っているコンボ(押すキーと出るキーが入っている枠だけ)。 */
+  combos: ComboEntry[]
   /** matrix stateを読めるか(vial protocolとパケットサイズの条件)。 */
   matrixTestSupported: boolean
 }
@@ -156,7 +172,7 @@ function validatorFor(request: readonly number[]): ((data: Uint8Array) => boolea
   if (id === CMD_VIA_GET_KEYBOARD_VALUE) {
     return (data) => data[0] === id && data[1] === request[1]
   }
-  if (id === CMD_VIA_KEYMAP_GET_BUFFER) {
+  if (id === CMD_VIA_KEYMAP_GET_BUFFER || id === CMD_VIA_MACRO_GET_BUFFER) {
     // オフセットとサイズもそのまま返ってくるので、取り違えを厳密に弾ける
     return (data) =>
       data[0] === id && data[1] === request[1] && data[2] === request[2] && data[3] === request[3]
@@ -344,6 +360,69 @@ export async function getHoldMode(transport: Transport): Promise<HoldMode | null
   if (onOtherPress && onOtherPress[0] !== 0) return 'hold-on-other-key-press'
   if (permissive && permissive[0] !== 0) return 'permissive-hold'
   return 'tapping-term'
+}
+
+/** キーマップ・ノブ・Tap DanceのどこかにM(n)のキーがあるか。無ければマクロは読まない。 */
+export function usesMacros(
+  keymap: number[][][],
+  encoders: number[][][],
+  tapDance: ReadonlyArray<TapDanceEntry | undefined>
+): boolean {
+  const isMacro = (raw: number) => raw >= QK_MACRO_FIRST && raw <= QK_MACRO_LAST
+  return (
+    keymap.flat(2).some(isMacro) ||
+    encoders.flat(2).some(isMacro) ||
+    tapDance.some(
+      (entry) =>
+        entry !== undefined &&
+        [entry.onTap, entry.onHold, entry.onDoubleTap, entry.onTapHold].some(isMacro)
+    )
+  )
+}
+
+/**
+ * マクロを読む。数と領域の大きさを聞き、領域を28バイトずつ、数だけのNULが揃うまで読む
+ * (vial-guiの`reload_macros`と同じ)。領域の大きさを超えては読まない(RMKは範囲を確かめずに
+ * 読むので、超えるとファームが止まる)。
+ */
+export async function getMacros(transport: Transport): Promise<MacroAction[][]> {
+  const count = (await send(transport, [CMD_VIA_MACRO_GET_COUNT], LONG))[1]
+  const size = u16be(await send(transport, [CMD_VIA_MACRO_GET_BUFFER_SIZE], LONG), 1)
+  if (count === 0 || size === 0) return []
+  const buffer = new Uint8Array(size)
+  let read = 0
+  while (read < size) {
+    const chunk = Math.min(BUFFER_FETCH_CHUNK, size - read)
+    const data = await send(
+      transport,
+      [CMD_VIA_MACRO_GET_BUFFER, read >> 8, read & 0xff, chunk],
+      LONG
+    )
+    buffer.set(data.subarray(4, 4 + chunk), read)
+    read += chunk
+    if (macroBufferComplete(buffer.subarray(0, read), count)) break
+  }
+  return decodeMacroBuffer(buffer.subarray(0, read), count)
+}
+
+/**
+ * コンボを読む(枠の数だけ1往復ずつ)。使っていない枠(押すキーか出るキーが無い)は除く。
+ * 使っている枠がどれかは読まないと分からないので、全部読む。
+ */
+export async function getCombos(transport: Transport, count: number): Promise<ComboEntry[]> {
+  const combos: ComboEntry[] = []
+  for (let index = 0; index < count; index++) {
+    const data = await send(
+      transport,
+      [CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_COMBO_GET, index],
+      LONG
+    )
+    if (data[0] !== 0) continue
+    const keys = [0, 1, 2, 3].map((i) => u16le(data, 1 + i * 2)).filter((raw) => raw !== 0)
+    const output = u16le(data, 9)
+    if (keys.length > 0 && output !== 0) combos.push({ index, keys, output })
+  }
+  return combos
 }
 
 export async function getLayoutOptions(transport: Transport): Promise<number> {
@@ -545,6 +624,8 @@ export interface CachedKeymap {
   tappingTerm?: number | null
   /** 長押しの判定のしかた。これを持たない前の版のキャッシュでは無い。 */
   holdMode?: HoldMode | null
+  macros?: MacroAction[][]
+  combos?: ComboEntry[]
 }
 
 export interface KeymapCache {
@@ -564,7 +645,9 @@ export function toCachedKeymap(snapshot: KeyboardSnapshot): CachedKeymap {
     encoders: snapshot.encoders,
     layoutOptions: snapshot.layoutOptions,
     tappingTerm: snapshot.tappingTerm,
-    holdMode: snapshot.holdMode
+    holdMode: snapshot.holdMode,
+    macros: snapshot.macros,
+    combos: snapshot.combos
   }
 }
 
@@ -617,6 +700,8 @@ export async function loadCachedKeyboard(
     layoutOptions: cached.layoutOptions,
     tappingTerm: cached.tappingTerm ?? null,
     holdMode: cached.holdMode ?? null,
+    macros: cached.macros ?? [],
+    combos: cached.combos ?? [],
     matrixTestSupported: isMatrixTestSupported(vialProtocol, cached.rows, cached.cols)
   }
 }
@@ -697,6 +782,8 @@ export async function loadKeyboard(
   const layoutOptions = definition.layouts.labels ? await getLayoutOptions(transport) : 0
   const tappingTerm = await getTappingTerm(transport)
   const holdMode = await getHoldMode(transport)
+  const macros = usesMacros(keymap, encoders, tapDance) ? await getMacros(transport) : []
+  const combos = await getCombos(transport, dynamic.combo)
 
   return {
     viaProtocol,
@@ -713,6 +800,8 @@ export async function loadKeyboard(
     layoutOptions,
     tappingTerm,
     holdMode,
+    macros,
+    combos,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, rows, cols)
   }
 }
@@ -745,8 +834,21 @@ export async function reloadKeymap(
   const layoutOptions = previous.definition.layouts.labels ? await getLayoutOptions(transport) : 0
   const tappingTerm = await getTappingTerm(transport)
   const holdMode = await getHoldMode(transport)
+  const macros = usesMacros(keymap, encoders, tapDance) ? await getMacros(transport) : []
+  const combos = await getCombos(transport, dynamic.combo)
 
-  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions, tappingTerm, holdMode }
+  return {
+    ...previous,
+    layers,
+    keymap,
+    tapDance,
+    encoders,
+    layoutOptions,
+    tappingTerm,
+    holdMode,
+    macros,
+    combos
+  }
 }
 
 /**
@@ -762,7 +864,9 @@ export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapsho
       s.encoders,
       s.layoutOptions,
       s.tappingTerm,
-      s.holdMode
+      s.holdMode,
+      s.macros,
+      s.combos
     ])
   return editable(before) === editable(after)
 }

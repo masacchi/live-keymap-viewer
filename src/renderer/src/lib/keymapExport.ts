@@ -73,6 +73,21 @@ export function buildKeymapExport({
     })),
     /** [layer][encoder] = [左回り, 右回り]。 */
     encoders: snapshot.encoders.map((layer) => layer.map((directions) => directions.map(nameOf))),
+    /** マクロの中身(M(n)を使っていなければ読まないので空)。キーコードは名前にする。 */
+    macros: snapshot.macros.map((actions, index) => ({
+      index,
+      actions: actions.map((action) =>
+        action.kind === 'tap' || action.kind === 'down' || action.kind === 'up'
+          ? { kind: action.kind, keycodes: action.keycodes.map(nameOf) }
+          : action
+      )
+    })),
+    /** 使っているコンボ(押すキーと出るキー)。 */
+    combos: snapshot.combos.map((combo) => ({
+      index: combo.index,
+      keys: combo.keys.map(nameOf),
+      output: nameOf(combo.output)
+    })),
     /** 読んだ枠だけ(使っている枠と先頭の数個)。 */
     tapDance: snapshot.tapDance.flatMap((entry, index) =>
       entry

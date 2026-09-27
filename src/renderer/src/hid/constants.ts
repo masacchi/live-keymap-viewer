@@ -43,6 +43,17 @@ export const CMD_VIAL_DYNAMIC_ENTRY_OP = 0x0d
 // dynamic entry opのサブコマンド
 export const DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES = 0x00
 export const DYNAMIC_VIAL_TAP_DANCE_GET = 0x01
+/** コンボを1つ読む。`[0xFE, 0x0D, 0x03, idx]` → data[0]=status、data[1..10]=u16 LE×5(押すキー4つと出るキー)。 */
+export const DYNAMIC_VIAL_COMBO_GET = 0x03
+/** マクロの数。`[0x0C]` → data[1]。 */
+export const CMD_VIA_MACRO_GET_COUNT = 0x0c
+/** マクロ領域のバイト数。`[0x0D]` → data[1..2](big-endian u16)。 */
+export const CMD_VIA_MACRO_GET_BUFFER_SIZE = 0x0d
+/** マクロ領域を読む。`[0x0E, off_hi, off_lo, size]` → data[4..](キーマップのバッファと同じ形)。 */
+export const CMD_VIA_MACRO_GET_BUFFER = 0x0e
+/** マクロのキーコード(M(n))の範囲。 */
+export const QK_MACRO_FIRST = 0x7700
+export const QK_MACRO_LAST = 0x77ff
 
 /** matrix testerが入ったのはvial protocol 3から。 */
 export const VIAL_PROTOCOL_MATRIX_TESTER = 3

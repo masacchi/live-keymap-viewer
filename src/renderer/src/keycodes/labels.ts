@@ -5,17 +5,18 @@
  * USモードは素のUS配列の表記。表の出発点はreference/keymap-preview.htmlの
  * JIS / NAMEDオブジェクト。
  */
-import type { Keycode } from './decode'
 import {
   decodeKeycode,
   formatKeycode,
   hasShift,
+  type Keycode,
   MOD_ALT,
   MOD_CTRL,
   MOD_GUI,
   MOD_RIGHT,
   MOD_SHIFT
 } from './decode'
+import { type ComboEntry, formatCombo, formatMacro, type MacroAction } from './dynamicEntries'
 
 export type LabelMode = 'jis' | 'us'
 
@@ -174,6 +175,10 @@ export interface LabelContext {
   customKeycodes?: ReadonlyArray<{ name?: string; title?: string; shortName?: string }>
   /** Tap Danceの設定。TD(n)をタップ側の文字で出すのに使う。読んでいない枠はundefined。 */
   tapDance?: ReadonlyArray<{ onTap: number; onHold: number } | undefined>
+  /** マクロの中身(番号順)。M(n)の説明に出す。読んでいなければ無い。 */
+  macros?: ReadonlyArray<readonly MacroAction[]>
+  /** 使っているコンボ。押すキーのどれかにあたるキーの説明に出す。 */
+  combos?: readonly ComboEntry[]
 }
 
 function printableTable(mode: LabelMode): Readonly<Record<string, Printable>> {
@@ -233,6 +238,26 @@ function modsLabel(mods: number): string {
  * ここでは**タップ側の文字**を返す。長押し側の表現は呼び出し元(KeyCap)が担当する。
  */
 export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext = {}): KeyLabel {
+  const label = baseLabel(kc, mode, ctx)
+  // このキーを使うコンボがあれば、説明に添える(キーの中には書かない。長くなるので)
+  const combos = (ctx.combos ?? []).filter((combo) => combo.keys.includes(kc.raw))
+  if (combos.length === 0) return label
+  const name = keyNameFor(mode, ctx)
+  const lines = combos.map((combo) => `コンボ: ${formatCombo(combo, name)}`)
+  return { ...label, description: [label.description, ...lines].filter(Boolean).join(' / ') }
+}
+
+/** マクロやコンボの中のキーを、画面と同じ名前で出す(無ければQMKの名前)。 */
+export function keyNameFor(mode: LabelMode, ctx: LabelContext): (raw: number) => string {
+  // コンボ・マクロの中でさらに説明を足さないよう、名前に要る材料だけを渡す
+  const plain: LabelContext = { customKeycodes: ctx.customKeycodes, tapDance: ctx.tapDance }
+  return (raw) => {
+    const kc = decodeKeycode(raw)
+    return baseLabel(kc, mode, plain).main || formatKeycode(kc)
+  }
+}
+
+function baseLabel(kc: Keycode, mode: LabelMode, ctx: LabelContext): KeyLabel {
   switch (kc.kind) {
     case 'none':
       return { main: '', category: 'none' }
@@ -275,8 +300,15 @@ export function labelForKeycode(kc: Keycode, mode: LabelMode, ctx: LabelContext 
       return { main: `TD${kc.index}`, category: 'layer' }
     }
 
-    case 'macro':
-      return { main: `M${kc.index}`, category: 'named' }
+    case 'macro': {
+      // 中身を読めていれば説明に出す(「"hello" Enter」のように)
+      const actions = ctx.macros?.[kc.index]
+      const description =
+        actions && actions.length > 0
+          ? `マクロ: ${formatMacro(actions, keyNameFor(mode, ctx))}`
+          : undefined
+      return { main: `M${kc.index}`, description, category: 'named' }
+    }
 
     case 'user': {
       const custom = ctx.customKeycodes?.[kc.index]

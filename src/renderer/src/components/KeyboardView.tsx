@@ -70,7 +70,10 @@ export function KeyboardView({
   const labelContext = useMemo<LabelContext>(
     () => ({
       customKeycodes: snapshot.definition.customKeycodes,
-      tapDance: snapshot.tapDance
+      tapDance: snapshot.tapDance,
+      // キーの説明(ツールチップ)に、マクロの中身とそのキーを使うコンボを出す
+      macros: snapshot.macros,
+      combos: snapshot.combos
     }),
     [snapshot]
   )

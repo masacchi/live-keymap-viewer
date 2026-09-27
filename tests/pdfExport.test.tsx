@@ -66,11 +66,11 @@ describe('PDFのメタデータ', () => {
 })
 
 describe('印刷用の1枚', () => {
-  function Sheet(): JSX.Element {
-    const guide = useKeymapGuide(snapshot, 'jis')
+  function Sheet({ source = snapshot }: { source?: KeyboardSnapshot }): JSX.Element {
+    const guide = useKeymapGuide(source, 'jis')
     return (
       <PrintSheet
-        snapshot={snapshot}
+        snapshot={source}
         geometry={buildGeometry(snapshot.definition.layouts.keymap, {
           rows: snapshot.rows,
           cols: snapshot.cols
@@ -96,5 +96,22 @@ describe('印刷用の1枚', () => {
     expect(html).toContain('記号')
     expect(html).not.toContain('>L5<')
     expect(html).toContain('4/4')
+    // 使っていなければ、コンボとマクロの欄は出さない
+    expect(html).not.toContain('コンボ')
+  })
+
+  it('コンボとマクロを使っていれば、最後のページに並べる', () => {
+    const html = renderToStaticMarkup(
+      <Sheet
+        source={{
+          ...snapshot,
+          combos: [{ index: 0, keys: [0x16, 0x07], output: 0x29 }],
+          macros: [[{ kind: 'text', text: 'hello' }], []]
+        }}
+      />
+    )
+    expect(html).toContain('コンボ(同時に押す)')
+    expect(html).toContain('マクロ')
+    expect(html).toContain('M0: &quot;hello&quot;')
   })
 })
