@@ -226,6 +226,25 @@ describe('KeyboardSession: ポーリング', () => {
     await session.dispose()
   })
 
+  it('遅い接続では、押下を読む往復を1分ごとにログに残す', async () => {
+    // 1往復500msの接続を、時計を進めて再現する
+    const mock = new MockTransport({ unlocked: true })
+    const opts = options()
+    const send = mock.send.bind(mock)
+    mock.send = async (request, sendOptions) => {
+      if (request[0] === 0x02 && request[1] === 0x03) opts.clock.t += 500
+      return send(request, sendOptions)
+    }
+    const lines: string[] = []
+    const session = new KeyboardSession(mock, { ...opts, log: (_level, line) => lines.push(line) })
+    await session.start()
+    await until(() => lines.length > 0)
+    expect(lines[0]).toMatch(
+      /^往復: 押下が変わった回 0回 \/ 変わらなかった回 \d+回\(中央値500ms・最大500ms\)$/
+    )
+    await session.dispose()
+  })
+
   it('往復時間を測らないトランスポート(モック)では、nullのまま', async () => {
     const { session } = await readySession()
     expect(session.state.roundTripMs).toBeNull()

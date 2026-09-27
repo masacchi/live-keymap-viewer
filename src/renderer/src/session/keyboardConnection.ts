@@ -377,7 +377,8 @@ export class KeyboardConnection {
       ...this.options.sessionOptions,
       definitionCache: real ? this.options.definitionCache : undefined,
       keymapCache: real ? this.options.keymapCache : undefined,
-      tappingTerm: this.tappingTerm
+      tappingTerm: this.tappingTerm,
+      log: real ? this.options.log : undefined
     })
     this.session = session
 

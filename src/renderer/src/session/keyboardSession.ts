@@ -20,6 +20,7 @@
  *      戻ってきた時点で自分が古いと分かるので、状態を書き換えない。
  */
 
+import type { ReportLevel } from '../../../shared/ipc'
 import { emptyMatrix, LayerEngine, type LayerSnapshot } from '../engine/layerState'
 import { type Transport, TransportError } from '../hid/transport'
 import {
@@ -40,6 +41,7 @@ import {
 } from '../hid/vial'
 import { buildGeometry, type KeyboardGeometry } from '../layout/geometry'
 import { messages } from '../messages'
+import { matrixKey, RoundTripStats } from './roundTripStats'
 
 /** matrixのポーリング間隔。vial-guiも20ms(docs/PROTOCOL.md §8)。 */
 export const MATRIX_POLL_MS = 20
@@ -64,6 +66,8 @@ export const STALL_LIMIT_MS = 15_000
 export const POLL_RETRY_MS = 100
 /** 往復時間を画面に知らせる間隔(ms)。 */
 export const ROUND_TRIP_PUBLISH_MS = 2000
+/** 押下を読む往復の時間をログに残す間隔(ms)。遅い接続のときだけ残す。 */
+export const ROUND_TRIP_LOG_MS = 60_000
 
 /**
  * タイムアウト(相手が詰まっているだけかもしれない)か、それ以外の失敗か。
@@ -128,6 +132,11 @@ export interface SessionOptions {
   keymapCache?: KeymapCache
   /** 長押しと見なすまでの時間(ms、LTの既定)。無ければエンジンの既定(200ms)。 */
   tappingTerm?: number
+  /**
+   * ログに残す。遅い接続(Bluetooth)では、押下を読む往復の時間を1分ごとに残す(roundTripStats.ts)。
+   * 無ければ残さない(モック)。
+   */
+  log?: (level: ReportLevel, message: string) => void
 }
 
 export interface ReloadOptions {
@@ -171,6 +180,7 @@ export class KeyboardSession {
 
   private readonly matrixPollMs: number
   private readonly unlockPollMs: number
+  private readonly log: SessionOptions['log']
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
@@ -183,6 +193,7 @@ export class KeyboardSession {
     private readonly transport: Transport,
     options: SessionOptions = {}
   ) {
+    this.log = options.log
     this.matrixPollMs = options.matrixPollMs ?? MATRIX_POLL_MS
     this.unlockPollMs = options.unlockPollMs ?? UNLOCK_POLL_MS
     this.now = options.now ?? (() => performance.now())
@@ -515,6 +526,10 @@ export class KeyboardSession {
     let stalledSince: number | null = null
     /** 往復時間を最後に知らせた時刻。 */
     let roundTripPublishedAt = Number.NEGATIVE_INFINITY
+    /** 押下が変わった回と変わらなかった回の往復。ROUND_TRIP_LOG_MSごとにログに残す。 */
+    const stats = new RoundTripStats()
+    let statsLoggedAt = this.now()
+    let previousMatrix: string | null = null
     try {
       while (this.alive(gen)) {
         const started = this.now()
@@ -532,6 +547,15 @@ export class KeyboardSession {
           continue
         }
         if (!this.alive(gen)) return
+        const answered = this.now()
+        const key = matrixKey(matrix)
+        if (previousMatrix !== null) stats.add(answered - started, key !== previousMatrix)
+        previousMatrix = key
+        if (answered - statsLoggedAt >= ROUND_TRIP_LOG_MS) {
+          statsLoggedAt = answered
+          const line = stats.flush()
+          if (line) this.log?.('info', line)
+        }
         if (stalledSince !== null) {
           stalledSince = null
           this.update({ stalled: false })
