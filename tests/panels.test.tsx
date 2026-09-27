@@ -278,6 +278,19 @@ describe('オーバーレイの自動フェード', () => {
     expect(reload({ canReload: true, reloading: true })).toMatch(/disabled=""[^>]*>読み直し中…/)
   })
 
+  it('画面の四隅と次のモニターへ寄せるボタンを出す', () => {
+    const html = controls()
+    for (const label of [
+      '左上に寄せる',
+      '右上に寄せる',
+      '左下に寄せる',
+      '右下に寄せる',
+      '次のモニターへ移す'
+    ]) {
+      expect(html).toContain(`aria-label="${label}"`)
+    }
+  })
+
   it('後ろのぼかしは、使えるときだけ欄を出す', () => {
     expect(controls()).toContain('後ろをぼかす')
     expect(controls({}, { blurSupported: false })).not.toContain('後ろをぼかす')

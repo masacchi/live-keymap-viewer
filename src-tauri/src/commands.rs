@@ -21,8 +21,8 @@ use crate::hid::{HidBridge, HidDeviceInfo};
 use crate::logfile;
 use crate::pdf;
 use crate::settings::{
-    GrantedDevice, MAX_LAYERS, Settings, SettingsStore, WindowMode, is_granted, is_keyboard_uid,
-    patch, pick_renderer_patch, remembered_name, with_layer_name,
+    GrantedDevice, MAX_LAYERS, Settings, SettingsStore, SnapTarget, WindowMode, is_granted,
+    is_keyboard_uid, patch, pick_renderer_patch, remembered_name, with_layer_name,
 };
 use crate::shortcut;
 use crate::updater::{self, UpdateStatus};
@@ -173,6 +173,12 @@ pub fn window_move_by(dx: f64, dy: f64, windows: State<'_, Arc<WindowManager>>) 
     if dx.is_finite() && dy.is_finite() {
         windows.move_by(dx, dy);
     }
+}
+
+/// オーバーレイを画面の四隅や次のモニターへ寄せる。
+#[tauri::command]
+pub fn window_snap(target: SnapTarget, windows: State<'_, Arc<WindowManager>>) {
+    windows.snap(target);
 }
 
 #[tauri::command]

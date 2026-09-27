@@ -125,6 +125,7 @@ function createApi(chooser: DeviceChooser): RendererApi {
     setIgnoreMouseEvents: (ignore) => send('window_set_ignore_mouse', { ignore }),
     moveBy: (dx, dy) => send('window_move_by', { dx, dy }),
     resizeBy: (dw, dh) => send('window_resize_by', { dw, dh }),
+    snapWindow: (target) => send('window_snap', { target }),
 
     onChooseDevice: (handler) => chooser.subscribe(handler),
     chooseDevice: (deviceId) => chooser.resolve(deviceId),

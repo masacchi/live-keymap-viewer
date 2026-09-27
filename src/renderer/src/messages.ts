@@ -307,7 +307,15 @@ export const messages = {
       'ベースレイヤー(L0)のあいだの濃さです。「濃さ」に掛かります。0%で見えなくなります(このパネルは残ります)',
     blur: '後ろをぼかす',
     blurHint: '後ろの画面をすりガラスのようにぼかします(Windows 11)。薄くしているあいだは外れます',
-    exit: '通常ウィンドウに戻す'
+    exit: '通常ウィンドウに戻す',
+    snap: {
+      'top-left': '左上に寄せる',
+      'top-right': '右上に寄せる',
+      'bottom-left': '左下に寄せる',
+      'bottom-right': '右下に寄せる',
+      'next-monitor': '次のモニターへ移す'
+    },
+    snapLabel: '寄せる'
   },
 
   symbols: {

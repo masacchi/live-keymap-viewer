@@ -63,6 +63,7 @@ fn main() {
             commands::window_set_ignore_mouse,
             commands::window_move_by,
             commands::window_resize_by,
+            commands::window_snap,
             commands::hid_released,
             commands::hid_devices,
             commands::hid_remember,

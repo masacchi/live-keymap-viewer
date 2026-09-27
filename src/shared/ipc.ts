@@ -67,6 +67,9 @@ export interface PdfExport {
   keymapJson: string
 }
 
+/** オーバーレイを寄せる先。次のモニターへは、いまのモニターの中での位置の割合を保つ。 */
+export type SnapTarget = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'next-monitor'
+
 /** 画面からRust側に頼めること。画面が使うものだけを置く。 */
 export interface RendererApi {
   /** 版・ビルド時刻・ログの置き場所。設定パネルに出す。 */
@@ -123,6 +126,8 @@ export interface RendererApi {
   moveBy(dx: number, dy: number): void
   /** ウィンドウの大きさを相対変更する。 */
   resizeBy(dw: number, dh: number): void
+  /** オーバーレイを画面の四隅や次のモニターへ寄せる(src-tauri/src/settings.rsのsnap_bounds)。 */
+  snapWindow(target: SnapTarget): void
 
   /** 選択画面に候補を出すときのハンドラを登録する。戻り値を呼ぶと解除。 */
   onChooseDevice(handler: (devices: HidCandidate[]) => void): () => void

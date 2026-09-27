@@ -10,6 +10,7 @@
  * (付け忘れると、オーバーレイでは見えているのに押せないボタンになる)。
  */
 import { type JSX, type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
+import type { SnapTarget } from '../../../shared/ipc'
 import {
   OVERLAY_FADED_OPACITY_MAX,
   OVERLAY_OPACITY_MIN,
@@ -47,6 +48,15 @@ export interface OverlayControlsProps {
   reloading?: boolean
   onExit: () => void
 }
+
+/** 寄せるボタン(並び順)。矢印で向きを示す。 */
+const SNAP_BUTTONS: ReadonlyArray<{ target: SnapTarget; mark: string }> = [
+  { target: 'top-left', mark: '↖' },
+  { target: 'top-right', mark: '↗' },
+  { target: 'bottom-left', mark: '↙' },
+  { target: 'bottom-right', mark: '↘' },
+  { target: 'next-monitor', mark: '⇥' }
+]
 
 export function OverlayControls({
   displayLayer,
@@ -213,6 +223,23 @@ export function OverlayControls({
               {messages.overlay.blur}
             </label>
           )}
+
+          {/* 四隅と次のモニターへ。ドラッグで狙うより早い(矢印は寄せる向き) */}
+          <span className="flex items-center gap-1">
+            {messages.overlay.snapLabel}
+            {SNAP_BUTTONS.map(({ target, mark }) => (
+              <Button
+                key={target}
+                size="sm"
+                title={messages.overlay.snap[target]}
+                aria-label={messages.overlay.snap[target]}
+                onClick={() => window.api?.snapWindow(target)}
+                className="bg-raised px-1.5 hover:bg-line"
+              >
+                {mark}
+              </Button>
+            ))}
+          </span>
 
           {/* パネル自体がbg-surfaceなので、ボタンは一段明るい面にする */}
           {onReload && (

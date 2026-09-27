@@ -56,6 +56,7 @@ window.api = {
   setIgnoreMouseEvents: noop,
   moveBy: noop,
   resizeBy: noop,
+  snapWindow: noop,
   onChooseDevice: () => noop,
   chooseDevice: noop,
   onReleaseHid: () => noop,

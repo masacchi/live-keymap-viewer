@@ -24,8 +24,8 @@ use tauri::{
 use crate::hid::HidBridge;
 use crate::logfile;
 use crate::settings::{
-    Bounds, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, Settings, SettingsStore, WindowMode,
-    ensure_on_screen, patch,
+    Bounds, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, Settings, SettingsStore, SnapTarget, WindowMode,
+    ensure_on_screen, patch, snap_bounds,
 };
 
 /// モードを切り替えるとき、古いウィンドウがキーボードを解放するのを待つ上限。
@@ -296,6 +296,19 @@ impl WindowManager {
     }
 
     /// ウィンドウを相対移動する(論理ピクセル)。オーバーレイの移動つまみから使う。
+    /// オーバーレイを画面の四隅や次のモニターへ寄せる(settings.rsのsnap_bounds)。
+    /// 動かした位置は、ふだんの移動と同じくWindowEvent::Movedで保存される。
+    pub fn snap(&self, target: SnapTarget) {
+        let Some(window) = self.current() else { return };
+        let Some(bounds) = bounds_of(&window) else { return };
+        let next = snap_bounds(bounds, target, &work_areas(&self.app));
+        if (next.width, next.height) != (bounds.width, bounds.height) {
+            let _ =
+                window.set_size(LogicalSize::new(f64::from(next.width), f64::from(next.height)));
+        }
+        let _ = window.set_position(LogicalPosition::new(f64::from(next.x), f64::from(next.y)));
+    }
+
     pub fn move_by(&self, dx: f64, dy: f64) {
         let Some(window) = self.current() else { return };
         let (Ok(scale), Ok(position)) = (window.scale_factor(), window.outer_position()) else {

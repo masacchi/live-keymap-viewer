@@ -15,7 +15,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use tauri_plugin_global_shortcut::{Modifiers, Shortcut};
 
@@ -302,6 +302,65 @@ pub fn ensure_on_screen(bounds: Bounds, work_areas: &[Bounds]) -> Bounds {
         width,
         height,
     }
+}
+
+/// オーバーレイを寄せる先(画面から送られる。src/shared/ipc.tsのSnapTarget)。
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SnapTarget {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    /// 次のモニターへ。いまのモニターの中での位置の割合を保つ(右下にあれば、次でも右下)
+    NextMonitor,
+}
+
+/// 画面の端から離す幅(論理px)。ぴったり付けると、タスクバーやほかのウィンドウの縁と紛れる。
+const SNAP_MARGIN: i32 = 12;
+
+/// オーバーレイを寄せた先の位置と大きさ。`work_areas`の先頭が主画面(ensure_on_screenと同じ)。
+///
+/// いまいるモニターは、ウィンドウの真ん中が入っている作業領域(無ければ主画面)。大きさは、
+/// 寄せた先の作業領域に収まらなければ縮める。
+pub fn snap_bounds(bounds: Bounds, target: SnapTarget, work_areas: &[Bounds]) -> Bounds {
+    let (cx, cy) = (bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    let Some(index) = work_areas
+        .iter()
+        .position(|a| cx >= a.x && cx < a.x + a.width && cy >= a.y && cy < a.y + a.height)
+        .or((!work_areas.is_empty()).then_some(0))
+    else {
+        return bounds;
+    };
+    let current = work_areas[index];
+    let area = match target {
+        SnapTarget::NextMonitor => work_areas[(index + 1) % work_areas.len()],
+        _ => current,
+    };
+    let width = bounds.width.min(area.width);
+    let height = bounds.height.min(area.height);
+    let (left, right) = (area.x + SNAP_MARGIN, area.x + area.width - width - SNAP_MARGIN);
+    let (top, bottom) = (area.y + SNAP_MARGIN, area.y + area.height - height - SNAP_MARGIN);
+    let (x, y) = match target {
+        SnapTarget::TopLeft => (left, top),
+        SnapTarget::TopRight => (right, top),
+        SnapTarget::BottomLeft => (left, bottom),
+        SnapTarget::BottomRight => (right, bottom),
+        SnapTarget::NextMonitor => {
+            // いまのモニターの中で、動ける幅のどのあたりにいるか(0〜1)を、次のモニターでも保つ
+            let ratio = |offset: i32, room: i32| {
+                if room <= 0 { 0.0 } else { (f64::from(offset) / f64::from(room)).clamp(0.0, 1.0) }
+            };
+            let rx = ratio(bounds.x - current.x, current.width - bounds.width);
+            let ry = ratio(bounds.y - current.y, current.height - bounds.height);
+            (
+                area.x + (rx * f64::from(area.width - width)).round() as i32,
+                area.y + (ry * f64::from(area.height - height)).round() as i32,
+            )
+        }
+    };
+    // 作業領域より大きいときは、左上をそろえる(はみ出すのは右下)
+    Bounds { x: x.max(area.x), y: y.max(area.y), width, height }
 }
 
 /// settings.jsonの読み書き。値はメモリに持ち、ファイルにはまとめて書く。
@@ -606,6 +665,41 @@ mod tests {
         assert_eq!(shortcut(json!("K")), "Ctrl+Alt+K");
         assert_eq!(shortcut(json!("Ctrl+Alt+NoSuchKey")), "Ctrl+Alt+K");
         assert_eq!(shortcut(json!(3)), "Ctrl+Alt+K");
+    }
+
+    #[test]
+    fn 四隅に寄せる_端から少し離す() {
+        let primary = Bounds { x: 0, y: 0, width: 1920, height: 1040 };
+        let window = Bounds { x: 500, y: 300, width: 600, height: 300 };
+        assert_eq!(
+            snap_bounds(window, SnapTarget::TopLeft, &[primary]),
+            Bounds { x: 12, y: 12, width: 600, height: 300 }
+        );
+        assert_eq!(
+            snap_bounds(window, SnapTarget::BottomRight, &[primary]),
+            Bounds { x: 1920 - 600 - 12, y: 1040 - 300 - 12, width: 600, height: 300 }
+        );
+    }
+
+    #[test]
+    fn 次のモニターへ_位置の割合を保ち_大きすぎれば縮める() {
+        let primary = Bounds { x: 0, y: 0, width: 1920, height: 1040 };
+        let second = Bounds { x: 1920, y: 0, width: 1280, height: 700 };
+        // 主画面の右下にある
+        let window = Bounds { x: 1920 - 600, y: 1040 - 300, width: 600, height: 300 };
+        assert_eq!(
+            snap_bounds(window, SnapTarget::NextMonitor, &[primary, second]),
+            Bounds { x: 1920 + 1280 - 600, y: 700 - 300, width: 600, height: 300 }
+        );
+        // 2つ目の画面から次へ行くと、主画面に戻る
+        let on_second = Bounds { x: 1920, y: 0, width: 600, height: 300 };
+        assert_eq!(snap_bounds(on_second, SnapTarget::NextMonitor, &[primary, second]).x, 0);
+        // 画面が1つなら動かない
+        assert_eq!(snap_bounds(window, SnapTarget::NextMonitor, &[primary]), window);
+        // 作業領域より大きいウィンドウは縮める
+        let huge = Bounds { x: 0, y: 0, width: 1900, height: 1000 };
+        let moved = snap_bounds(huge, SnapTarget::NextMonitor, &[primary, second]);
+        assert_eq!((moved.width, moved.height), (1280, 700));
     }
 
     #[test]
