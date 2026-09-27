@@ -24,6 +24,7 @@ import {
   TAPPING_TERM_MIN
 } from '../../../shared/settings'
 import type { AppUpdate } from '../hooks/useAppUpdate'
+import type { HoldMode } from '../keycodes/tapDance'
 import { cn } from '../lib/cn'
 import { formatShortcut, isModifierCode, shortcutFromKeyboardEvent } from '../lib/shortcut'
 import { layerColor } from '../lib/theme'
@@ -65,6 +66,8 @@ export interface SettingsPanelProps {
    * 「長押しまで」は動かせないようにして、その旨を出す。
    */
   keyboardTappingTerm?: number | null
+  /** キーボードから読めた長押しの判定のしかた。読めなければnull、未接続ならundefined(出さない)。 */
+  keyboardHoldMode?: HoldMode | null
   /** 許可したキーボードを忘れる。渡さなければ一覧だけ出す(保存できないとき)。 */
   onForgetDevice?: (vendorId: number, productId: number) => void
   /** 後ろのぼかしが使えるか(Windowsのときだけ)。 */
@@ -206,6 +209,7 @@ export function SettingsPanel({
   settings,
   onChange,
   keyboardTappingTerm = null,
+  keyboardHoldMode,
   shortcutRegistered = true,
   autostart = null,
   onAutostart,
@@ -308,6 +312,11 @@ export function SettingsPanel({
             ? messages.settings.tappingTermFromKeyboard(keyboardTappingTerm)
             : messages.settings.tappingTermHint}
         </p>
+        {keyboardHoldMode !== undefined && (
+          <p className="text-2xs text-muted">
+            {messages.settings.holdMode[keyboardHoldMode ?? 'unknown']}
+          </p>
+        )}
       </Section>
 
       <Section title={messages.settings.overlay}>

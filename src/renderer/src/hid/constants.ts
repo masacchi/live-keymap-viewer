@@ -34,6 +34,10 @@ export const CMD_VIAL_LOCK = 0x08
 export const CMD_VIAL_QMK_SETTINGS_GET = 0x0a
 /** QMK設定の番号(qsid)のうち、長押しの判定時間(tapping term。RMKではMorseTimeout)。u16。 */
 export const QSID_TAPPING_TERM = 7
+/** QMK設定の番号のうち、Permissive Hold(RMKではPermissiveHold)。1バイトの真偽。 */
+export const QSID_PERMISSIVE_HOLD = 22
+/** QMK設定の番号のうち、Hold On Other Key Press(RMKではHoldOnOtherKeyPress)。1バイトの真偽。 */
+export const QSID_HOLD_ON_OTHER_KEY_PRESS = 23
 export const CMD_VIAL_DYNAMIC_ENTRY_OP = 0x0d
 
 // dynamic entry opのサブコマンド

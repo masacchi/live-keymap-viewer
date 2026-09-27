@@ -490,7 +490,9 @@ export class KeyboardSession {
       cols: snapshot.cols,
       keymap: snapshot.keymap,
       tapDance: snapshot.tapDance,
-      tappingTerm: this.tappingTermFor(snapshot)
+      tappingTerm: this.tappingTermFor(snapshot),
+      // 長押しの判定のしかたも、キーボードの設定に合わせる(読めなければエンジンの既定)
+      holdMode: snapshot.holdMode ?? undefined
     })
     if (previous) engine.inheritFrom(previous)
     const geometry =

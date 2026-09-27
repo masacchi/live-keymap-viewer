@@ -83,14 +83,18 @@ Vialコマンド(`0xFE`)は`msg[0]`から上書きするため照合できない
 | アンロックのポーリング | `[0xFE, 0x07]` | `data[0]`=unlocked、`data[1]`=in_progress、`data[2]`=counter | `vial.c:166-189` |
 | ロック | `[0xFE, 0x08]` | — | `vial.c:190-196` |
 | dynamic entryの数 | `[0xFE, 0x0D, 0x00]` | `data[0]`=TDの数、`[1]`=Comboの数、`[2]`=KeyOverrideの数、`[3]`=AltRepeatの数、`data[31]`=機能のビット | `vial.c:228-245` |
-| QMK設定の取得 | `[0xFE, 0x0A, qsid_lo, qsid_hi]` | `data[0]`=status(0が成功、知らない番号は0xFF)、値は`data[1..]`(長さは設定ごと)。長押しの判定時間(tapping term)は**qsid 7、u16 LE** | `vial.c:210-214`(`#ifdef QMK_SETTINGS`)、`qmk_settings.c:53,257-267`、`keyboard_comm.py:308-311`、vial-guiの`qmk_settings.json`(qsid 7は`width: 2`) |
+| QMK設定の取得 | `[0xFE, 0x0A, qsid_lo, qsid_hi]` | `data[0]`=status(0が成功、知らない番号は0xFF)、値は`data[1..]`(長さは設定ごと)。長押しの判定時間(tapping term)は**qsid 7、u16 LE**。Permissive Holdは**qsid 22**、Hold On Other Key Pressは**qsid 23**(どちらも1バイトの真偽) | `vial.c:210-214`(`#ifdef QMK_SETTINGS`)、`qmk_settings.c:53,257-267`、`keyboard_comm.py:308-311`、vial-guiの`qmk_settings.json`(qsid 7は`width: 2`) |
 | Tap Danceの取得 | `[0xFE, 0x0D, 0x01, idx]` | `data[0]`=status(0が成功)、`data[1..10]` = u16 **LE** ×5 = on_tap、on_hold、on_double_tap、on_tap_hold、tapping_term | `vial.c:247-254`、`vial.h:99-100`、`tap_dance.py:16-17` |
 
-### 長押しの判定時間
+### 長押しの判定時間と判定のしかた
 
-アプリは読み込みと読み直しのたびに`[0xFE, 0x0A, 7, 0]`を1回送り、`data[0]`が0で値が0より大きければ、
+アプリは読み込みと読み直しのたびに`[0xFE, 0x0A, 7, 0]`・`[0xFE, 0x0A, 23, 0]`・`[0xFE, 0x0A, 22, 0]`を送る。
+判定時間は`data[0]`が0で値が0より大きければ、
 それをLT / MTの長押しの判定に使う(`hid/vial.ts`の`getTappingTerm`)。読めなければ(QMK設定の無い
 vial-qmk、RMKで設定していない)アプリの設定の「長押しまで」を使う。Tap Danceはエントリごとの値を使う。
+判定のしかたは、23が1ならHold On Other Key Press、22が1ならPermissive Hold、両方0なら時間だけ。
+どちらも読めなければ、アプリの既定(Hold On Other Key Press)を使う(`getHoldMode`)。
+RMKでは22が`PermissiveHold`、23が`HoldOnOtherKeyPress`で、デフォルトのプロファイルのモードを返す。
 
 ### アンロックの動き
 

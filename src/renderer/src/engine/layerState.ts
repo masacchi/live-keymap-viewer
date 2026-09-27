@@ -4,15 +4,27 @@
  * QMKの厳密な再現ではなく、表示のための近似。
  * - キーコードは**押した瞬間**のレイヤー状態で確定させる
  * - MO(n)は押している間だけ有効
- * - LT(n, kc)と、on_holdがMO(n)のTap Danceは
- *   「tapping termを超えた」か「押している間に別のキーが押された」で有効になる
+ * - LT(n, kc)と、on_holdがMO(n)のTap Danceは「tapping termを超えた」か、判定のしかた(HoldMode)
+ *   しだいで「押している間に別のキーが押された / 押して離された」で有効になる
  * - TG(n) / TO(n) / DF(n)は押した時点で反映する
  */
 import { decodeKeycode, type Keycode, modifierBitsOf } from '../keycodes/decode'
-import { holdLayerOf, holdModsOf, type TapDanceEntry, tappingTermOf } from '../keycodes/tapDance'
+import {
+  type HoldMode,
+  holdLayerOf,
+  holdModsOf,
+  type TapDanceEntry,
+  tappingTermOf
+} from '../keycodes/tapDance'
+
+export type { HoldMode }
+
 import { keyId } from '../layout/geometry'
 
 export const DEFAULT_TAPPING_TERM = 200
+
+/** キーボードの設定を読めないときの判定のしかた。この近似をずっと使ってきたので、読めないときはこれ。 */
+export const DEFAULT_HOLD_MODE: HoldMode = 'hold-on-other-key-press'
 
 export interface LayerEngineConfig {
   layers: number
@@ -24,6 +36,8 @@ export interface LayerEngineConfig {
   tapDance: ReadonlyArray<TapDanceEntry | undefined>
   /** LTの既定tapping term。QMKのTAPPING_TERM相当。 */
   tappingTerm?: number
+  /** 長押しの判定のしかた。無ければDEFAULT_HOLD_MODE。 */
+  holdMode?: HoldMode
 }
 
 export interface HeldKey {
@@ -45,6 +59,12 @@ export interface HeldKey {
   tappingTerm: number
   /** いま実際にレイヤーを出しているか(MOは押した瞬間から、LT / TDは長押し確定後)。 */
   holdActive: boolean
+  /**
+   * 前に押した長押しキーがタップか長押しかまだ決まっておらず、どのレイヤーのキーかが仮のまま。
+   * keycodeは、決まっていない長押しを除いたレイヤーで仮に解決したもの(タップだったときの値)。
+   * 決まったら解決し直す(`hold-on-other-key-press`では使わない)。
+   */
+  pending: boolean
 }
 
 export interface LayerSnapshot {
@@ -89,7 +109,11 @@ export class LayerEngine {
     // `tappingTerm: undefined`で作られることがある。既定値にconfigをそのまま重ねるとundefinedで
     // 上書きされ、`now - pressedAt >= undefined`が常に偽になって、LT / Tap Danceの長押しが
     // いつまでも確定しない
-    this.config = { ...config, tappingTerm: config.tappingTerm ?? DEFAULT_TAPPING_TERM }
+    this.config = {
+      ...config,
+      tappingTerm: config.tappingTerm ?? DEFAULT_TAPPING_TERM,
+      holdMode: config.holdMode ?? DEFAULT_HOLD_MODE
+    }
   }
 
   /**
@@ -139,7 +163,15 @@ export class LayerEngine {
   update(matrix: boolean[][], now: number): LayerSnapshot {
     // 1. 離されたキーを落とす
     for (const [id, key] of this.held) {
-      if (!matrix[key.row]?.[key.col]) this.held.delete(id)
+      if (matrix[key.row]?.[key.col]) continue
+      // Permissive Hold: 長押しキーを押しているあいだに、後から押したキーが離されたら長押しに決める
+      if (this.config.holdMode === 'permissive-hold') {
+        for (const other of this.held.values()) {
+          if (other === key || !this.undecided(other) || other.pressedAt > key.pressedAt) continue
+          if (matrix[other.row]?.[other.col]) other.heldSince = now
+        }
+      }
+      this.held.delete(id)
     }
 
     // 2. 新しく押されたキーを、行優先の順で足す
@@ -154,6 +186,7 @@ export class LayerEngine {
 
     // 3. 経過時間による長押し確定
     this.decideHolds(now)
+    this.settlePending()
 
     return this.snapshot()
   }
@@ -168,6 +201,7 @@ export class LayerEngine {
    */
   advance(now: number): LayerSnapshot {
     this.decideHolds(now)
+    this.settlePending()
     return this.snapshot()
   }
 
@@ -175,7 +209,7 @@ export class LayerEngine {
   nextDecisionAt(): number | null {
     let next: number | null = null
     for (const key of this.held.values()) {
-      if (!canHold(key) || key.heldSince !== null) continue
+      if (!this.undecided(key)) continue
       const at = key.pressedAt + key.tappingTerm
       if (next === null || at < next) next = at
     }
@@ -183,22 +217,56 @@ export class LayerEngine {
   }
 
   private decideHolds(now: number): void {
+    const onOtherPress = this.config.holdMode === 'hold-on-other-key-press'
     for (const key of this.held.values()) {
       if (!canHold(key) || key.heldSince !== null) continue
-      if (key.interrupted || now - key.pressedAt >= key.tappingTerm) {
+      if ((onOtherPress && key.interrupted) || now - key.pressedAt >= key.tappingTerm) {
         key.heldSince = now
       }
     }
   }
 
+  /** 長押しかタップかまだ決まっていないキーか(保留のキーは、前のキーが決まるのを待っている)。 */
+  private undecided(key: HeldKey): boolean {
+    return canHold(key) && key.heldSince === null && !key.pending
+  }
+
+  /**
+   * 保留のキーのうち、前に押した長押しキーがすべて決まったものを解決し直す。
+   * 長押しに決まったならそのレイヤーで、タップ(離された)ならそれを除いたレイヤーで解決する。
+   * キーボードが待たせていたキーを出すのと同じ時に、押した瞬間に効くもの(TGなど)も効かせる。
+   */
+  private settlePending(): void {
+    for (const key of this.held.values()) {
+      if (!key.pending) continue
+      const waiting = [...this.held.values()].some(
+        (other) => other !== key && this.undecided(other) && other.pressedAt <= key.pressedAt
+      )
+      if (waiting) continue
+      const keycode = decodeKeycode(
+        this.resolveRaw(key.row, key.col, this.computeActiveLayers()).raw
+      )
+      key.keycode = keycode
+      key.holdLayer = holdLayerOf(keycode, this.config.tapDance)
+      key.holdMods = holdModsOf(keycode, this.config.tapDance)
+      key.tappingTerm = tappingTermOf(keycode, this.config.tapDance, this.config.tappingTerm)
+      key.pending = false
+      this.applyPressEffect(keycode)
+    }
+  }
+
   private pressKey(row: number, col: number, now: number): void {
     // 先に、いま押されている長押しキーを「割り込まれた」ことにする。
-    // これでこのキーは上のレイヤーで解決される(hold-on-other-key-press相当)。
+    // hold-on-other-key-pressなら、これで長押しに決まり、このキーは上のレイヤーで解決される。
+    // ほかの判定のしかたでは、まだ決まっていない長押しキーがあれば、このキーを保留にする
+    const onOtherPress = this.config.holdMode === 'hold-on-other-key-press'
+    let pending = false
     for (const key of this.held.values()) {
-      if (canHold(key)) {
-        key.interrupted = true
-        if (key.heldSince === null) key.heldSince = now
-      }
+      if (!canHold(key)) continue
+      key.interrupted = true
+      if (key.heldSince !== null) continue
+      if (onOtherPress) key.heldSince = now
+      else if (!key.pending) pending = true
     }
 
     const active = this.computeActiveLayers()
@@ -216,10 +284,12 @@ export class LayerEngine {
       heldSince: null,
       interrupted: false,
       tappingTerm: tappingTermOf(keycode, this.config.tapDance, this.config.tappingTerm),
-      holdActive: false
+      holdActive: false,
+      pending
     })
 
-    this.applyPressEffect(keycode)
+    // 保留のキーは、どのレイヤーのキーかが決まってから効かせる(settlePending)
+    if (!pending) this.applyPressEffect(keycode)
   }
 
   /** 押した瞬間に効くもの(TG / TO / DF / PDF)。 */

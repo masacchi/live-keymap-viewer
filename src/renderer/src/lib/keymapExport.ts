@@ -62,6 +62,8 @@ export function buildKeymapExport({
     labelMode,
     /** キーボードから読めた長押しの判定時間(ms)。読めなければnull。 */
     tappingTerm: snapshot.tappingTerm,
+    /** キーボードから読めた長押しの判定のしかた。読めなければnull。 */
+    holdMode: snapshot.holdMode,
     layoutOptions: snapshot.layoutOptions,
     layers: snapshot.keymap.map((rows, index) => ({
       index,

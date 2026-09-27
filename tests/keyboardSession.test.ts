@@ -235,6 +235,22 @@ describe('KeyboardSession: 長押しの判定時間', () => {
     await session.dispose()
   })
 
+  it('長押しの判定のしかたも、キーボードの設定に合わせる', async () => {
+    // Permissive Holdのキーボード: Spaceを押したままQを押しても、Qを離すまでL2は出ない
+    const mock = new MockTransport({ unlocked: true, holdMode: 'permissive-hold' })
+    const session = new KeyboardSession(mock, { ...options(), tappingTerm: 10_000 })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    expect(session.state.snapshot?.holdMode).toBe('permissive-hold')
+    mock.press(7, 5) // Space(LT2)
+    mock.press(0, 1) // Q
+    await waitFor(session, (s) => s.layers?.held.has('0,1') === true)
+    expect(session.state.layers?.displayLayer).toBe(0)
+    mock.release(0, 1)
+    await waitFor(session, (s) => s.layers?.displayLayer === 2)
+    await session.dispose()
+  })
+
   it('読めなければ(0が返る)、アプリの設定で判定し、設定を変えればすぐ効く', async () => {
     const mock = new MockTransport({ unlocked: true })
     const session = new KeyboardSession(mock, { ...options(), tappingTerm: 150 })

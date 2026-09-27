@@ -265,6 +265,7 @@ export default function App(): JSX.Element {
                 names={names}
                 onRename={canSave && uid ? onRename : undefined}
                 keyboardTappingTerm={snapshot?.tappingTerm}
+                keyboardHoldMode={snapshot ? snapshot.holdMode : undefined}
                 shortcutRegistered={shortcutRegistered}
                 autostart={autostart}
                 onAutostart={onAutostart}

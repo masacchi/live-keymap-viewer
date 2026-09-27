@@ -17,6 +17,19 @@ export interface TapDanceEntry {
 }
 
 /**
+ * 長押し(LT / MT / Tap Danceのhold)をいつ確定させるか。キーボードの設定に合わせる
+ * (QMK設定のPermissive Hold / Hold On Other Key Press。RMKも同じ番号。hid/vial.tsのgetHoldMode。判定はengine/layerState.ts)。
+ *
+ * - `hold-on-other-key-press`: 押しているあいだに別のキーを**押した**瞬間に長押し
+ * - `permissive-hold`: 押しているあいだに別のキーを**押して離した**ら長押し
+ * - `tapping-term`: 時間だけで決める。その前に離せばタップ
+ *
+ * どちらでもないときは、キーボードは長押しかタップかが決まるまで、後に押したキーを出さずに待つ。
+ * エンジンも、そのキーを保留(`HeldKey.pending`)にして、決まってからどのレイヤーのキーかを決め直す。
+ */
+export type HoldMode = 'hold-on-other-key-press' | 'permissive-hold' | 'tapping-term'
+
+/**
  * このキーコードを長押ししたときに出るレイヤー。出さないならnull。
  *
  * 対象:

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_TAPPING_TERM, emptyMatrix, LayerEngine } from '@/engine/layerState'
+import { DEFAULT_TAPPING_TERM, emptyMatrix, type HoldMode, LayerEngine } from '@/engine/layerState'
 import { decodeKeycode, formatKeycode, MOD_CTRL, MOD_SHIFT } from '@/keycodes/decode'
 import { labelForKeycode } from '@/keycodes/labels'
 import type { TapDanceEntry } from '@/keycodes/tapDance'
@@ -47,13 +47,14 @@ class Board {
   private readonly matrix = emptyMatrix(MOCK_ROWS, MOCK_COLS)
   private now = 1000
 
-  constructor() {
+  constructor(holdMode?: HoldMode) {
     this.engine = new LayerEngine({
       layers: MOCK_LAYERS,
       rows: MOCK_ROWS,
       cols: MOCK_COLS,
       keymap: mockKeymap(),
-      tapDance
+      tapDance,
+      holdMode
     })
   }
 
@@ -109,6 +110,53 @@ describe('押下を読まずに時間だけ進める(Bluetoothで次の応答を
     const board = new Board()
     board.press(Q).tick(0)
     expect(board.engine.nextDecisionAt()).toBeNull()
+  })
+})
+
+describe('長押しの判定のしかた(キーボードの設定に合わせる)', () => {
+  const keymap = mockKeymap()
+  const onLayer = (layer: number, key: { row: number; col: number }) =>
+    decodeKeycode(keymap[layer][key.row][key.col])
+  const heldQ = (snapshot: ReturnType<Board['tick']>) => snapshot.held.get(`${Q.row},${Q.col}`)
+
+  it('時間だけ: 判定時間の前に別のキーを押しても、レイヤーは出さずにそのキーを保留にする', () => {
+    const board = new Board('tapping-term')
+    board.press(SPACE).tick(0)
+    const before = board.press(Q).tick(50)
+    expect(before.displayLayer).toBe(0)
+    expect(heldQ(before)?.pending).toBe(true)
+    expect(heldQ(before)?.keycode).toEqual(onLayer(0, Q)) // 仮にタップだったときの値
+    // 判定時間を過ぎたら長押しに決まり、保留のキーはL2のキーとして解決し直す
+    const after = board.tick(DEFAULT_TAPPING_TERM)
+    expect(after.displayLayer).toBe(2)
+    expect(heldQ(after)?.pending).toBe(false)
+    expect(heldQ(after)?.keycode).toEqual(onLayer(2, Q))
+  })
+
+  it('時間だけ: 判定時間の前に長押しキーを離したらタップ。保留のキーは下のレイヤーのキーに決まる', () => {
+    const board = new Board('tapping-term')
+    board.press(SPACE).tick(0)
+    board.press(Q).tick(50)
+    const tapped = board.release(SPACE).tick(50)
+    expect(tapped.displayLayer).toBe(0)
+    expect(heldQ(tapped)?.pending).toBe(false)
+    expect(heldQ(tapped)?.keycode).toEqual(onLayer(0, Q))
+  })
+
+  it('Permissive Hold: 後から押したキーを離したら、判定時間の前でも長押しに決める', () => {
+    const board = new Board('permissive-hold')
+    board.press(SPACE).tick(0)
+    expect(board.press(Q).tick(30).displayLayer).toBe(0) // 押しただけではまだ
+    expect(board.release(Q).tick(30).displayLayer).toBe(2)
+  })
+
+  it('Hold On Other Key Press(既定): 別のキーを押した瞬間に長押しに決める', () => {
+    const board = new Board()
+    board.press(SPACE).tick(0)
+    const pressed = board.press(Q).tick(30)
+    expect(pressed.displayLayer).toBe(2)
+    expect(heldQ(pressed)?.pending).toBe(false)
+    expect(heldQ(pressed)?.keycode).toEqual(onLayer(2, Q))
   })
 })
 

@@ -7,7 +7,7 @@
  */
 
 import { decodeKeycode } from '../keycodes/decode'
-import type { TapDanceEntry } from '../keycodes/tapDance'
+import type { HoldMode, TapDanceEntry } from '../keycodes/tapDance'
 import { buildGeometry } from '../layout/geometry'
 import {
   BUFFER_FETCH_CHUNK,
@@ -29,6 +29,8 @@ import {
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
+  QSID_HOLD_ON_OTHER_KEY_PRESS,
+  QSID_PERMISSIVE_HOLD,
   QSID_TAPPING_TERM,
   SUPPORTED_VIA_PROTOCOL,
   SUPPORTED_VIAL_PROTOCOL,
@@ -91,6 +93,8 @@ export interface KeyboardSnapshot {
    * RMKで設定していない)。nullなら、アプリの設定の値で判定する。
    */
   tappingTerm: number | null
+  /** キーボードに設定されている長押しの判定のしかた。読めなければnull(既定の判定を使う)。 */
+  holdMode: HoldMode | null
   /** matrix stateを読めるか(vial protocolとパケットサイズの条件)。 */
   matrixTestSupported: boolean
 }
@@ -303,27 +307,43 @@ export async function getEncoders(
 }
 
 /**
- * キーボードに設定されている長押しの判定時間(ms)を読む。読めなければnull。
+ * QMK設定を1つ読む。読めなければnull、読めたら値の入った応答(`data[1]`から)を返す。
  *
- * vial-qmkはQMK設定(qmk_settings_get)、RMKはbehavior setting(GetBehaviorSetting)として、どちらも
- * 同じ`[0xFE, 0x0A, 7, 0]`に答え、`data[0]`が0なら`data[1..2]`がu16 LE(docs/PROTOCOL.md §3)。
+ * vial-qmkはqmk_settings_get、RMKはbehavior setting(GetBehaviorSetting)として、どちらも
+ * 同じ`[0xFE, 0x0A, qsid_lo, qsid_hi]`に答え、`data[0]`が0なら成功(docs/PROTOCOL.md §3)。
  * QMK設定を持たないvial-qmkは要求をそのまま返す(`data[0]`が0xFE)ので、成功と取り違えない。
+ */
+async function getQmkSetting(transport: Transport, qsid: number): Promise<Uint8Array | null> {
+  const data = await send(
+    transport,
+    [CMD_VIA_VIAL_PREFIX, CMD_VIAL_QMK_SETTINGS_GET, qsid & 0xff, qsid >> 8],
+    LONG
+  )
+  return data[0] === 0 ? data.subarray(1) : null
+}
+
+/**
+ * キーボードに設定されている長押しの判定時間(ms)を読む(qsid 7、u16 LE)。読めなければnull。
  * RMKは設定していないと0を返すので、0も「読めなかった」とする。
  */
 export async function getTappingTerm(transport: Transport): Promise<number | null> {
-  const data = await send(
-    transport,
-    [
-      CMD_VIA_VIAL_PREFIX,
-      CMD_VIAL_QMK_SETTINGS_GET,
-      QSID_TAPPING_TERM & 0xff,
-      QSID_TAPPING_TERM >> 8
-    ],
-    LONG
-  )
-  if (data[0] !== 0) return null
-  const value = u16le(data, 1)
-  return value > 0 ? value : null
+  const value = await getQmkSetting(transport, QSID_TAPPING_TERM)
+  if (!value) return null
+  const ms = u16le(value, 0)
+  return ms > 0 ? ms : null
+}
+
+/**
+ * 長押しの判定のしかたを読む(qsid 22 Permissive Hold、23 Hold On Other Key Press。どちらも1バイトの真偽)。
+ * どちらも読めなければnull(エンジンは既定の判定を使う)。両方オフなら時間だけで決める。
+ */
+export async function getHoldMode(transport: Transport): Promise<HoldMode | null> {
+  const onOtherPress = await getQmkSetting(transport, QSID_HOLD_ON_OTHER_KEY_PRESS)
+  const permissive = await getQmkSetting(transport, QSID_PERMISSIVE_HOLD)
+  if (!onOtherPress && !permissive) return null
+  if (onOtherPress && onOtherPress[0] !== 0) return 'hold-on-other-key-press'
+  if (permissive && permissive[0] !== 0) return 'permissive-hold'
+  return 'tapping-term'
 }
 
 export async function getLayoutOptions(transport: Transport): Promise<number> {
@@ -523,6 +543,8 @@ export interface CachedKeymap {
   layoutOptions: number
   /** 長押しの判定時間。これを持たない前の版のキャッシュでは無い(読めなかったのと同じに扱う)。 */
   tappingTerm?: number | null
+  /** 長押しの判定のしかた。これを持たない前の版のキャッシュでは無い。 */
+  holdMode?: HoldMode | null
 }
 
 export interface KeymapCache {
@@ -541,7 +563,8 @@ export function toCachedKeymap(snapshot: KeyboardSnapshot): CachedKeymap {
     tapDance: snapshot.tapDance,
     encoders: snapshot.encoders,
     layoutOptions: snapshot.layoutOptions,
-    tappingTerm: snapshot.tappingTerm
+    tappingTerm: snapshot.tappingTerm,
+    holdMode: snapshot.holdMode
   }
 }
 
@@ -593,6 +616,7 @@ export async function loadCachedKeyboard(
     encoders: cached.encoders,
     layoutOptions: cached.layoutOptions,
     tappingTerm: cached.tappingTerm ?? null,
+    holdMode: cached.holdMode ?? null,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, cached.rows, cached.cols)
   }
 }
@@ -672,6 +696,7 @@ export async function loadKeyboard(
 
   const layoutOptions = definition.layouts.labels ? await getLayoutOptions(transport) : 0
   const tappingTerm = await getTappingTerm(transport)
+  const holdMode = await getHoldMode(transport)
 
   return {
     viaProtocol,
@@ -687,6 +712,7 @@ export async function loadKeyboard(
     encoders,
     layoutOptions,
     tappingTerm,
+    holdMode,
     matrixTestSupported: isMatrixTestSupported(vialProtocol, rows, cols)
   }
 }
@@ -718,8 +744,9 @@ export async function reloadKeymap(
 
   const layoutOptions = previous.definition.layouts.labels ? await getLayoutOptions(transport) : 0
   const tappingTerm = await getTappingTerm(transport)
+  const holdMode = await getHoldMode(transport)
 
-  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions, tappingTerm }
+  return { ...previous, layers, keymap, tapDance, encoders, layoutOptions, tappingTerm, holdMode }
 }
 
 /**
@@ -728,7 +755,15 @@ export async function reloadKeymap(
  */
 export function keymapUnchanged(before: KeyboardSnapshot, after: KeyboardSnapshot): boolean {
   const editable = (s: KeyboardSnapshot) =>
-    JSON.stringify([s.layers, s.keymap, s.tapDance, s.encoders, s.layoutOptions, s.tappingTerm])
+    JSON.stringify([
+      s.layers,
+      s.keymap,
+      s.tapDance,
+      s.encoders,
+      s.layoutOptions,
+      s.tappingTerm,
+      s.holdMode
+    ])
   return editable(before) === editable(after)
 }
 

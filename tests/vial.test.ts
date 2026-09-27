@@ -10,6 +10,7 @@ import { RequestQueue, type Transport, WebHidTransport } from '@/hid/transport'
 import {
   countEncoders,
   decodeMatrixState,
+  getHoldMode,
   getKeymap,
   getMatrixState,
   getTapDance,
@@ -299,6 +300,27 @@ describe('長押しの判定時間(QMK設定のtapping term)', () => {
     const transport = new MockTransport({ unlocked: true, tappingTerm: 220 })
     await transport.open()
     expect((await loadKeyboard(transport)).tappingTerm).toBe(220)
+  })
+})
+
+describe('長押しの判定のしかた(QMK設定のPermissive Hold / Hold On Other Key Press)', () => {
+  it.each(['permissive-hold', 'hold-on-other-key-press', 'tapping-term'] as const)(
+    'キーボードの設定(%s)を読む',
+    async (holdMode) => {
+      const transport = new MockTransport({ unlocked: true, holdMode })
+      await transport.open()
+      expect(await getHoldMode(transport)).toBe(holdMode)
+    }
+  )
+
+  it('答えないファームではnull(既定の判定を使う)', async () => {
+    expect(await getHoldMode(await openMock())).toBeNull()
+  })
+
+  it('読み込むと、スナップショットに入る', async () => {
+    const transport = new MockTransport({ unlocked: true, holdMode: 'permissive-hold' })
+    await transport.open()
+    expect((await loadKeyboard(transport)).holdMode).toBe('permissive-hold')
   })
 })
 

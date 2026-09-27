@@ -14,6 +14,7 @@
  * (tests/otherKeyboard.test.tsx)。
  */
 
+import type { HoldMode } from '../keycodes/tapDance'
 import { keyId } from '../layout/geometry'
 import {
   MOCK_COLS,
@@ -46,6 +47,8 @@ import {
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   MSG_LEN,
+  QSID_HOLD_ON_OTHER_KEY_PRESS,
+  QSID_PERMISSIVE_HOLD,
   QSID_TAPPING_TERM,
   VIA_LAYOUT_OPTIONS,
   VIA_SWITCH_MATRIX_STATE,
@@ -115,6 +118,11 @@ export interface MockOptions {
    */
   tappingTerm?: number
   /**
+   * 長押しの判定のしかたとして答えるもの(QMK設定のPermissive Hold / Hold On Other Key Press)。
+   * 既定は答えない(知らない番号として0xFF。アプリは既定の判定を使う)。
+   */
+  holdMode?: HoldMode
+  /**
    * アンロックをどちらのファームと同じに答えるか。既定は`'vial-qmk'`。
    *
    * - `'vial-qmk'`: カウンタは50から始まり、アンロックキーを全部押しているあいだポーリングごとに
@@ -147,6 +155,7 @@ export class MockTransport implements Transport {
   private readonly latencyMs: number
   private readonly firmware: MockFirmware
   private readonly tappingTerm: number
+  private readonly holdMode: HoldMode | undefined
   private readonly pressed = new Set<string>()
   private readonly definitionBytes: Uint8Array
 
@@ -169,6 +178,7 @@ export class MockTransport implements Transport {
     this.latencyMs = options.latencyMs ?? 0
     this.firmware = options.firmware ?? 'vial-qmk'
     this.tappingTerm = options.tappingTerm ?? 0
+    this.holdMode = options.holdMode
   }
 
   get opened(): boolean {
@@ -444,10 +454,19 @@ export class MockTransport implements Transport {
       // 値はdata[1]から(u16 LE)。知らない番号は0xFF
       case CMD_VIAL_QMK_SETTINGS_GET: {
         out.fill(0xff)
-        if ((msg[2] | (msg[3] << 8)) !== QSID_TAPPING_TERM) return out
-        out[0] = 0
-        out[1] = this.tappingTerm & 0xff
-        out[2] = (this.tappingTerm >> 8) & 0xff
+        const qsid = msg[2] | (msg[3] << 8)
+        if (qsid === QSID_TAPPING_TERM) {
+          out[0] = 0
+          out[1] = this.tappingTerm & 0xff
+          out[2] = (this.tappingTerm >> 8) & 0xff
+        } else if (
+          this.holdMode &&
+          (qsid === QSID_PERMISSIVE_HOLD || qsid === QSID_HOLD_ON_OTHER_KEY_PRESS)
+        ) {
+          out[0] = 0
+          const on = qsid === QSID_PERMISSIVE_HOLD ? 'permissive-hold' : 'hold-on-other-key-press'
+          out[1] = this.holdMode === on ? 1 : 0
+        }
         return out
       }
 

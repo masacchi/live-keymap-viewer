@@ -238,6 +238,16 @@ export const messages = {
     tappingTermValue: (ms: number) => `${ms}ms`,
     tappingTermHint:
       'この時間押し続けると長押し(LTのレイヤー)と判定します。キーボード側の設定(tapping term / hold timeout)と同じ値にすると、表示がずれません。キーボードから読めたときは、そちらを使います。Tap Danceはキーボードに設定された時間を使います',
+    holdMode: {
+      'hold-on-other-key-press':
+        '長押しの判定: キーボードの設定(Hold On Other Key Press)に合わせ、押しているあいだに別のキーを押したら長押しとみなします',
+      'permissive-hold':
+        '長押しの判定: キーボードの設定(Permissive Hold)に合わせ、押しているあいだに別のキーを押して離したら長押しとみなします',
+      'tapping-term':
+        '長押しの判定: キーボードの設定に合わせ、時間だけで決めます(決まるまで、あとに押したキーは仮の表示です)',
+      unknown:
+        '長押しの判定: キーボードの設定を読めないので、押しているあいだに別のキーを押したら長押しとみなします'
+    },
     tappingTermFromKeyboard: (ms: number) =>
       `キーボードに設定された${ms}msで判定しています(Vialで変えたら、キーマップを読み直すと反映されます)。この値は、キーボードから読めないときに使います`,
     devices: '許可したキーボード',
