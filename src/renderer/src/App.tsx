@@ -22,7 +22,9 @@ import { EmptyState, ErrorBanner } from './components/StatusViews'
 import { RouteChips, SymbolFinder } from './components/SymbolFinder'
 import { Toolbar } from './components/Toolbar'
 import { UnlockPanel } from './components/UnlockPanel'
+import { Button } from './components/ui/Button'
 import { useAppUpdate } from './hooks/useAppUpdate'
+import { useKeyHeatmap } from './hooks/useKeyHeatmap'
 import { useKeymapGuide } from './hooks/useKeymapGuide'
 import { FADE_DELAY_MS, overlayFaded, useOverlayBlurSync } from './hooks/useOverlayFade'
 import { usePreview } from './hooks/usePreview'
@@ -30,6 +32,7 @@ import { useSettings } from './hooks/useSettings'
 import { useVialKeyboard } from './hooks/useVialKeyboard'
 import { MOD_SHIFT } from './keycodes/decode'
 import { cn } from './lib/cn'
+import { heatLevels, totalPresses } from './lib/heatmap'
 import { buildPdfExport } from './lib/keymapExport'
 import { reportError } from './lib/report'
 import { messages } from './messages'
@@ -140,6 +143,18 @@ export default function App(): JSX.Element {
 
   const uid = snapshot?.uid ?? null
   const names = (uid && settings.layerNames[uid]) || []
+
+  // 打鍵のヒートマップ。数えるのは設定でオンにしたときだけ、実機だけ(モックは数えない)
+  const heatmap = useKeyHeatmap(settings.keyHeatmap, keyboard.mock ? null : uid, layers)
+  const [heatmapVisible, setHeatmapVisible] = useState(false)
+  const heatmapData = settings.keyHeatmap ? heatmap.data : null
+  const heat = useMemo(
+    () =>
+      heatmapVisible && heatmapData
+        ? { counts: heatmapData.counts, levels: heatLevels(heatmapData.counts) }
+        : undefined,
+    [heatmapVisible, heatmapData]
+  )
   const onRename = useCallback(
     (layer: number, name: string) => {
       if (uid) setLayerName(uid, layer, name)
@@ -266,6 +281,13 @@ export default function App(): JSX.Element {
                 onRename={canSave && uid ? onRename : undefined}
                 keyboardTappingTerm={snapshot?.tappingTerm}
                 keyboardHoldMode={snapshot ? snapshot.holdMode : undefined}
+                heatmap={
+                  heatmapData && {
+                    total: totalPresses(heatmapData.counts),
+                    since: new Date(heatmapData.since),
+                    onReset: heatmap.reset
+                  }
+                }
                 shortcutRegistered={shortcutRegistered}
                 autostart={autostart}
                 onAutostart={onAutostart}
@@ -303,6 +325,10 @@ export default function App(): JSX.Element {
             reloading={keyboard.reloading}
             onReload={() => void keyboard.reload()}
             onExportPdf={live && !printing ? () => void exportPdf() : undefined}
+            onToggleHeatmap={
+              live && heatmapData ? () => setHeatmapVisible((visible) => !visible) : undefined
+            }
+            heatmapVisible={heat !== undefined}
             onDisconnect={() => void keyboard.disconnect()}
             onLabelMode={(labelMode) => updateSettings({ labelMode })}
             onToggleWindowMode={onToggleWindowMode}
@@ -329,6 +355,20 @@ export default function App(): JSX.Element {
               : undefined
           }
         >
+          {heat && heatmapData && (
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink">
+              <span className="min-w-0 flex-1">
+                {messages.heatmap.showing(
+                  totalPresses(heatmapData.counts),
+                  new Date(heatmapData.since)
+                )}
+              </span>
+              <Button size="sm" onClick={() => setHeatmapVisible(false)} className="shrink-0">
+                {messages.heatmap.hide}
+              </Button>
+            </div>
+          )}
+
           {exportNotice && (
             <p className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink">
               {exportNotice}
@@ -361,6 +401,7 @@ export default function App(): JSX.Element {
                 layerNames={names}
                 highlightKeys={triggerKeys}
                 flashKeys={flashKeys}
+                heat={heat}
               />
             </KeyboardFrame>
           ) : keyboard.status === 'connecting' || keyboard.status === 'loading' ? (

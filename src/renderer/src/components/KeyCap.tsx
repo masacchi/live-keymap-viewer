@@ -34,6 +34,11 @@ export interface KeyCapProps {
   highlight?: boolean
   /** 光らせるか(記号の出し方で選んだ記号を打つのに押すキー)。 */
   flash?: boolean
+  /**
+   * ヒートマップの表示中の、このキーを押した回数と塗りの濃さ(0〜1)。表示していなければ無い。
+   * 押していないキーは回数0・濃さ0。
+   */
+  heat?: { count: number; level: number }
   /** Shiftが効いているか。Shiftで入る文字が変わるキーは、そちらを主にして目立たせる。 */
   shifted?: boolean
   /**
@@ -48,6 +53,9 @@ export interface KeyCapProps {
 }
 
 const GAP = 0.08
+/** ヒートマップで、いちばんよく押すキーに混ぜる黄色の割合(%)。 */
+const HEAT_MAX_PERCENT = 50
+
 /** キーの厚みとして下に覗かせる縁(px)。押したときの沈み(styles.cssの.key-body)より少し深く。 */
 const SKIRT = 3
 const BAND_HEIGHT = 17
@@ -186,6 +194,7 @@ export function KeyCap({
   unlockHint,
   highlight = false,
   flash = false,
+  heat,
   shifted = false,
   knob,
   unit,
@@ -215,6 +224,7 @@ export function KeyCap({
     'key-flash': flash,
     'key-shifted': swapShift,
     'key-knob': knob !== undefined,
+    'key-heat': heat !== undefined,
     'key-clickable': onClick !== undefined
   })
   const mainText = swapShift ? (label.shift ?? '') : label.main
@@ -280,7 +290,14 @@ export function KeyCap({
     <g
       className={className}
       transform={rotate}
-      style={{ '--hold': holdColor } as React.CSSProperties}
+      style={
+        {
+          '--hold': holdColor,
+          // 押下と同じ黄色を、最大でも5割まで混ぜる(押しているキーの塗りつぶしと見分けられるように。
+          // 文字も読める濃さに留める)
+          '--heat': heat ? `${Math.round(heat.level * HEAT_MAX_PERCENT)}%` : undefined
+        } as React.CSSProperties
+      }
       {...interactive}
     >
       {/* キーの厚み(下の縁)。押すと本体が沈んで隠れる */}
@@ -363,7 +380,7 @@ export function KeyCap({
         </>
       )}
 
-      <title>{describe(keycode, label, holdLayer, holdLayerName)}</title>
+      <title>{describe(keycode, label, holdLayer, holdLayerName, heat?.count)}</title>
     </g>
   )
 }
@@ -372,9 +389,11 @@ function describe(
   keycode: Keycode,
   label: KeyLabel,
   holdLayer: number | null,
-  holdLayerName: string | undefined
+  holdLayerName: string | undefined,
+  presses: number | undefined
 ): string {
   const parts = [label.main || messages.keyCap.none]
+  if (presses !== undefined) parts.push(messages.keyCap.presses(presses))
   if (holdLayer !== null) parts.push(messages.keyCap.holdTo(holdLayer, holdLayerName))
   if (label.shift) parts.push(messages.keyCap.shift(label.shift))
   if (label.sub) parts.push(label.sub)

@@ -38,6 +38,11 @@ export interface KeyboardViewProps {
   highlightKeys?: ReadonlyArray<{ row: number; col: number }>
   /** 光らせるキー。記号の出し方で選んだ記号を打つのに押すキー(Shiftも含む)。 */
   flashKeys?: ReadonlyArray<{ row: number; col: number }>
+  /**
+   * ヒートマップを重ねるときの、キー(`row,col`)ごとの押した回数と塗りの濃さ(lib/heatmap.ts)。
+   * 渡さなければ重ねない。
+   */
+  heat?: { counts: Readonly<Record<string, number>>; levels: ReadonlyMap<string, number> }
 }
 
 /** ノブの割り当て文字の大きさ(px)。styles.cssの.encoder-labelと揃える。 */
@@ -55,7 +60,8 @@ export function KeyboardView({
   previewLayer = null,
   layerNames = [],
   highlightKeys = [],
-  flashKeys = []
+  flashKeys = [],
+  heat
 }: KeyboardViewProps): JSX.Element {
   // Shiftを押しているあいだは、Shiftで入る文字の方を目立たせる
   const shifted = (layers.mods & MOD_SHIFT) !== 0
@@ -201,6 +207,7 @@ export function KeyboardView({
             unlockHint={unlockSet.has(id)}
             highlight={highlightSet.has(id)}
             flash={flashSet.has(id)}
+            heat={heat && { count: heat.counts[id] ?? 0, level: heat.levels.get(id) ?? 0 }}
             shifted={shifted}
             knob={knobs.onKeys.get(id)}
             unit={unit}

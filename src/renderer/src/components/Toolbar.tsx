@@ -52,6 +52,9 @@ export interface ToolbarProps {
   onReload: () => void
   /** キーマップをPDFに書き出す。書き出せないとき(読み込み前など)は渡さない。 */
   onExportPdf?: () => void
+  /** ヒートマップを図に重ねるか切り替える。数えていないときは渡さない。 */
+  onToggleHeatmap?: () => void
+  heatmapVisible?: boolean
   onDisconnect: () => void
   onLabelMode: (mode: LabelMode) => void
   onToggleWindowMode: () => void
@@ -82,6 +85,8 @@ export function Toolbar({
   reloading,
   onReload,
   onExportPdf,
+  onToggleHeatmap,
+  heatmapVisible = false,
   onDisconnect,
   onLabelMode,
   onToggleWindowMode
@@ -142,6 +147,11 @@ export function Toolbar({
           <MenuItem onSelect={() => onExportPdf?.()} disabled={!onExportPdf}>
             {messages.deviceMenu.exportPdf}
           </MenuItem>
+          {onToggleHeatmap && (
+            <MenuItem onSelect={onToggleHeatmap}>
+              {heatmapVisible ? messages.deviceMenu.hideHeatmap : messages.deviceMenu.showHeatmap}
+            </MenuItem>
+          )}
           <MenuItem onSelect={onDisconnect}>{messages.deviceMenu.disconnect}</MenuItem>
         </Menu>
       )}

@@ -14,6 +14,7 @@ const settings = {
   showLayerTriggers: false,
   tappingTerm: 200,
   toggleShortcut: 'Ctrl+Alt+K',
+  keyHeatmap: false,
   grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
   layerNames: {}
 }

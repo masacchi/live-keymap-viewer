@@ -292,6 +292,14 @@ body.overlay .app-shell.faded {
   display: none;
 }
 
+/*
+ * ヒートマップ(打鍵の回数)。よく押すキーほど、押下と同じ黄色を濃く混ぜる(濃さはKeyCapが--heatで
+ * 渡す)。種類の最後に置き、記号キーも同じ塗りにする。状態(押下・長押しなど)はこの後なので上に来る
+ */
+.key-heat .cap {
+  fill: color-mix(in srgb, var(--color-press) var(--heat, 0%), var(--color-surface));
+}
+
 /* --- 状態 --- */
 
 /* モックのキー。クリックで押す/離すを切り替えられる */

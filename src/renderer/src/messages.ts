@@ -64,7 +64,16 @@ export const messages = {
   deviceMenu: {
     reload: 'キーマップを読み直す',
     exportPdf: 'キーマップをPDFに書き出す',
+    showHeatmap: 'ヒートマップを表示',
+    hideHeatmap: 'ヒートマップを隠す',
     disconnect: '切断'
+  },
+
+  /** ヒートマップを図に重ねているあいだ、図の上に出す帯。 */
+  heatmap: {
+    showing: (total: number, since: Date) =>
+      `ヒートマップ: ${since.getFullYear()}/${since.getMonth() + 1}/${since.getDate()}から${total.toLocaleString()}回。よく押すキーほど濃く塗っています`,
+    hide: '隠す'
   },
 
   /** PDFに書き出す(印刷用の1枚。components/PrintSheet.tsx)。 */
@@ -129,6 +138,7 @@ export const messages = {
   },
 
   keyCap: {
+    presses: (count: number) => `押した回数 ${count.toLocaleString()}`,
     holding: '長押し中',
     holdingKey: (key: string) => joinWords(key.trim(), '長押し中'),
     none: '(なし)',
@@ -222,6 +232,13 @@ export const messages = {
       'すりガラスのようにぼかします(Windows 11)。強さはOSが決めます。薄くしているあいだは外れます',
     blurUnsupported: 'Windows 11でだけ使えます',
     overlayPanelToo: 'オーバーレイの左上のパネルからも変えられます',
+    heatmap: '打鍵のヒートマップ',
+    heatmapCount: 'キーごとに押した回数を数える',
+    heatmapHint:
+      'デバイス名のメニューの「ヒートマップを表示」で、よく押すキーほど濃く塗ります。数えるのは回数だけで、打った順番は残しません。数はこのPCにだけ持ちます',
+    heatmapTotal: (total: number, since: Date) =>
+      `${since.getFullYear()}/${since.getMonth() + 1}/${since.getDate()}から${total.toLocaleString()}回`,
+    heatmapReset: 'リセット',
     autostart: 'Windowsの起動時に自動で起動する',
     autostartHint:
       '前回のモード(通常ウィンドウ / オーバーレイ)で開きます。タスクトレイのアイコンからも切り替え・終了できます',

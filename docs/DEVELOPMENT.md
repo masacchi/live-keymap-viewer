@@ -162,6 +162,7 @@ tests/
   keyboardView / panels                       SVGの描画と部品(react-dom/serverで静的に)
   pdfExport                                   PDFに添付するkeymap.json・メタデータ・印刷用の1枚
   dynamicEntries                              マクロ(Vialの形式)とコンボを読む・ほどく・説明にする
+  heatmap                                     打鍵のヒートマップ(数え方・濃さ・保存)
 
 src-tauri/src/*.rsの#[cfg(test)]              設定の検証・画面外からの復帰・ログの時刻など
                                               (npm run check:rustで動く)

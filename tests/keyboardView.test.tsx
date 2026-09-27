@@ -55,6 +55,29 @@ function render(
   )
 }
 
+describe('KeyboardView: ヒートマップ', () => {
+  it('重ねるときは、キーごとに押した回数に応じた濃さで塗り、回数を説明に出す', () => {
+    const engine = newEngine()
+    const layers = engine.update(emptyMatrix(snapshot.rows, snapshot.cols), 0)
+    const html = renderToStaticMarkup(
+      <KeyboardView
+        geometry={geometry}
+        snapshot={snapshot}
+        engine={engine}
+        layers={layers}
+        labelMode="jis"
+        heat={{ counts: { '0,1': 42 }, levels: new Map([['0,1', 1]]) }}
+      />
+    )
+    // すべてのキーに塗りのクラスが付き、よく押したキーは最大の濃さ(50%)
+    expect(html.match(/class="key[^"]*key-heat/g)?.length).toBe(geometry.keys.length)
+    expect(html).toContain('--heat:50%')
+    expect(html).toContain('押した回数 42')
+    // 重ねないときは付けない
+    expect(render(engine, layers)).not.toContain('key-heat')
+  })
+})
+
 describe('KeyboardView', () => {
   it('定義どおりの数のキーを描く', () => {
     const engine = newEngine()

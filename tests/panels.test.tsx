@@ -342,6 +342,7 @@ describe('SettingsPanel', () => {
   const panelSettings = {
     tappingTerm: 250,
     toggleShortcut: 'Ctrl+Alt+K',
+    keyHeatmap: false,
     grantedDevices: [{ vendorId: 0xe118, productId: 1, name: 'Cornix LP' }],
     overlayOpacity: 0.6,
     overlayAutoFade: false,
@@ -364,6 +365,18 @@ describe('SettingsPanel', () => {
         {...props}
       />
     )
+
+  it('打鍵のヒートマップ: 数えているときだけ、合計とリセットを出す', () => {
+    expect(panel()).toContain('キーごとに押した回数を数える')
+    const heatmap = { total: 1234, since: new Date(2026, 8, 27), onReset: noop }
+    expect(panel({ heatmap })).not.toContain('1,234回')
+    const counting = panel({
+      heatmap,
+      settings: { ...panelSettings, keyHeatmap: true, grantedDevices: [] }
+    })
+    expect(counting).toContain('2026/9/27から1,234回')
+    expect(counting).toContain('リセット')
+  })
 
   it('切り替えのショートカットを出す。変えていれば既定に戻せる', () => {
     const html = panel()

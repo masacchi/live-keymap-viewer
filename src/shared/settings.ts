@@ -55,6 +55,11 @@ export interface Settings {
    * Ctrl・Alt・Winのどれかを含むものだけ(ふだんの入力を奪わないように)。検証はRustのsettings.rs。
    */
   toggleShortcut: string
+  /**
+   * 打鍵のヒートマップのために、キーごとに押した回数を数えるか(既定はオフ)。数えるのは回数だけで、
+   * 打った順番は残さない。数はlocalStorageに持つ(lib/heatmap.ts)。
+   */
+  keyHeatmap: boolean
   /** 一度許可したHIDデバイス。次回から自動で接続する。 */
   grantedDevices: GrantedDevice[]
   /**
@@ -75,6 +80,7 @@ export const RENDERER_SETTINGS_KEYS = [
   'labelMode',
   'tappingTerm',
   'toggleShortcut',
+  'keyHeatmap',
   'overlayOpacity',
   'overlayAutoFade',
   'overlayFadedOpacity',
@@ -120,6 +126,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // QMKのTAPPING_TERMの既定値(engine/layerState.tsのDEFAULT_TAPPING_TERMと同じ)
   tappingTerm: 200,
   toggleShortcut: DEFAULT_TOGGLE_SHORTCUT,
+  keyHeatmap: false,
   grantedDevices: [],
   layerNames: {}
 }

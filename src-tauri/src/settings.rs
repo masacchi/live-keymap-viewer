@@ -37,10 +37,11 @@ pub const MAX_LAYERS: usize = 32;
 pub const DEFAULT_TOGGLE_SHORTCUT: &str = "Ctrl+Alt+K";
 
 /// 画面から変えてよい項目。ウィンドウの位置・モード・許可したデバイス・レイヤー名は専用の手順で書く。
-const RENDERER_SETTINGS_KEYS: [&str; 8] = [
+const RENDERER_SETTINGS_KEYS: [&str; 9] = [
     "labelMode",
     "tappingTerm",
     "toggleShortcut",
+    "keyHeatmap",
     "overlayOpacity",
     "overlayAutoFade",
     "overlayFadedOpacity",
@@ -101,6 +102,8 @@ pub struct Settings {
     pub tapping_term: i64,
     /// 通常ウィンドウとオーバーレイを切り替えるショートカット(`Ctrl+Alt+K`の形。shortcut.rs)。
     pub toggle_shortcut: String,
+    /// 打鍵のヒートマップのために、キーごとに押した回数を数えるか(既定はオフ。数は画面が持つ)。
+    pub key_heatmap: bool,
     pub granted_devices: Vec<GrantedDevice>,
     pub layer_names: BTreeMap<String, Vec<String>>,
 }
@@ -235,6 +238,7 @@ pub fn sanitize(raw: &Value) -> Settings {
         show_layer_triggers: value.get("showLayerTriggers") == Some(&Value::Bool(true)),
         tapping_term: clamp_tapping_term(value.get("tappingTerm")),
         toggle_shortcut: sanitize_shortcut(value.get("toggleShortcut")),
+        key_heatmap: value.get("keyHeatmap") == Some(&Value::Bool(true)),
         granted_devices: sanitize_devices(value.get("grantedDevices")),
         layer_names: sanitize_layer_names(value.get("layerNames")),
     }
@@ -470,6 +474,7 @@ mod tests {
             "showLayerTriggers": true,
             "tappingTerm": 250,
             "toggleShortcut": "Ctrl+Shift+F9",
+            "keyHeatmap": true,
             "grantedDevices": [{ "vendorId": 0xE118, "productId": 1, "name": "Cornix" }],
             "layerNames": { UID: ["基本", "", "記号"] }
         });

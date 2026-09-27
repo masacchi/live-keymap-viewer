@@ -47,7 +47,7 @@ export interface SettingsPanelProps {
   /** いまの設定(このパネルで変える項目)。 */
   settings: Pick<
     Settings,
-    'tappingTerm' | 'toggleShortcut' | 'grantedDevices' | 'showLayerTriggers'
+    'tappingTerm' | 'toggleShortcut' | 'keyHeatmap' | 'grantedDevices' | 'showLayerTriggers'
   > &
     OverlaySettings
   /**
@@ -60,6 +60,8 @@ export interface SettingsPanelProps {
    */
   autostart?: boolean | null
   onAutostart?: (enabled: boolean) => void
+  /** 数えた打鍵(キーボードに繋いでいて、数えているときだけ)。リセットできる。 */
+  heatmap?: { total: number; since: Date; onReset: () => void } | null
   onChange: (patch: SettingsPatch) => void
   /**
    * キーボードから読めた長押しの判定時間(ms)。読めていればそちらで判定するので、
@@ -213,6 +215,7 @@ export function SettingsPanel({
   shortcutRegistered = true,
   autostart = null,
   onAutostart,
+  heatmap = null,
   onForgetDevice,
   blurSupported,
   appInfo,
@@ -316,6 +319,31 @@ export function SettingsPanel({
           <p className="text-2xs text-muted">
             {messages.settings.holdMode[keyboardHoldMode ?? 'unknown']}
           </p>
+        )}
+      </Section>
+
+      <Section title={messages.settings.heatmap}>
+        <label className="flex items-start gap-2 text-xs text-ink">
+          <input
+            type="checkbox"
+            checked={settings.keyHeatmap}
+            onChange={(event) => onChange({ keyHeatmap: event.target.checked })}
+            className="mt-0.5 accent-ink"
+          />
+          <span>
+            {messages.settings.heatmapCount}
+            <span className="block text-2xs text-muted">{messages.settings.heatmapHint}</span>
+          </span>
+        </label>
+        {settings.keyHeatmap && heatmap && (
+          <div className="flex items-center gap-2 pl-5 text-2xs text-muted">
+            <span className="min-w-0 flex-1">
+              {messages.settings.heatmapTotal(heatmap.total, heatmap.since)}
+            </span>
+            <Button size="sm" onClick={heatmap.onReset}>
+              {messages.settings.heatmapReset}
+            </Button>
+          </div>
         )}
       </Section>
 
