@@ -153,14 +153,42 @@ export class LayerEngine {
     }
 
     // 3. 経過時間による長押し確定
+    this.decideHolds(now)
+
+    return this.snapshot()
+  }
+
+  /**
+   * 押下は読まずに、時間だけ進めて長押しを確定し直す。
+   *
+   * 長押しの確定は押下を読んだときにしか判定しないと、Bluetoothでは次の応答(最大0.5秒ほど)まで
+   * レイヤーの表示が変わらない。そこでnextDecisionAtの時刻にセッションがこれを呼ぶ。離したことは
+   * まだ分かっていないが、BLEはキーを離すと通信が起きてすぐ知らせが来るはずなので、来ていなければ
+   * 押したままとみなす(docs/BLUETOOTH.md §5。前提はログで確かめる)。
+   */
+  advance(now: number): LayerSnapshot {
+    this.decideHolds(now)
+    return this.snapshot()
+  }
+
+  /** まだ長押しが確定していないキーのうち、いちばん早く確定する時刻。無ければnull。 */
+  nextDecisionAt(): number | null {
+    let next: number | null = null
+    for (const key of this.held.values()) {
+      if (!canHold(key) || key.heldSince !== null) continue
+      const at = key.pressedAt + key.tappingTerm
+      if (next === null || at < next) next = at
+    }
+    return next
+  }
+
+  private decideHolds(now: number): void {
     for (const key of this.held.values()) {
       if (!canHold(key) || key.heldSince !== null) continue
       if (key.interrupted || now - key.pressedAt >= key.tappingTerm) {
         key.heldSince = now
       }
     }
-
-    return this.snapshot()
   }
 
   private pressKey(row: number, col: number, now: number): void {

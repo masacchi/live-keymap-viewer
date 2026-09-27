@@ -181,6 +181,8 @@ export class KeyboardSession {
   private readonly matrixPollMs: number
   private readonly unlockPollMs: number
   private readonly log: SessionOptions['log']
+  /** 次に長押しが確定する時刻に掛けたタイマー(scheduleDecision)。 */
+  private decisionTimer: ReturnType<typeof setTimeout> | null = null
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
   private readonly definitionCache: DefinitionCache | undefined
@@ -347,10 +349,44 @@ export class KeyboardSession {
     this.disposed = true
     this.generation++
     this.listeners.clear()
+    if (this.decisionTimer !== null) clearTimeout(this.decisionTimer)
     await this.transport.close().catch(() => undefined)
   }
 
   // --- 内部 ---
+
+  /** 見た目が変わったときだけ知らせる(20msごとに同じ図を描き直さないように)。 */
+  private publishLayers(layers: LayerSnapshot): void {
+    const signature = signatureOf(layers)
+    if (signature === this.lastSignature) return
+    this.lastSignature = signature
+    this.update({ layers })
+  }
+
+  /**
+   * 次に長押しが確定する時刻にタイマーを掛け、押下を読むのを待たずに表示を切り替える。
+   *
+   * Bluetoothでは押下を読む1往復に0.5秒ほどかかるので、読んだときにしか判定しないと、押してから
+   * レイヤーが出るまで「判定時間」ではなく「応答2回分」(0.5〜1秒)かかる。離したことは、BLEでは
+   * キーを離したときに通信が起きてすぐ分かるはずなので、それまでは押したままとみなす
+   * (LayerEngine.advance。前提はログで確かめる。session/roundTripStats.ts)。
+   * USB(20msごと)でも、判定が次の読み取りを待たなくなるだけで、害は無い。
+   */
+  private scheduleDecision(gen: number, engine: LayerEngine): void {
+    if (this.decisionTimer !== null) clearTimeout(this.decisionTimer)
+    this.decisionTimer = null
+    const at = engine.nextDecisionAt()
+    if (at === null) return
+    this.decisionTimer = setTimeout(
+      () => {
+        this.decisionTimer = null
+        if (!this.alive(gen) || this.current.engine !== engine) return
+        this.publishLayers(engine.advance(this.now()))
+        this.scheduleDecision(gen, engine)
+      },
+      Math.max(0, at - this.now())
+    )
+  }
 
   private alive(gen: number): boolean {
     return !this.disposed && gen === this.generation
@@ -567,12 +603,8 @@ export class KeyboardSession {
           if (rounded !== this.current.roundTripMs) this.update({ roundTripMs: rounded })
         }
 
-        const layers = engine.update(matrix, this.now())
-        const signature = signatureOf(layers)
-        if (signature !== this.lastSignature) {
-          this.lastSignature = signature
-          this.update({ layers })
-        }
+        this.publishLayers(engine.update(matrix, this.now()))
+        this.scheduleDecision(gen, engine)
 
         const rest = this.matrixPollMs - (this.now() - started)
         await this.sleep(Math.max(0, rest))

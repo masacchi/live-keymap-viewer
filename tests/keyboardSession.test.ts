@@ -189,6 +189,39 @@ describe('KeyboardSession: アンロック', () => {
   })
 })
 
+describe('KeyboardSession: 遅い接続での長押し', () => {
+  it('長押しは、次の応答を待たずに判定時間が過ぎた時点で出す', async () => {
+    // 押下を読む1往復に300msかかる接続。読み込みは速く済ませ、押下を読むところだけ遅くする
+    const mock = new MockTransport({ unlocked: true })
+    const send = mock.send.bind(mock)
+    let slow = false
+    mock.send = async (request, sendOptions) => {
+      const response = await send(request, sendOptions) // 押下は要求を受けた時点のもの
+      if (slow && request[0] === 0x02 && request[1] === 0x03) {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+      return response
+    }
+    const session = new KeyboardSession(mock, { tappingTerm: 100 })
+    await session.start()
+    await waitFor(session, (s) => s.status === 'ready')
+    slow = true
+
+    let pressedSeenAt = 0
+    let layerSeenAt = 0
+    const off = session.subscribe((s) => {
+      if (!pressedSeenAt && s.layers?.held.has('7,5')) pressedSeenAt = Date.now()
+      if (!layerSeenAt && s.layers?.displayLayer === 2) layerSeenAt = Date.now()
+    })
+    mock.press(7, 5) // Space(LT2)
+    await until(() => layerSeenAt > 0, 5000)
+    off()
+    // 次の応答(300ms後)を待っていたら300ms以上かかる。判定時間(100ms)が過ぎた時点で出ている
+    expect(layerSeenAt - pressedSeenAt).toBeLessThan(250)
+    await session.dispose()
+  })
+})
+
 describe('KeyboardSession: 長押しの判定時間', () => {
   it('キーボードから読めたら、その値で判定する。アプリの設定は効かない', async () => {
     const mock = new MockTransport({ unlocked: true, tappingTerm: 250 })

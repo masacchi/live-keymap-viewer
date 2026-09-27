@@ -94,6 +94,24 @@ describe('LayerEngineの作り方', () => {
   })
 })
 
+describe('押下を読まずに時間だけ進める(Bluetoothで次の応答を待たない)', () => {
+  it('長押しが確定する時刻を返し、その時刻まで進めるとレイヤーが出る', () => {
+    const board = new Board()
+    board.press(SPACE).tick(0) // 1000msに押した
+    expect(board.engine.nextDecisionAt()).toBe(1000 + DEFAULT_TAPPING_TERM)
+    expect(board.engine.advance(1000 + DEFAULT_TAPPING_TERM - 1).displayLayer).toBe(0)
+    expect(board.engine.advance(1000 + DEFAULT_TAPPING_TERM).displayLayer).toBe(2)
+    // 確定したら、もう待つものは無い
+    expect(board.engine.nextDecisionAt()).toBeNull()
+  })
+
+  it('長押しで何も効かないキーだけなら、待つものは無い', () => {
+    const board = new Board()
+    board.press(Q).tick(0)
+    expect(board.engine.nextDecisionAt()).toBeNull()
+  })
+})
+
 describe('Layer-Tap', () => {
   let board: Board
   beforeEach(() => {
